@@ -43,16 +43,23 @@ export function createLocalStorage(): StorageService {
 }
 
 export function createS3Storage(): StorageService {
+  const endpoint = process.env.S3_ENDPOINT
+  const accessKey = process.env.S3_ACCESS_KEY
+  const secretKey = process.env.S3_SECRET_KEY
+  const bucket = process.env.S3_BUCKET
+
+  if (!accessKey || !secretKey || !bucket) {
+    throw new Error('S3 storage requires S3_ACCESS_KEY, S3_SECRET_KEY, and S3_BUCKET environment variables')
+  }
+
   const client = new S3Client({
-    endpoint: process.env.S3_ENDPOINT,
+    endpoint,
     region: 'auto',
     credentials: {
-      accessKeyId: process.env.S3_ACCESS_KEY!,
-      secretAccessKey: process.env.S3_SECRET_KEY!,
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
     },
   })
-
-  const bucket = process.env.S3_BUCKET!
 
   return {
     async save(file: File) {
