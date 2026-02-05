@@ -1,4 +1,5 @@
 // src/admin/editors/RichtextEditor.tsx
+import { useState, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
@@ -30,6 +31,19 @@ interface Props {
 }
 
 export default function RichtextEditor({ value, onChange }: Props) {
+  const [isImageSelected, setIsImageSelected] = useState(false)
+  const [currentAlignment, setCurrentAlignment] = useState('center')
+
+  const updateImageState = useCallback((editor: ReturnType<typeof useEditor>) => {
+    if (!editor) return
+    const isImage = editor.isActive('image')
+    setIsImageSelected(isImage)
+    if (isImage) {
+      const attrs = editor.getAttributes('image')
+      setCurrentAlignment(attrs.alignment || 'center')
+    }
+  }, [])
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -41,15 +55,18 @@ export default function RichtextEditor({ value, onChange }: Props) {
     content: (value as string) || '',
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
+      updateImageState(editor)
+    },
+    onSelectionUpdate: ({ editor }) => {
+      updateImageState(editor)
     },
   })
 
   if (!editor) return null
 
-  const isImageSelected = editor.isActive('image')
-
   const setImageAlignment = (alignment: string) => {
     editor.chain().focus().updateAttributes('image', { alignment }).run()
+    setCurrentAlignment(alignment)
   }
 
   return (
@@ -131,21 +148,21 @@ export default function RichtextEditor({ value, onChange }: Props) {
           <>
             <div className="w-px bg-[#E8E8E3] mx-1" />
             <ToolbarButton
-              active={editor.isActive('image', { alignment: 'left' })}
+              active={currentAlignment === 'left'}
               onClick={() => setImageAlignment('left')}
               title="Float left"
             >
               <AlignLeft className="w-4 h-4" />
             </ToolbarButton>
             <ToolbarButton
-              active={editor.isActive('image', { alignment: 'center' })}
+              active={currentAlignment === 'center'}
               onClick={() => setImageAlignment('center')}
               title="Center"
             >
               <AlignCenter className="w-4 h-4" />
             </ToolbarButton>
             <ToolbarButton
-              active={editor.isActive('image', { alignment: 'right' })}
+              active={currentAlignment === 'right'}
               onClick={() => setImageAlignment('right')}
               title="Float right"
             >
