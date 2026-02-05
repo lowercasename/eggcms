@@ -1,0 +1,60 @@
+export type FieldType =
+  | 'string'
+  | 'text'
+  | 'richtext'
+  | 'number'
+  | 'boolean'
+  | 'datetime'
+  | 'image'
+  | 'slug'
+  | 'select'
+  | 'blocks'
+
+export interface FieldDefinition {
+  name: string
+  type: FieldType
+  required?: boolean
+  default?: unknown
+  placeholder?: string
+  options?: string[]
+  from?: string
+  blocks?: BlockDefinition[]
+}
+
+export interface SchemaDefinition {
+  name: string
+  label: string
+  type: 'singleton' | 'collection' | 'block'
+  fields: FieldDefinition[]
+  drafts?: boolean
+}
+
+export type BlockDefinition = SchemaDefinition & { type: 'block' }
+export type SingletonDefinition = SchemaDefinition & { type: 'singleton' }
+export type CollectionDefinition = SchemaDefinition & { type: 'collection' }
+
+export function defineSingleton(config: Omit<SingletonDefinition, 'type'>): SingletonDefinition {
+  return { ...config, type: 'singleton' }
+}
+
+export function defineCollection(config: Omit<CollectionDefinition, 'type' | 'drafts'> & { drafts?: boolean }): CollectionDefinition {
+  return { ...config, type: 'collection', drafts: config.drafts ?? true }
+}
+
+export function defineBlock(config: Omit<BlockDefinition, 'type'>): BlockDefinition {
+  return { ...config, type: 'block' }
+}
+
+// Field helpers
+export const f = {
+  string: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'string', ...opts }),
+  text: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'text', ...opts }),
+  richtext: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'richtext', ...opts }),
+  number: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'number', ...opts }),
+  boolean: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'boolean', ...opts }),
+  datetime: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'datetime', ...opts }),
+  image: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'image', ...opts }),
+  slug: (name: string, opts: { from: string } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'slug', ...opts }),
+  select: (name: string, opts: { options: string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'select', ...opts }),
+  blocks: (name: string, opts: { blocks: BlockDefinition[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'blocks', ...opts }),
+}
