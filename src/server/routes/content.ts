@@ -2,6 +2,7 @@
 import { Hono } from 'hono'
 import { requireAuth, optionalAuth } from '../middleware/auth'
 import * as content from '../lib/content'
+import { fireWebhook, shouldFireWebhook } from '../lib/webhook'
 import type { SchemaDefinition } from '../../lib/schema'
 
 type Variables = {
@@ -81,10 +82,14 @@ export function createContentRoutes(schemas: SchemaDefinition[]) {
 
     if (schema.type === 'singleton') {
       const data = content.upsertSingleton(schema, body)
+      fireWebhook({ event: 'content.updated', schema: schema.name, timestamp: new Date().toISOString() })
       return c.json({ data })
     }
 
-    const data = content.createItem(schema, body)
+    const data = content.createItem(schema, body) as { id: string; draft?: number }
+    if (shouldFireWebhook(schema, 'create', data)) {
+      fireWebhook({ event: 'content.updated', schema: schema.name, id: data.id, timestamp: new Date().toISOString() })
+    }
     return c.json({ data }, 201)
   })
 
@@ -104,7 +109,10 @@ export function createContentRoutes(schemas: SchemaDefinition[]) {
     }
 
     const body = await c.req.json()
-    const data = content.updateItem(schema, id, body)
+    const data = content.updateItem(schema, id, body) as { id: string; draft?: number }
+    if (shouldFireWebhook(schema, 'update', data)) {
+      fireWebhook({ event: 'content.updated', schema: schema.name, id: data.id, timestamp: new Date().toISOString() })
+    }
     return c.json({ data })
   })
 
@@ -118,11 +126,15 @@ export function createContentRoutes(schemas: SchemaDefinition[]) {
       return c.json({ error: { code: 'NOT_FOUND', message: 'Not found' } }, 404)
     }
 
+    const existing = content.getItem(schema, id) as { draft?: number } | undefined
     const deleted = content.deleteItem(schema, id)
     if (!deleted) {
       return c.json({ error: { code: 'NOT_FOUND', message: 'Item not found' } }, 404)
     }
 
+    if (shouldFireWebhook(schema, 'delete', existing)) {
+      fireWebhook({ event: 'content.deleted', schema: schema.name, id, timestamp: new Date().toISOString() })
+    }
     return c.json({ data: { success: true } })
   })
 
