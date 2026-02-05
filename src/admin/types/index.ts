@@ -6,6 +6,8 @@ export interface FieldDefinition {
   required?: boolean
   default?: unknown
   placeholder?: string
+  options?: string[]  // For select fields
+  from?: string       // For slug fields (source field name)
 }
 
 export interface Schema {

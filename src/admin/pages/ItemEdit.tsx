@@ -8,23 +8,27 @@ import TextEditor from '../editors/TextEditor'
 import NumberEditor from '../editors/NumberEditor'
 import BooleanEditor from '../editors/BooleanEditor'
 import RichtextEditor from '../editors/RichtextEditor'
+import DatetimeEditor from '../editors/DatetimeEditor'
+import SelectEditor from '../editors/SelectEditor'
+import SlugEditor from '../editors/SlugEditor'
+import ImageEditor from '../editors/ImageEditor'
 
 interface OutletContext {
   schema: Schema
   refreshList: () => void
 }
 
-const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; value: unknown; onChange: (v: unknown) => void }>> = {
+const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; value: unknown; onChange: (v: unknown) => void; formData?: Record<string, unknown> }>> = {
   string: StringEditor,
   text: TextEditor,
-  slug: StringEditor,
+  slug: SlugEditor,
   richtext: RichtextEditor,
   number: NumberEditor,
   boolean: BooleanEditor,
-  datetime: StringEditor, // Placeholder
-  image: StringEditor, // Placeholder
-  select: StringEditor, // Placeholder
-  blocks: TextEditor, // Placeholder
+  datetime: DatetimeEditor,
+  image: ImageEditor,
+  select: SelectEditor,
+  blocks: TextEditor,  // Keep as TextEditor for now (JSON editing)
 }
 
 export default function ItemEdit() {
@@ -122,6 +126,7 @@ export default function ItemEdit() {
                 field={field}
                 value={data[field.name]}
                 onChange={(v) => setData({ ...data, [field.name]: v })}
+                formData={data}
               />
             </div>
           )
