@@ -1,12 +1,7 @@
 // src/admin/components/Sidebar.tsx
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-
-interface Schema {
-  name: string
-  label: string
-  type: 'singleton' | 'collection'
-}
+import type { Schema } from '../types'
 
 interface SidebarProps {
   schemas: Schema[]

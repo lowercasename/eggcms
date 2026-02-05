@@ -2,12 +2,7 @@
 import { Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Sidebar from './Sidebar'
-
-interface Schema {
-  name: string
-  label: string
-  type: 'singleton' | 'collection'
-}
+import type { Schema } from '../types'
 
 interface LayoutProps {
   schemas: Schema[]
