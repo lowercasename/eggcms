@@ -1,21 +1,32 @@
 import { Hono } from 'hono'
-import { serve } from '@hono/node-server'
+import { cors } from 'hono/cors'
 import { runMigrations } from './lib/migrator'
+import auth from './routes/auth'
+import { createContentRoutes } from './routes/content'
 import schemas from '../schemas'
 
 const app = new Hono()
 
+// Middleware
+app.use('*', cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+}))
+
+// Health check
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
-async function start() {
-  // Run migrations
-  await runMigrations(schemas)
+// Routes
+app.route('/api/auth', auth)
+app.route('/api/content', createContentRoutes(schemas))
 
-  const port = parseInt(process.env.PORT || '3000')
-  console.log(`Server running on http://localhost:${port}`)
-  serve({ fetch: app.fetch, port })
+// Run migrations on startup
+runMigrations(schemas).then(() => {
+  console.log('Server ready')
+}).catch(console.error)
+
+// Export for Bun's native serve
+export default {
+  port: parseInt(process.env.PORT || '3000'),
+  fetch: app.fetch,
 }
-
-start().catch(console.error)
-
-export default app
