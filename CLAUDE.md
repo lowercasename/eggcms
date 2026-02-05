@@ -44,6 +44,16 @@ bun run start     # Run production
 bun run test      # Run tests
 ```
 
+## Database Driver
+
+This project uses `bun:sqlite` (Bun's native SQLite driver) instead of `better-sqlite3`.
+
+**Why:** better-sqlite3 is a native Node.js addon that requires compilation for the specific Node/Bun ABI version. This often causes "NODE_MODULE_VERSION mismatch" errors when Bun's version differs from what the prebuilt binary expects.
+
+**Solution:** bun:sqlite is built into Bun and has no ABI compatibility issues. Drizzle ORM has native support via `drizzle-orm/bun-sqlite`.
+
+**Note:** The `better-sqlite3` package remains in package.json for drizzle-kit compatibility (migrations tooling), but the runtime uses bun:sqlite.
+
 ## Design Doc
 
 See `docs/plans/2026-02-05-eggcms-design.md` for full design details.
