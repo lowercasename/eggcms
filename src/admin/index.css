@@ -1,7 +1,5 @@
 /* src/admin/index.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 body {
   @apply bg-gray-50 text-gray-900;
