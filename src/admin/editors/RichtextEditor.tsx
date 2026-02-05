@@ -4,7 +4,24 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import type { FieldDefinition } from '../types'
-import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Image as ImageIcon } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight } from 'lucide-react'
+
+// Extend Image with alignment support
+const ImageWithAlignment = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      alignment: {
+        default: 'center',
+        parseHTML: (element) => element.getAttribute('data-alignment') || 'center',
+        renderHTML: (attributes) => ({
+          'data-alignment': attributes.alignment,
+          class: `image-${attributes.alignment}`,
+        }),
+      },
+    }
+  },
+})
 
 interface Props {
   field: FieldDefinition
@@ -19,7 +36,7 @@ export default function RichtextEditor({ value, onChange }: Props) {
         heading: { levels: [2, 3] },
       }),
       Link.configure({ openOnClick: false }),
-      Image,
+      ImageWithAlignment,
     ],
     content: (value as string) || '',
     onUpdate: ({ editor }) => {
@@ -28,6 +45,12 @@ export default function RichtextEditor({ value, onChange }: Props) {
   })
 
   if (!editor) return null
+
+  const isImageSelected = editor.isActive('image')
+
+  const setImageAlignment = (alignment: string) => {
+    editor.chain().focus().updateAttributes('image', { alignment }).run()
+  }
 
   return (
     <div className="border border-[#E8E8E3] rounded-lg overflow-hidden bg-white">
@@ -102,12 +125,40 @@ export default function RichtextEditor({ value, onChange }: Props) {
         >
           <ImageIcon className="w-4 h-4" />
         </ToolbarButton>
+
+        {/* Image alignment buttons - shown when image is selected */}
+        {isImageSelected && (
+          <>
+            <div className="w-px bg-[#E8E8E3] mx-1" />
+            <ToolbarButton
+              active={editor.isActive('image', { alignment: 'left' })}
+              onClick={() => setImageAlignment('left')}
+              title="Float left"
+            >
+              <AlignLeft className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('image', { alignment: 'center' })}
+              onClick={() => setImageAlignment('center')}
+              title="Center"
+            >
+              <AlignCenter className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('image', { alignment: 'right' })}
+              onClick={() => setImageAlignment('right')}
+              title="Float right"
+            >
+              <AlignRight className="w-4 h-4" />
+            </ToolbarButton>
+          </>
+        )}
       </div>
 
       {/* Editor */}
       <EditorContent
         editor={editor}
-        className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[168px]"
+        className="richtext-editor prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[168px]"
       />
     </div>
   )

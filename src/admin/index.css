@@ -106,3 +106,45 @@ body {
 .prose :where(a):hover {
   color: var(--color-accent-hover);
 }
+
+/* Rich text image alignment */
+.richtext-editor .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
+.richtext-editor .ProseMirror img.image-left {
+  float: left;
+  margin-right: 1.5rem;
+  margin-bottom: 0.5rem;
+  max-width: 50%;
+}
+
+.richtext-editor .ProseMirror img.image-right {
+  float: right;
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+  max-width: 50%;
+}
+
+.richtext-editor .ProseMirror img.image-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  float: none;
+  clear: both;
+}
+
+/* Clear floats after paragraphs following floated images */
+.richtext-editor .ProseMirror p::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Selected image highlight */
+.richtext-editor .ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
