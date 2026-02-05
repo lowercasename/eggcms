@@ -1,26 +1,34 @@
 // src/admin/pages/Singleton.tsx
-import { useState, useEffect } from 'react'
-import { useParams } from 'wouter'
-import { api } from '../lib/api'
-import type { FieldDefinition } from '../types'
-import { getFieldLabel } from '../types'
-import { useSchemas } from '../App'
-import { Heading, Alert, FormField, Button } from '../components/ui'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { useParams } from "wouter";
+import { api } from "../lib/api";
+import type { FieldDefinition } from "../types";
+import { getFieldLabel } from "../types";
+import { useSchemas } from "../App";
+import { Heading, Alert, FormField, Button } from "../components/ui";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 // Import editors
-import StringEditor from '../editors/StringEditor'
-import TextEditor from '../editors/TextEditor'
-import NumberEditor from '../editors/NumberEditor'
-import BooleanEditor from '../editors/BooleanEditor'
-import RichtextEditor from '../editors/RichtextEditor'
-import DatetimeEditor from '../editors/DatetimeEditor'
-import SelectEditor from '../editors/SelectEditor'
-import SlugEditor from '../editors/SlugEditor'
-import ImageEditor from '../editors/ImageEditor'
-import BlocksEditor from '../editors/BlocksEditor'
+import StringEditor from "../editors/StringEditor";
+import TextEditor from "../editors/TextEditor";
+import NumberEditor from "../editors/NumberEditor";
+import BooleanEditor from "../editors/BooleanEditor";
+import RichtextEditor from "../editors/RichtextEditor";
+import DatetimeEditor from "../editors/DatetimeEditor";
+import SelectEditor from "../editors/SelectEditor";
+import SlugEditor from "../editors/SlugEditor";
+import ImageEditor from "../editors/ImageEditor";
+import BlocksEditor from "../editors/BlocksEditor";
 
-const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; value: unknown; onChange: (v: unknown) => void; formData?: Record<string, unknown> }>> = {
+const editorMap: Record<
+  string,
+  React.ComponentType<{
+    field: FieldDefinition;
+    value: unknown;
+    onChange: (v: unknown) => void;
+    formData?: Record<string, unknown>;
+  }>
+> = {
   string: StringEditor,
   text: TextEditor,
   slug: SlugEditor,
@@ -31,51 +39,54 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   image: ImageEditor,
   select: SelectEditor,
   blocks: BlocksEditor,
-}
+};
 
 export default function Singleton() {
-  const params = useParams<{ schema: string }>()
-  const { schemas } = useSchemas()
-  const [data, setData] = useState<Record<string, unknown>>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const params = useParams<{ schema: string }>();
+  const { schemas } = useSchemas();
+  const [data, setData] = useState<Record<string, unknown>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const schema = schemas.find((s) => s.name === params.schema && s.type === 'singleton')
+  const schema = schemas.find(
+    (s) => s.name === params.schema && s.type === "singleton",
+  );
 
   useEffect(() => {
-    if (!schema) return
+    if (!schema) return;
 
-    setLoading(true)
-    api.getSingleton(schema.name)
+    setLoading(true);
+    api
+      .getSingleton(schema.name)
       .then((res) => {
-        setData((res.data as Record<string, unknown>) || {})
+        setData((res.data as Record<string, unknown>) || {});
       })
       .catch(() => {
         // Singleton might not exist yet, start with empty data
-        setData({})
+        setData({});
       })
-      .finally(() => setLoading(false))
-  }, [schema?.name])
+      .finally(() => setLoading(false));
+  }, [schema?.name]);
 
   const handleSave = async () => {
-    if (!schema) return
+    if (!schema) return;
 
-    setSaving(true)
-    setError('')
-    setSuccess(false)
+    setSaving(true);
+    setError("");
+    setSuccess(false);
 
     try {
-      await api.updateSingleton(schema.name, data)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      await api.updateSingleton(schema.name, data);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(err instanceof Error ? err.message : "Save failed");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (!schema) {
     return (
@@ -85,10 +96,12 @@ export default function Singleton() {
             <AlertCircle className="w-6 h-6 text-[#DC4E42]" />
           </div>
           <p className="text-sm font-medium text-[#1A1A18]">Schema not found</p>
-          <p className="text-xs text-[#9C9C91] mt-1">The requested singleton doesn't exist</p>
+          <p className="text-xs text-[#9C9C91] mt-1">
+            The requested singleton doesn't exist
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   if (loading) {
@@ -99,7 +112,7 @@ export default function Singleton() {
           <span className="text-sm">Loading...</span>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -107,20 +120,29 @@ export default function Singleton() {
       {/* Header */}
       <div className="mb-8">
         <Heading>{schema.label}</Heading>
-        <p className="text-sm text-[#9C9C91] mt-1">
-          Global settings for your site
-        </p>
       </div>
 
-      {error && <Alert variant="error" className="mb-6">{error}</Alert>}
-      {success && <Alert variant="success" className="mb-6">Saved successfully</Alert>}
+      {error && (
+        <Alert variant="error" className="mb-6">
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert variant="success" className="mb-6">
+          Saved successfully
+        </Alert>
+      )}
 
       <div className="space-y-6">
         {schema.fields.map((field) => {
-          const Editor = editorMap[field.type] || StringEditor
+          const Editor = editorMap[field.type] || StringEditor;
 
           return (
-            <FormField key={field.name} label={getFieldLabel(field)} required={field.required}>
+            <FormField
+              key={field.name}
+              label={getFieldLabel(field)}
+              required={field.required}
+            >
               <Editor
                 field={field}
                 value={data[field.name]}
@@ -128,7 +150,7 @@ export default function Singleton() {
                 formData={data}
               />
             </FormField>
-          )
+          );
         })}
       </div>
 
@@ -139,5 +161,5 @@ export default function Singleton() {
         </Button>
       </div>
     </div>
-  )
+  );
 }
