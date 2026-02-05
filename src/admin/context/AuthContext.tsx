@@ -16,19 +16,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+
     // Check if already logged in by trying to fetch content
     api.getContent('settings', true)
       .then(() => {
         // If this succeeds, we're logged in - but we don't know the email
         // For simplicity, just mark as logged in
-        setUser({ email: 'admin' })
+        if (mounted) setUser({ email: 'admin' })
       })
       .catch(() => {
-        setUser(null)
+        if (mounted) setUser(null)
       })
       .finally(() => {
-        setLoading(false)
+        if (mounted) setLoading(false)
       })
+
+    return () => { mounted = false }
   }, [])
 
   const login = async (email: string, password: string) => {
@@ -37,8 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    await api.logout()
-    setUser(null)
+    try {
+      await api.logout()
+    } finally {
+      setUser(null)  // Clear state regardless of API result
+    }
   }
 
   return (
