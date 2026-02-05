@@ -1,3 +1,44 @@
+const RESERVED_FIELDS = ['id', 'created_at', 'updated_at', '_type', 'draft']
+
+export class SchemaValidationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SchemaValidationError'
+  }
+}
+
+export function validateSchema(schema: SchemaDefinition): void {
+  const fieldNames = new Set<string>()
+
+  for (const field of schema.fields) {
+    // Check reserved names
+    if (RESERVED_FIELDS.includes(field.name)) {
+      throw new SchemaValidationError(`Field '${field.name}' is reserved`)
+    }
+
+    // Check duplicates
+    if (fieldNames.has(field.name)) {
+      throw new SchemaValidationError(`Field '${field.name}' defined twice in schema '${schema.name}'`)
+    }
+    fieldNames.add(field.name)
+
+    // Validate slug has 'from' field
+    if (field.type === 'slug' && !field.from) {
+      throw new SchemaValidationError(`Slug field '${field.name}' requires 'from' option`)
+    }
+
+    // Validate select has options
+    if (field.type === 'select' && (!field.options || field.options.length === 0)) {
+      throw new SchemaValidationError(`Select field '${field.name}' requires 'options'`)
+    }
+
+    // Validate blocks has block definitions
+    if (field.type === 'blocks' && (!field.blocks || field.blocks.length === 0)) {
+      throw new SchemaValidationError(`Blocks field '${field.name}' requires 'blocks' array`)
+    }
+  }
+}
+
 export type FieldType =
   | 'string'
   | 'text'
