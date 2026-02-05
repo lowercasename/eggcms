@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3'
+import Database, { type Database as DatabaseType } from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import path from 'path'
 import fs from 'fs'
@@ -8,7 +8,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true })
 }
 
-const sqlite = new Database(path.join(dataDir, 'eggcms.db'))
+const sqlite: DatabaseType = new Database(path.join(dataDir, 'eggcms.db'))
 sqlite.pragma('journal_mode = WAL')
 
 export const db = drizzle(sqlite)
