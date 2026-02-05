@@ -44,6 +44,10 @@ bun run start     # Run production
 bun run test      # Run tests
 ```
 
+## Git Usage
+
+Always run git commands from the working directory. Do not use `git -C /path/to/repo` - just run `git` directly since the working directory is already set correctly.
+
 ## Database Driver
 
 This project uses `bun:sqlite` (Bun's native SQLite driver) instead of `better-sqlite3`.
