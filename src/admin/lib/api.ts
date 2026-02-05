@@ -37,6 +37,9 @@ export const api = {
       method: 'POST',
     }),
 
+  me: () =>
+    request<{ data: { email: string } }>('/auth/me'),
+
   // Content
   getContent: <T>(schema: string, drafts = true) =>
     request<{ data: T[]; meta: { total: number } }>(

@@ -56,4 +56,22 @@ auth.post('/logout', (c) => {
   return c.json({ data: { success: true } })
 })
 
+// Check current session - requires valid token
+auth.get('/me', async (c) => {
+  const { getCookie } = await import('hono/cookie')
+  const { verifyToken } = await import('../lib/auth')
+
+  const token = getCookie(c, 'token')
+  if (!token) {
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401)
+  }
+
+  const payload = await verifyToken(token)
+  if (!payload) {
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } }, 401)
+  }
+
+  return c.json({ data: { email: payload.email } })
+})
+
 export default auth

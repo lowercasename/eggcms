@@ -18,12 +18,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // Check if already logged in by trying to fetch content
-    api.getContent('settings', true)
-      .then(() => {
-        // If this succeeds, we're logged in - but we don't know the email
-        // For simplicity, just mark as logged in
-        if (mounted) setUser({ email: 'admin' })
+    // Check if already logged in by calling /auth/me
+    api.me()
+      .then((result) => {
+        if (mounted) setUser(result.data)
       })
       .catch(() => {
         if (mounted) setUser(null)
