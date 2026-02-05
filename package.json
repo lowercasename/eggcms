@@ -1,0 +1,28 @@
+{
+  "name": "eggcms",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/server/index.ts",
+    "build": "bun run build:server && bun run build:admin",
+    "build:server": "bun build src/server/index.ts --outdir dist/server --target node",
+    "build:admin": "vite build",
+    "start": "bun dist/server/index.js",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "@hono/node-server": "^1.14.0",
+    "drizzle-orm": "^0.39.0",
+    "better-sqlite3": "^11.8.0",
+    "jose": "^6.0.0",
+    "slugify": "^1.6.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "drizzle-kit": "^0.30.0"
+  }
+}
