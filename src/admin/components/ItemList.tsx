@@ -1,5 +1,5 @@
 // src/admin/components/ItemList.tsx
-import { NavLink, useParams } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 
 interface Item {
   id: string  // UUID
@@ -16,8 +16,6 @@ interface ItemListProps {
 }
 
 export default function ItemList({ items, schemaName, labelField = 'title' }: ItemListProps) {
-  const { id } = useParams()
-
   return (
     <div className="w-72 border-r bg-gray-50 h-screen overflow-y-auto">
       <div className="p-4 border-b bg-white sticky top-0">

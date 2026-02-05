@@ -1,6 +1,6 @@
 // src/admin/pages/Collection.tsx
 import { useState, useEffect } from 'react'
-import { useParams, Outlet, useNavigate } from 'react-router-dom'
+import { useParams, Outlet } from 'react-router-dom'
 import { api } from '../lib/api'
 import ItemList from '../components/ItemList'
 import type { Schema } from '../types'
@@ -13,7 +13,6 @@ export default function Collection({ schemas }: CollectionProps) {
   const { schema: schemaName } = useParams<{ schema: string }>()
   const [items, setItems] = useState<Array<{ id: string }>>([])
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
 
   const schema = schemas.find((s) => s.name === schemaName && s.type === 'collection')
 
