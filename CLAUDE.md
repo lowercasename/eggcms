@@ -58,6 +58,10 @@ bun run test      # Run tests
 
 Always run git commands from the working directory. Do not use `git -C /path/to/repo` - just run `git` directly since the working directory is already set correctly.
 
+## Image Processing
+
+Uses `sharp` for image dimension capture on upload. The Dockerfile includes `vips` dependencies required by sharp.
+
 ## Database Driver
 
 This project uses `bun:sqlite` (Bun's native SQLite driver) instead of `better-sqlite3`.
