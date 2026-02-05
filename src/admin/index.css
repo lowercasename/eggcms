@@ -1,5 +1,6 @@
 /* src/admin/index.css */
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 body {
   @apply bg-gray-50 text-gray-900;

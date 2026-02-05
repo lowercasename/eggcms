@@ -7,6 +7,7 @@ import StringEditor from '../editors/StringEditor'
 import TextEditor from '../editors/TextEditor'
 import NumberEditor from '../editors/NumberEditor'
 import BooleanEditor from '../editors/BooleanEditor'
+import RichtextEditor from '../editors/RichtextEditor'
 
 interface OutletContext {
   schema: Schema
@@ -17,7 +18,7 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   string: StringEditor,
   text: TextEditor,
   slug: StringEditor,
-  richtext: TextEditor, // Placeholder until we add Tiptap
+  richtext: RichtextEditor,
   number: NumberEditor,
   boolean: BooleanEditor,
   datetime: StringEditor, // Placeholder
