@@ -1,6 +1,6 @@
 // src/server/lib/migrate.test.ts
 import { describe, it, expect } from 'vitest'
-import { generateTableSql } from './migrate'
+import { generateTableSql, hashSchema } from './migrate'
 import { defineCollection, f } from '../../lib/schema'
 
 describe('generateTableSql', () => {
@@ -25,5 +25,30 @@ describe('generateTableSql', () => {
     expect(sql).toContain('"draft" INTEGER DEFAULT 1')
     expect(sql).toContain('"created_at" TEXT')
     expect(sql).toContain('"updated_at" TEXT')
+  })
+})
+
+describe('hashSchema', () => {
+  it('produces consistent hash for same schema', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [f.string('title')],
+    })
+    expect(hashSchema(schema)).toBe(hashSchema(schema))
+  })
+
+  it('produces different hash when fields change', () => {
+    const schema1 = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [f.string('title')],
+    })
+    const schema2 = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [f.string('title'), f.string('body')],
+    })
+    expect(hashSchema(schema1)).not.toBe(hashSchema(schema2))
   })
 })

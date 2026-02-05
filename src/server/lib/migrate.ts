@@ -1,5 +1,6 @@
 // src/server/lib/migrate.ts
-import type { SchemaDefinition, FieldDefinition } from '../../lib/schema'
+import { createHash } from 'crypto'
+import type { SchemaDefinition, FieldDefinition, CollectionDefinition } from '../../lib/schema'
 
 function fieldToSqlType(field: FieldDefinition): string {
   const typeMap: Record<string, string> = {
@@ -43,4 +44,14 @@ export function generateTableSql(schema: SchemaDefinition): string {
   columns.push('"updated_at" TEXT')
 
   return `CREATE TABLE IF NOT EXISTS "${schema.name}" (\n  ${columns.join(',\n  ')}\n)`
+}
+
+export function hashSchema(schema: SchemaDefinition): string {
+  const content = JSON.stringify({
+    name: schema.name,
+    type: schema.type,
+    fields: schema.fields,
+    drafts: schema.type === 'collection' ? (schema as CollectionDefinition).drafts : undefined,
+  })
+  return createHash('sha256').update(content).digest('hex').slice(0, 16)
 }
