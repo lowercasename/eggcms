@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { serveStatic } from 'hono/bun'
 import { runMigrations } from './lib/migrator'
 import auth from './routes/auth'
 import { createContentRoutes } from './routes/content'
+import media from './routes/media'
 import schemas from '../schemas'
 
 const app = new Hono()
@@ -13,12 +15,16 @@ app.use('*', cors({
   credentials: true,
 }))
 
+// Static file serving for uploads
+app.use('/uploads/*', serveStatic({ root: './' }))
+
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
 // Routes
 app.route('/api/auth', auth)
 app.route('/api/content', createContentRoutes(schemas))
+app.route('/api/media', media)
 
 // Run migrations on startup
 runMigrations(schemas).then(() => {
