@@ -5,6 +5,8 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Collection from './pages/Collection'
 import ItemEdit from './pages/ItemEdit'
+import Singleton from './pages/Singleton'
+import Media from './pages/Media'
 
 // Import schemas - in a real app, these would come from the server
 // For now, we'll define them here as a placeholder
@@ -47,8 +49,8 @@ export default function App() {
             <Route index element={<div className="p-8 text-gray-500">Select an item or create a new one</div>} />
             <Route path=":id" element={<ItemEdit />} />
           </Route>
-          <Route path="/singletons/:schema" element={<div className="p-8">Singleton editing coming soon</div>} />
-          <Route path="/media" element={<div className="p-8">Media library coming soon</div>} />
+          <Route path="/singletons/:schema" element={<Singleton schemas={schemas} />} />
+          <Route path="/media" element={<Media />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
