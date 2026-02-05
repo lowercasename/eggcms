@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useOutletContext, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import type { Schema } from '../types'
+import type { Schema, FieldDefinition } from '../types'
 
 // Placeholder editors until we create real ones
 function StringEditor({ field, value, onChange }: { field: { name: string; placeholder?: string }; value: unknown; onChange: (v: unknown) => void }) {
@@ -59,16 +59,8 @@ function BooleanEditor({ value, onChange }: { field: { name: string }; value: un
   )
 }
 
-interface FieldDefinition {
-  name: string
-  type: string
-  required?: boolean
-  default?: unknown
-  placeholder?: string
-}
-
 interface OutletContext {
-  schema: Schema & { fields: FieldDefinition[] }
+  schema: Schema
   refreshList: () => void
 }
 
