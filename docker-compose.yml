@@ -1,0 +1,11 @@
+# docker-compose.yml
+services:
+  cms:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    env_file: .env
+    restart: unless-stopped
