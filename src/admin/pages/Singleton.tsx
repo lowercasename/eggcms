@@ -1,8 +1,12 @@
 // src/admin/pages/Singleton.tsx
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'wouter'
 import { api } from '../lib/api'
-import type { Schema, FieldDefinition } from '../types'
+import type { FieldDefinition } from '../types'
+import { getFieldLabel } from '../types'
+import { useSchemas } from '../App'
+import { Heading, Alert, FormField, Button } from '../components/ui'
+import { AlertCircle, Loader2 } from 'lucide-react'
 
 // Import editors
 import StringEditor from '../editors/StringEditor'
@@ -14,10 +18,7 @@ import DatetimeEditor from '../editors/DatetimeEditor'
 import SelectEditor from '../editors/SelectEditor'
 import SlugEditor from '../editors/SlugEditor'
 import ImageEditor from '../editors/ImageEditor'
-
-interface SingletonProps {
-  schemas: Schema[]
-}
+import BlocksEditor from '../editors/BlocksEditor'
 
 const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; value: unknown; onChange: (v: unknown) => void; formData?: Record<string, unknown> }>> = {
   string: StringEditor,
@@ -29,18 +30,19 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   datetime: DatetimeEditor,
   image: ImageEditor,
   select: SelectEditor,
-  blocks: TextEditor,
+  blocks: BlocksEditor,
 }
 
-export default function Singleton({ schemas }: SingletonProps) {
-  const { schema: schemaName } = useParams<{ schema: string }>()
+export default function Singleton() {
+  const params = useParams<{ schema: string }>()
+  const { schemas } = useSchemas()
   const [data, setData] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const schema = schemas.find((s) => s.name === schemaName && s.type === 'singleton')
+  const schema = schemas.find((s) => s.name === params.schema && s.type === 'singleton')
 
   useEffect(() => {
     if (!schema) return
@@ -76,54 +78,65 @@ export default function Singleton({ schemas }: SingletonProps) {
   }
 
   if (!schema) {
-    return <div className="p-8">Schema not found</div>
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#FAFAF8]">
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#FEF2F1] flex items-center justify-center">
+            <AlertCircle className="w-6 h-6 text-[#DC4E42]" />
+          </div>
+          <p className="text-sm font-medium text-[#1A1A18]">Schema not found</p>
+          <p className="text-xs text-[#9C9C91] mt-1">The requested singleton doesn't exist</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#FAFAF8]">
+        <div className="flex items-center gap-2 text-[#9C9C91]">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Loading...</span>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      <h2 className="text-2xl font-bold mb-6">{schema.label}</h2>
+    <div className="p-8 max-w-3xl bg-[#FAFAF8] min-h-screen">
+      {/* Header */}
+      <div className="mb-8">
+        <Heading>{schema.label}</Heading>
+        <p className="text-sm text-[#9C9C91] mt-1">
+          Global settings for your site
+        </p>
+      </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded mb-4">{error}</div>
-      )}
-
-      {success && (
-        <div className="bg-green-50 text-green-600 p-3 rounded mb-4">Saved successfully</div>
-      )}
+      {error && <Alert variant="error" className="mb-6">{error}</Alert>}
+      {success && <Alert variant="success" className="mb-6">Saved successfully</Alert>}
 
       <div className="space-y-6">
         {schema.fields.map((field) => {
           const Editor = editorMap[field.type] || StringEditor
 
           return (
-            <div key={field.name}>
-              <label className="block text-sm font-medium mb-1">
-                {field.name}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
+            <FormField key={field.name} label={getFieldLabel(field)} required={field.required}>
               <Editor
                 field={field}
                 value={data[field.name]}
                 onChange={(v) => setData({ ...data, [field.name]: v })}
                 formData={data}
               />
-            </div>
+            </FormField>
           )
         })}
       </div>
 
-      <div className="mt-8">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+      {/* Action bar */}
+      <div className="mt-10 pt-6 border-t border-[#E8E8E3]">
+        <Button onClick={handleSave} loading={saving}>
+          Save Changes
+        </Button>
       </div>
     </div>
   )

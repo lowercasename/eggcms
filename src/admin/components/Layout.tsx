@@ -1,34 +1,20 @@
 // src/admin/components/Layout.tsx
-import { Outlet, Navigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import type { ReactNode } from 'react'
 import Sidebar from './Sidebar'
 import type { Schema } from '../types'
 
 interface LayoutProps {
   schemas: Schema[]
+  children: ReactNode
 }
 
-export default function Layout({ schemas }: LayoutProps) {
-  const { user, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
-
+export default function Layout({ schemas, children }: LayoutProps) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#FAFAF8]">
       <Sidebar schemas={schemas} />
-      <div className="flex-1">
-        <Outlet />
-      </div>
+      <main className="flex-1">
+        {children}
+      </main>
     </div>
   )
 }

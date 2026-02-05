@@ -1,14 +1,14 @@
 // src/admin/main.tsx
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { Router } from 'wouter'
 import App from './App'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter basename="/admin">
+    <Router base="/admin">
       <App />
-    </BrowserRouter>
+    </Router>
   </React.StrictMode>
 )

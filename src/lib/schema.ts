@@ -54,6 +54,7 @@ export type FieldType =
 export interface FieldDefinition {
   name: string
   type: FieldType
+  label?: string
   required?: boolean
   default?: unknown
   placeholder?: string
@@ -62,12 +63,33 @@ export interface FieldDefinition {
   blocks?: BlockDefinition[]
 }
 
+/**
+ * Convert camelCase or PascalCase to "Sentence case"
+ * e.g., "siteTitle" -> "Site title", "firstName" -> "First name"
+ */
+export function fieldNameToLabel(name: string): string {
+  return name
+    .replace(/([A-Z])/g, ' $1')  // Add space before capitals
+    .replace(/^./, (s) => s.toUpperCase())  // Capitalize first letter
+    .trim()
+    .toLowerCase()
+    .replace(/^./, (s) => s.toUpperCase())  // Capitalize first letter again after lowercase
+}
+
+/**
+ * Get the display label for a field (custom label or derived from name)
+ */
+export function getFieldLabel(field: FieldDefinition): string {
+  return field.label || fieldNameToLabel(field.name)
+}
+
 export interface SchemaDefinition {
   name: string
   label: string
   type: 'singleton' | 'collection' | 'block'
   fields: FieldDefinition[]
   drafts?: boolean
+  labelField?: string  // Field to use as display label in lists (defaults to 'title')
 }
 
 export type BlockDefinition = SchemaDefinition & { type: 'block' }
@@ -78,7 +100,7 @@ export function defineSingleton(config: Omit<SingletonDefinition, 'type'>): Sing
   return { ...config, type: 'singleton' }
 }
 
-export function defineCollection(config: Omit<CollectionDefinition, 'type' | 'drafts'> & { drafts?: boolean }): CollectionDefinition {
+export function defineCollection(config: Omit<CollectionDefinition, 'type' | 'drafts'> & { drafts?: boolean; labelField?: string }): CollectionDefinition {
   return { ...config, type: 'collection', drafts: config.drafts ?? true }
 }
 

@@ -12,6 +12,37 @@ type Variables = {
 export function createContentRoutes(schemas: SchemaDefinition[]) {
   const app = new Hono<{ Variables: Variables }>()
 
+  // GET /api/content/_schemas - List all schemas (for admin UI)
+  app.get('/_schemas', requireAuth, (c) => {
+    const mapField = (f: typeof schemas[0]['fields'][0]): Record<string, unknown> => ({
+      name: f.name,
+      type: f.type,
+      label: f.label,
+      required: f.required,
+      default: f.default,
+      placeholder: f.placeholder,
+      options: f.options,
+      from: f.from,
+      // Include block definitions for blocks fields
+      blocks: f.blocks?.map((b) => ({
+        name: b.name,
+        label: b.label,
+        fields: b.fields.map(mapField),
+      })),
+    })
+
+    const publicSchemas = schemas
+      .filter((s) => s.type !== 'block')
+      .map((s) => ({
+        name: s.name,
+        label: s.label,
+        type: s.type,
+        labelField: s.labelField,
+        fields: s.fields.map(mapField),
+      }))
+    return c.json({ data: publicSchemas })
+  })
+
   // GET /api/content/:schema - List or get singleton
   app.get('/:schema', optionalAuth, (c) => {
     const schemaName = c.req.param('schema')

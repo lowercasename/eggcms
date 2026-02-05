@@ -1,5 +1,6 @@
 // src/admin/editors/DatetimeEditor.tsx
 import type { FieldDefinition } from '../types'
+import { Input } from '../components/ui'
 
 interface Props {
   field: FieldDefinition
@@ -16,14 +17,13 @@ export default function DatetimeEditor({ value, onChange }: Props) {
   }
 
   return (
-    <input
+    <Input
       type="datetime-local"
       value={toLocalDatetime(value as string)}
       onChange={(e) => {
         const date = e.target.value ? new Date(e.target.value).toISOString() : null
         onChange(date)
       }}
-      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
   )
 }

@@ -6,6 +6,8 @@ import { validateSchema, type SchemaDefinition } from '../../lib/schema'
 import { generateTableSql, hashSchema } from './migrate'
 
 export async function runMigrations(schemas: SchemaDefinition[]): Promise<void> {
+  console.log('Running migrations...')
+
   // Create internal tables
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS "_schemas" (
@@ -30,6 +32,8 @@ export async function runMigrations(schemas: SchemaDefinition[]): Promise<void> 
     )
   `)
 
+  let migrationsRun = 0
+
   for (const schema of schemas) {
     // Validate schema
     validateSchema(schema)
@@ -42,7 +46,7 @@ export async function runMigrations(schemas: SchemaDefinition[]): Promise<void> 
 
     if (!existing) {
       // New schema - create table
-      console.log(`Creating table for schema: ${schema.name}`)
+      console.log(`  [new] Creating table: ${schema.name}`)
       const sql = generateTableSql(schema)
       sqlite.exec(sql)
 
@@ -53,11 +57,19 @@ export async function runMigrations(schemas: SchemaDefinition[]): Promise<void> 
         hash,
         fieldsJson: JSON.stringify(schema.fields),
       }).run()
+      migrationsRun++
     } else if (existing.hash !== hash) {
       // Schema changed - handle migration
-      console.log(`Schema changed: ${schema.name}`)
+      console.log(`  [changed] Migrating: ${schema.name}`)
       await handleSchemaMigration(schema, existing, hash)
+      migrationsRun++
     }
+  }
+
+  if (migrationsRun === 0) {
+    console.log('  No schema changes detected')
+  } else {
+    console.log(`  Completed ${migrationsRun} migration(s)`)
   }
 }
 

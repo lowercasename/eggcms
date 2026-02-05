@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation } from 'wouter'
 import { useAuth } from '../context/AuthContext'
+import { Card, Heading, Alert, Input, Label, Button } from '../components/ui'
+import { Layers } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -8,7 +10,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
-  const navigate = useNavigate()
+  const [, navigate] = useLocation()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,47 +28,56 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">EggCMS</h1>
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded mb-4">
-            {error}
+    <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8]">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E5644E] flex items-center justify-center shadow-sm">
+              <Layers className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-[#1A1A18]">EggCMS</span>
           </div>
-        )}
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+        <Card className="p-8">
+          <h2 className="text-lg font-semibold text-[#1A1A18] mb-1">Welcome back</h2>
+          <p className="text-sm text-[#9C9C91] mb-6">Sign in to your account to continue</p>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+          {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+
+            <div>
+              <Label>Password</Label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <Button type="submit" loading={loading} className="w-full">
+              Sign in
+            </Button>
+          </form>
+        </Card>
+
+        <p className="text-center text-xs text-[#9C9C91] mt-6">
+          Lightweight, schema-driven content management
+        </p>
       </div>
     </div>
   )

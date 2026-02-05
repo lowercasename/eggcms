@@ -25,6 +25,16 @@ Schemas define content types using TypeScript:
 - `defineBlock()` - page builder components
 - `f.*` field helpers (string, richtext, image, blocks, etc.)
 
+## Schema Configuration
+
+Collections support these options:
+- `labelField` - Field to display in admin item list (defaults to 'title'). Use this when your schema doesn't have a `title` field (e.g., `labelField: 'firstName'` for a Person schema).
+
+**Important:** When adding new schema properties, you must update THREE places:
+1. `src/lib/schema.ts` - Add to `SchemaDefinition` interface
+2. `src/admin/types/index.ts` - Add to `Schema` interface
+3. `src/server/routes/content.ts` - Include in `/_schemas` API response mapping
+
 ## Architecture
 
 - Auto-migration on startup (safe changes only, blocks on unsafe)

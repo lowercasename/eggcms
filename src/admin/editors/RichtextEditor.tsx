@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import type { FieldDefinition } from '../types'
+import { Bold, Italic, List, ListOrdered, Link as LinkIcon } from 'lucide-react'
 
 interface Props {
   field: FieldDefinition
@@ -29,48 +30,54 @@ export default function RichtextEditor({ value, onChange }: Props) {
   if (!editor) return null
 
   return (
-    <div className="border rounded">
+    <div className="border border-[#E8E8E3] rounded-lg overflow-hidden bg-white">
       {/* Toolbar */}
-      <div className="flex gap-1 p-2 border-b bg-gray-50 flex-wrap">
+      <div className="flex gap-1 px-3 py-2 border-b border-[#E8E8E3] bg-[#FAFAF8] flex-wrap">
         <ToolbarButton
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
+          title="Bold"
         >
-          B
+          <Bold className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('italic')}
           onClick={() => editor.chain().focus().toggleItalic().run()}
+          title="Italic"
         >
-          I
+          <Italic className="w-4 h-4" />
         </ToolbarButton>
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px bg-[#E8E8E3] mx-1" />
         <ToolbarButton
           active={editor.isActive('heading', { level: 2 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          title="Heading 2"
         >
-          H2
+          <span className="text-xs font-bold">H2</span>
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('heading', { level: 3 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          title="Heading 3"
         >
-          H3
+          <span className="text-xs font-bold">H3</span>
         </ToolbarButton>
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px bg-[#E8E8E3] mx-1" />
         <ToolbarButton
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
+          title="Bullet list"
         >
-          &bull;
+          <List className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
           active={editor.isActive('orderedList')}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          title="Numbered list"
         >
-          1.
+          <ListOrdered className="w-4 h-4" />
         </ToolbarButton>
-        <div className="w-px bg-gray-300 mx-1" />
+        <div className="w-px bg-[#E8E8E3] mx-1" />
         <ToolbarButton
           active={editor.isActive('link')}
           onClick={() => {
@@ -79,15 +86,16 @@ export default function RichtextEditor({ value, onChange }: Props) {
               editor.chain().focus().setLink({ href: url }).run()
             }
           }}
+          title="Add link"
         >
-          Link
+          <LinkIcon className="w-4 h-4" />
         </ToolbarButton>
       </div>
 
       {/* Editor */}
       <EditorContent
         editor={editor}
-        className="prose max-w-none p-4 min-h-[200px] focus:outline-none"
+        className="prose prose-sm max-w-none p-4 min-h-[200px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[168px]"
       />
     </div>
   )
@@ -97,18 +105,25 @@ function ToolbarButton({
   active,
   onClick,
   children,
+  title,
 }: {
   active: boolean
   onClick: () => void
   children: React.ReactNode
+  title?: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-2 py-1 rounded text-sm font-medium ${
-        active ? 'bg-gray-200' : 'hover:bg-gray-100'
-      }`}
+      title={title}
+      className={`
+        p-1.5 rounded-md text-[#6B6B63] transition-colors
+        ${active
+          ? 'bg-[#E5644E]/10 text-[#E5644E]'
+          : 'hover:bg-[#F5F5F3] hover:text-[#1A1A18]'
+        }
+      `}
     >
       {children}
     </button>

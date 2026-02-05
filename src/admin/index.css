@@ -1,7 +1,108 @@
 /* src/admin/index.css */
+
+/* Import fonts - Satoshi for a modern, geometric feel */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+:root {
+  /* Warm, inviting palette */
+  --color-bg: #FAFAF8;
+  --color-bg-subtle: #F5F5F3;
+  --color-bg-muted: #EEEEE9;
+  --color-surface: #FFFFFF;
+  --color-border: #E8E8E3;
+  --color-border-subtle: #F0F0EB;
+
+  /* Text hierarchy */
+  --color-text: #1A1A18;
+  --color-text-secondary: #6B6B63;
+  --color-text-muted: #9C9C91;
+
+  /* Accent - warm coral */
+  --color-accent: #E5644E;
+  --color-accent-hover: #D45A45;
+  --color-accent-subtle: #FEF2F0;
+
+  /* Success/Error states */
+  --color-success: #3D9A5D;
+  --color-success-subtle: #F0F9F3;
+  --color-error: #DC4E42;
+  --color-error-subtle: #FEF2F1;
+  --color-warning: #E09D3D;
+  --color-warning-subtle: #FEF8EC;
+
+  /* Shadows - soft and layered */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-focus: 0 0 0 3px rgba(229, 100, 78, 0.15);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+* {
+  font-feature-settings: 'ss01' on, 'ss02' on;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+/* Prose overrides for rich text */
+.prose {
+  --tw-prose-body: var(--color-text);
+  --tw-prose-headings: var(--color-text);
+  --tw-prose-links: var(--color-accent);
+  font-size: 15px;
+}
+
+.prose :where(a):hover {
+  color: var(--color-accent-hover);
 }

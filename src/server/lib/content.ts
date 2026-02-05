@@ -1,9 +1,43 @@
 // src/server/lib/content.ts
 import { randomUUID } from 'crypto'
 import { sqlite } from '../db'
-import type { SchemaDefinition } from '../../lib/schema'
+import type { SchemaDefinition, FieldDefinition } from '../../lib/schema'
 
 type SQLBindValue = string | number | boolean | null | bigint
+
+// Fields that store JSON data
+const JSON_FIELD_TYPES = ['blocks']
+
+function toSqlValue(value: unknown, field: FieldDefinition): SQLBindValue {
+  if (value === null || value === undefined) return null
+  if (JSON_FIELD_TYPES.includes(field.type)) {
+    return JSON.stringify(value)
+  }
+  return value as SQLBindValue
+}
+
+function fromSqlValue(value: unknown, field: FieldDefinition): unknown {
+  if (value === null || value === undefined) return null
+  if (JSON_FIELD_TYPES.includes(field.type) && typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
+  }
+  return value
+}
+
+function deserializeRow(row: Record<string, unknown>, schema: SchemaDefinition): Record<string, unknown> {
+  if (!row) return row
+  const result = { ...row }
+  for (const field of schema.fields) {
+    if (field.name in result) {
+      result[field.name] = fromSqlValue(result[field.name], field)
+    }
+  }
+  return result
+}
 
 export function getSchema(schemas: SchemaDefinition[], name: string): SchemaDefinition | undefined {
   return schemas.find((s) => s.name === name && s.type !== 'block')
@@ -12,31 +46,33 @@ export function getSchema(schemas: SchemaDefinition[], name: string): SchemaDefi
 export function listItems(schema: SchemaDefinition, includeDrafts: boolean): unknown[] {
   const draftClause = schema.type === 'collection' && !includeDrafts ? 'WHERE draft = 0' : ''
   const stmt = sqlite.prepare(`SELECT * FROM "${schema.name}" ${draftClause} ORDER BY created_at DESC`)
-  return stmt.all()
+  const rows = stmt.all() as Record<string, unknown>[]
+  return rows.map((row) => deserializeRow(row, schema))
 }
 
 export function getItem(schema: SchemaDefinition, id: string): unknown {
   const stmt = sqlite.prepare(`SELECT * FROM "${schema.name}" WHERE id = ?`)
-  return stmt.get(id)
+  const row = stmt.get(id) as Record<string, unknown> | undefined
+  return row ? deserializeRow(row, schema) : undefined
 }
 
 export function getSingleton(schema: SchemaDefinition): unknown {
   const stmt = sqlite.prepare(`SELECT * FROM "${schema.name}" LIMIT 1`)
-  return stmt.get()
+  const row = stmt.get() as Record<string, unknown> | undefined
+  return row ? deserializeRow(row, schema) : undefined
 }
 
 export function createItem(schema: SchemaDefinition, data: Record<string, unknown>): unknown {
   const id = randomUUID()
   const now = new Date().toISOString()
-  const fields = schema.fields.map((f) => f.name)
   const values: SQLBindValue[] = [id]
   const placeholders: string[] = ['?']
   const columns: string[] = ['"id"']
 
-  for (const field of fields) {
-    columns.push(`"${field}"`)
+  for (const field of schema.fields) {
+    columns.push(`"${field.name}"`)
     placeholders.push('?')
-    values.push(data[field] as SQLBindValue ?? null)
+    values.push(toSqlValue(data[field.name], field))
   }
 
   if (schema.type === 'collection') {
@@ -63,7 +99,7 @@ export function updateItem(schema: SchemaDefinition, id: string, data: Record<st
   for (const field of schema.fields) {
     if (field.name in data) {
       sets.push(`"${field.name}" = ?`)
-      values.push(data[field.name] as SQLBindValue)
+      values.push(toSqlValue(data[field.name], field))
     }
   }
 

@@ -1,5 +1,6 @@
 // src/admin/editors/SlugEditor.tsx
 import type { FieldDefinition } from '../types'
+import { Input, Button } from '../components/ui'
 
 interface Props {
   field: FieldDefinition
@@ -29,21 +30,16 @@ export default function SlugEditor({ field, value, onChange, formData }: Props) 
 
   return (
     <div className="flex gap-2">
-      <input
-        type="text"
+      <Input
         value={(value as string) || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder}
-        className="flex-1 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1"
       />
       {field.from && (
-        <button
-          type="button"
-          onClick={handleGenerate}
-          className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm"
-        >
+        <Button variant="secondary" onClick={handleGenerate}>
           Generate
-        </button>
+        </Button>
       )}
     </div>
   )

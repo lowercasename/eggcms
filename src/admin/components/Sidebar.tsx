@@ -1,38 +1,60 @@
 // src/admin/components/Sidebar.tsx
-import { NavLink } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import type { Schema } from '../types'
+import { Link, useLocation } from "wouter";
+import { useAuth } from "../context/AuthContext";
+import type { Schema } from "../types";
+import { Layers, Square, List, Image, LogOut, Egg } from "lucide-react";
 
 interface SidebarProps {
-  schemas: Schema[]
+  schemas: Schema[];
 }
 
 export default function Sidebar({ schemas }: SidebarProps) {
-  const { logout } = useAuth()
+  const { logout } = useAuth();
+  const [location] = useLocation();
 
-  const singletons = schemas.filter((s) => s.type === 'singleton')
-  const collections = schemas.filter((s) => s.type === 'collection')
+  const singletons = schemas.filter((s) => s.type === "singleton");
+  const collections = schemas.filter((s) => s.type === "collection");
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `block px-3 py-2 rounded ${isActive ? 'bg-gray-200 font-medium' : 'hover:bg-gray-100'}`
+  const isActive = (href: string) =>
+    location === href || location.startsWith(href + "/");
 
   return (
-    <div className="w-56 bg-white border-r h-screen flex flex-col">
-      <div className="p-4 border-b">
-        <h1 className="text-xl font-bold">EggCMS</h1>
+    <aside className="w-60 bg-white border-r border-[#E8E8E3] h-screen flex flex-col">
+      {/* Logo */}
+      <div className="px-5 py-4 border-b border-[#E8E8E3]">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[#E5644E] flex items-center justify-center">
+            <Egg className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-lg font-semibold text-[#1A1A18]">EggCMS</span>
+        </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
         {singletons.length > 0 && (
           <div>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            <h2 className="px-2 mb-2 text-[11px] font-semibold text-[#9C9C91] uppercase tracking-wider">
               Singletons
             </h2>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {singletons.map((s) => (
-                <NavLink key={s.name} to={`/singletons/${s.name}`} className={linkClass}>
+                <Link
+                  key={s.name}
+                  href={`/singletons/${s.name}`}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+                    transition-colors duration-150
+                    ${
+                      isActive(`/singletons/${s.name}`)
+                        ? "bg-[#F5F5F3] text-[#1A1A18] font-medium"
+                        : "text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]"
+                    }
+                  `}
+                >
+                  <Square className="w-4 h-4 opacity-60" />
                   {s.label}
-                </NavLink>
+                </Link>
               ))}
             </div>
           </div>
@@ -40,34 +62,65 @@ export default function Sidebar({ schemas }: SidebarProps) {
 
         {collections.length > 0 && (
           <div>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            <h2 className="px-2 mb-2 text-[11px] font-semibold text-[#9C9C91] uppercase tracking-wider">
               Collections
             </h2>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {collections.map((s) => (
-                <NavLink key={s.name} to={`/collections/${s.name}`} className={linkClass}>
+                <Link
+                  key={s.name}
+                  href={`/collections/${s.name}`}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+                    transition-colors duration-150
+                    ${
+                      isActive(`/collections/${s.name}`)
+                        ? "bg-[#F5F5F3] text-[#1A1A18] font-medium"
+                        : "text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]"
+                    }
+                  `}
+                >
+                  <List className="w-4 h-4 opacity-60" />
                   {s.label}
-                </NavLink>
+                </Link>
               ))}
             </div>
           </div>
         )}
 
-        <div className="border-t pt-4">
-          <NavLink to="/media" className={linkClass}>
+        <div className="pt-2">
+          <Link
+            href="/media"
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+              transition-colors duration-150
+              ${
+                isActive("/media")
+                  ? "bg-[#F5F5F3] text-[#1A1A18] font-medium"
+                  : "text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]"
+              }
+            `}
+          >
+            <Image className="w-4 h-4 opacity-60" />
             Media
-          </NavLink>
+          </Link>
         </div>
       </nav>
 
-      <div className="p-4 border-t">
+      {/* User section */}
+      <div className="px-3 py-3 border-t border-[#E8E8E3]">
         <button
           onClick={() => logout()}
-          className="w-full text-left px-3 py-2 text-gray-600 hover:bg-gray-100 rounded"
+          className="
+            flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm
+            text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]
+            transition-colors duration-150
+          "
         >
-          Logout
+          <LogOut className="w-4 h-4 opacity-60" />
+          Sign out
         </button>
       </div>
-    </div>
-  )
+    </aside>
+  );
 }

@@ -1,8 +1,11 @@
 // src/admin/pages/ItemEdit.tsx
 import { useState, useEffect } from 'react'
-import { useParams, useOutletContext, useNavigate } from 'react-router-dom'
+import { useLocation } from 'wouter'
 import { api } from '../lib/api'
 import type { Schema, FieldDefinition } from '../types'
+import { getFieldLabel } from '../types'
+import { Heading, Alert, FormField, Button } from '../components/ui'
+import { Loader2, Trash2 } from 'lucide-react'
 import StringEditor from '../editors/StringEditor'
 import TextEditor from '../editors/TextEditor'
 import NumberEditor from '../editors/NumberEditor'
@@ -12,9 +15,11 @@ import DatetimeEditor from '../editors/DatetimeEditor'
 import SelectEditor from '../editors/SelectEditor'
 import SlugEditor from '../editors/SlugEditor'
 import ImageEditor from '../editors/ImageEditor'
+import BlocksEditor from '../editors/BlocksEditor'
 
-interface OutletContext {
+interface ItemEditProps {
   schema: Schema
+  itemId: string
   refreshList: () => void
 }
 
@@ -28,20 +33,18 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   datetime: DatetimeEditor,
   image: ImageEditor,
   select: SelectEditor,
-  blocks: TextEditor,  // Keep as TextEditor for now (JSON editing)
+  blocks: BlocksEditor,
 }
 
-export default function ItemEdit() {
-  const { id } = useParams<{ id: string }>()
-  const { schema, refreshList } = useOutletContext<OutletContext>()
-  const navigate = useNavigate()
+export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps) {
+  const [, navigate] = useLocation()
 
   const [data, setData] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const isNew = id === 'new'
+  const isNew = itemId === 'new'
 
   useEffect(() => {
     if (isNew) {
@@ -57,11 +60,12 @@ export default function ItemEdit() {
       return
     }
 
-    api.getItem(schema.name, id!)
+    setLoading(true)
+    api.getItem(schema.name, itemId)
       .then((res) => setData(res.data as Record<string, unknown>))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [id, schema.name, schema.fields, isNew])
+  }, [itemId, schema.name, schema.fields, isNew])
 
   const handleSave = async (asDraft = true) => {
     setSaving(true)
@@ -76,7 +80,7 @@ export default function ItemEdit() {
         refreshList()
         navigate(`/collections/${schema.name}/${newId}`, { replace: true })
       } else {
-        await api.updateItem(schema.name, id!, saveData)
+        await api.updateItem(schema.name, itemId, saveData)
         refreshList()
       }
     } catch (err) {
@@ -90,7 +94,7 @@ export default function ItemEdit() {
     if (!confirm('Are you sure you want to delete this item?')) return
 
     try {
-      await api.deleteItem(schema.name, id!)
+      await api.deleteItem(schema.name, itemId)
       refreshList()
       navigate(`/collections/${schema.name}`)
     } catch (err) {
@@ -99,62 +103,73 @@ export default function ItemEdit() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-2 text-[#9C9C91]">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Loading...</span>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="p-8 max-w-3xl">
-      <h2 className="text-2xl font-bold mb-6">
-        {isNew ? `New ${schema.label.replace(/s$/, '')}` : `Edit ${schema.label.replace(/s$/, '')}`}
-      </h2>
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-1">
+          <Heading>
+            {isNew ? `New ${schema.label.replace(/s$/, '')}` : `Edit ${schema.label.replace(/s$/, '')}`}
+          </Heading>
+          {!isNew && (
+            <span className={`
+              inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
+              ${data.draft
+                ? 'bg-[#FEF8EC] text-[#B8862B]'
+                : 'bg-[#F0F9F3] text-[#3D9A5D]'
+              }
+            `}>
+              {data.draft ? 'Draft' : 'Published'}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-[#9C9C91]">
+          {isNew ? 'Fill in the details below to create a new entry' : 'Make changes and save when ready'}
+        </p>
+      </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded mb-4">{error}</div>
-      )}
+      {error && <Alert variant="error" className="mb-6">{error}</Alert>}
 
       <div className="space-y-6">
         {schema.fields.map((field) => {
           const Editor = editorMap[field.type] || StringEditor
 
           return (
-            <div key={field.name}>
-              <label className="block text-sm font-medium mb-1">
-                {field.name}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
+            <FormField key={field.name} label={getFieldLabel(field)} required={field.required}>
               <Editor
                 field={field}
                 value={data[field.name]}
                 onChange={(v) => setData({ ...data, [field.name]: v })}
                 formData={data}
               />
-            </div>
+            </FormField>
           )
         })}
       </div>
 
-      <div className="mt-8 flex gap-4">
-        <button
-          onClick={() => handleSave(true)}
-          disabled={saving}
-          className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 disabled:opacity-50"
-        >
-          Save Draft
-        </button>
-        <button
-          onClick={() => handleSave(false)}
-          disabled={saving}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          Publish
-        </button>
+      {/* Action bar */}
+      <div className="mt-10 pt-6 border-t border-[#E8E8E3] flex items-center gap-3">
+        <Button onClick={() => handleSave(false)} loading={saving}>
+          {isNew ? 'Publish' : 'Save & Publish'}
+        </Button>
+        <Button variant="secondary" onClick={() => handleSave(true)} disabled={saving}>
+          {isNew ? 'Save as Draft' : 'Save Draft'}
+        </Button>
         {!isNew && (
-          <button
-            onClick={handleDelete}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 ml-auto"
-          >
+          <Button variant="ghost" onClick={handleDelete} className="ml-auto text-[#DC4E42] hover:bg-[#FEF2F1]">
+            <Trash2 className="w-4 h-4 mr-1.5" />
             Delete
-          </button>
+          </Button>
         )}
       </div>
     </div>
