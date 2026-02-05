@@ -2,6 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 export interface StorageService {
   save(file: File): Promise<{ path: string; filename: string }>
@@ -39,4 +40,59 @@ export function createLocalStorage(): StorageService {
       return filePath
     },
   }
+}
+
+export function createS3Storage(): StorageService {
+  const client = new S3Client({
+    endpoint: process.env.S3_ENDPOINT,
+    region: 'auto',
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY!,
+      secretAccessKey: process.env.S3_SECRET_KEY!,
+    },
+  })
+
+  const bucket = process.env.S3_BUCKET!
+
+  return {
+    async save(file: File) {
+      const ext = path.extname(file.name) || ''
+      const key = `${randomUUID()}${ext}`
+
+      const buffer = Buffer.from(await file.arrayBuffer())
+
+      await client.send(new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: file.type,
+        ACL: 'public-read',
+      }))
+
+      const url = `${process.env.S3_ENDPOINT}/${bucket}/${key}`
+      return { path: url, filename: file.name }
+    },
+
+    async delete(filePath: string) {
+      // Extract key from URL
+      const url = new URL(filePath)
+      const key = url.pathname.split('/').slice(2).join('/')
+
+      await client.send(new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }))
+    },
+
+    getUrl(filePath: string) {
+      return filePath
+    },
+  }
+}
+
+export function createStorage(): StorageService {
+  if (process.env.STORAGE === 's3') {
+    return createS3Storage()
+  }
+  return createLocalStorage()
 }
