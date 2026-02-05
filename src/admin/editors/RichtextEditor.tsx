@@ -4,7 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import type { FieldDefinition } from '../types'
-import { Bold, Italic, List, ListOrdered, Link as LinkIcon } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Image as ImageIcon } from 'lucide-react'
 
 interface Props {
   field: FieldDefinition
@@ -89,6 +89,18 @@ export default function RichtextEditor({ value, onChange }: Props) {
           title="Add link"
         >
           <LinkIcon className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          active={false}
+          onClick={() => {
+            const url = window.prompt('Image URL:')
+            if (url) {
+              editor.chain().focus().setImage({ src: url }).run()
+            }
+          }}
+          title="Insert image"
+        >
+          <ImageIcon className="w-4 h-4" />
         </ToolbarButton>
       </div>
 

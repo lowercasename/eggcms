@@ -1,6 +1,7 @@
 // src/server/routes/media.ts
 import { randomUUID } from 'crypto'
 import { Hono } from 'hono'
+import sharp from 'sharp'
 import { requireAuth } from '../middleware/auth'
 import { createStorage } from '../lib/storage'
 import { sqlite } from '../db'
@@ -31,7 +32,23 @@ media.post('/', requireAuth, async (c) => {
 
   let filePath: string
   let filename: string
+  let width: number | null = null
+  let height: number | null = null
+
   try {
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    // Get image dimensions for supported formats
+    if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+      try {
+        const metadata = await sharp(buffer).metadata()
+        width = metadata.width || null
+        height = metadata.height || null
+      } catch {
+        // Non-fatal: continue without dimensions
+      }
+    }
+
     const saved = await storage.save(file)
     filePath = saved.path
     filename = saved.filename
@@ -43,9 +60,9 @@ media.post('/', requireAuth, async (c) => {
   const id = randomUUID()
 
   sqlite.prepare(`
-    INSERT INTO _media (id, filename, path, mimetype, size, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, filename, filePath, file.type, file.size, now)
+    INSERT INTO _media (id, filename, path, mimetype, size, width, height, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, filename, filePath, file.type, file.size, width, height, now)
 
   const item = sqlite.prepare('SELECT * FROM _media WHERE id = ?').get(id)
 
