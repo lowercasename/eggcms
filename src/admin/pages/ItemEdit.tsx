@@ -3,61 +3,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useOutletContext, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { Schema, FieldDefinition } from '../types'
-
-// Placeholder editors until we create real ones
-function StringEditor({ field, value, onChange }: { field: { name: string; placeholder?: string }; value: unknown; onChange: (v: unknown) => void }) {
-  return (
-    <input
-      type="text"
-      value={(value as string) || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={field.placeholder}
-      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  )
-}
-
-function TextEditor({ field, value, onChange }: { field: { name: string; placeholder?: string }; value: unknown; onChange: (v: unknown) => void }) {
-  return (
-    <textarea
-      value={(value as string) || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={field.placeholder}
-      rows={5}
-      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  )
-}
-
-function NumberEditor({ field, value, onChange }: { field: { name: string; placeholder?: string }; value: unknown; onChange: (v: unknown) => void }) {
-  return (
-    <input
-      type="number"
-      value={(value as number) ?? ''}
-      onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : null)}
-      placeholder={field.placeholder}
-      className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  )
-}
-
-function BooleanEditor({ value, onChange }: { field: { name: string }; value: unknown; onChange: (v: unknown) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      className={`relative w-12 h-6 rounded-full transition-colors ${
-        value ? 'bg-blue-600' : 'bg-gray-300'
-      }`}
-    >
-      <span
-        className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-          value ? 'left-7' : 'left-1'
-        }`}
-      />
-    </button>
-  )
-}
+import StringEditor from '../editors/StringEditor'
+import TextEditor from '../editors/TextEditor'
+import NumberEditor from '../editors/NumberEditor'
+import BooleanEditor from '../editors/BooleanEditor'
 
 interface OutletContext {
   schema: Schema
