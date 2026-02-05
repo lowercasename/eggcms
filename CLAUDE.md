@@ -1,0 +1,49 @@
+# EggCMS
+
+A lightweight, schema-driven headless CMS built for deploying alongside static site generators (Eleventy, Astro, etc.).
+
+## Tech Stack
+
+- **Runtime:** Bun 1.3.8
+- **Server:** Hono
+- **Database:** SQLite + Drizzle ORM
+- **Admin UI:** React 19 + Vite + Tailwind + Radix primitives
+- **Rich text:** Tiptap (minimal)
+- **Testing:** Vitest
+
+## Key Concepts
+
+**Singletons:** Single instances (Site Settings, Homepage Hero)
+**Collections:** Lists of items (Blog Posts, Pages)
+**Blocks:** Reusable page builder components (one level deep, no nesting)
+
+## Schema System
+
+Schemas define content types using TypeScript:
+- `defineSingleton()` - one-off settings
+- `defineCollection()` - lists with drafts
+- `defineBlock()` - page builder components
+- `f.*` field helpers (string, richtext, image, blocks, etc.)
+
+## Architecture
+
+- Auto-migration on startup (safe changes only, blocks on unsafe)
+- Single admin user via .env (no multi-user)
+- JWT auth in httpOnly cookie
+- Public API is read-only, published content only
+- Webhooks fire on publish/delete (not drafts)
+- Local storage default, optional S3/DO Spaces
+
+## Commands
+
+```bash
+bun install       # Install deps
+bun run dev       # Dev server
+bun run build     # Production build
+bun run start     # Run production
+bun run test      # Run tests
+```
+
+## Design Doc
+
+See `docs/plans/2026-02-05-eggcms-design.md` for full design details.
