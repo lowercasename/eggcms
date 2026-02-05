@@ -1,2 +1,8 @@
 /* src/admin/index.css */
-/* Tailwind directives will be added in the next task */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
