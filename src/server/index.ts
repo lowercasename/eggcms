@@ -4,10 +4,10 @@ import { serveStatic } from 'hono/bun'
 import path from 'path'
 import fs from 'fs'
 import { runMigrations } from './lib/migrator'
+import { loadSchemas } from './lib/schemaLoader'
 import auth from './routes/auth'
 import { createContentRoutes } from './routes/content'
 import media from './routes/media'
-import schemas from '../schemas'
 
 const app = new Hono()
 
@@ -23,10 +23,27 @@ app.use('/uploads/*', serveStatic({ root: './' }))
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
-// Routes
+// Routes (initialized after schema loading)
 app.route('/api/auth', auth)
-app.route('/api/content', createContentRoutes(schemas))
 app.route('/api/media', media)
+
+// Content routes are added dynamically after schema loading
+let contentRoutesInitialized = false
+
+// Initialize schemas and routes
+async function initialize() {
+  const schemas = await loadSchemas()
+
+  // Add content routes with loaded schemas
+  app.route('/api/content', createContentRoutes(schemas))
+  contentRoutesInitialized = true
+
+  // Run migrations
+  await runMigrations(schemas)
+
+  console.log(`Loaded ${schemas.length} schema(s): ${schemas.map(s => s.name).join(', ')}`)
+  console.log('Server ready')
+}
 
 // Serve admin SPA (in production)
 const adminPath = path.join(process.cwd(), 'dist', 'admin')
@@ -45,10 +62,8 @@ if (fs.existsSync(adminPath)) {
   app.get('/admin', (c) => c.redirect('/admin/'))
 }
 
-// Run migrations on startup
-runMigrations(schemas).then(() => {
-  console.log('Server ready')
-}).catch(console.error)
+// Start initialization
+initialize().catch(console.error)
 
 // Export for Bun's native serve
 export default {

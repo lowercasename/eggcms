@@ -1,0 +1,103 @@
+// schemas.example.js
+// Example custom schemas file for Docker deployment
+// Copy this to schemas.js and mount it in your container
+
+export default [
+  // Singleton: Site-wide settings
+  {
+    name: 'settings',
+    label: 'Site Settings',
+    type: 'singleton',
+    fields: [
+      { name: 'siteName', type: 'string', required: true },
+      { name: 'tagline', type: 'string' },
+      { name: 'logo', type: 'image' },
+    ],
+  },
+
+  // Collection: Blog posts
+  {
+    name: 'post',
+    label: 'Blog Posts',
+    type: 'collection',
+    labelField: 'title', // Field to display in admin list
+    fields: [
+      { name: 'title', type: 'string', required: true },
+      { name: 'slug', type: 'slug', from: 'title' },
+      { name: 'featuredImage', type: 'image' },
+      { name: 'content', type: 'richtext' },
+      { name: 'publishedAt', type: 'datetime' },
+    ],
+  },
+
+  // Collection: Team members
+  {
+    name: 'person',
+    label: 'Team',
+    type: 'collection',
+    labelField: 'name',
+    fields: [
+      { name: 'name', type: 'string', required: true },
+      { name: 'role', type: 'string' },
+      { name: 'photo', type: 'image' },
+      { name: 'bio', type: 'text' },
+    ],
+  },
+
+  // Collection: Pages with blocks
+  {
+    name: 'page',
+    label: 'Pages',
+    type: 'collection',
+    fields: [
+      { name: 'title', type: 'string', required: true },
+      { name: 'slug', type: 'slug', from: 'title' },
+      {
+        name: 'blocks',
+        type: 'blocks',
+        blocks: ['heroBlock', 'textBlock', 'imageBlock'],
+      },
+    ],
+  },
+
+  // Block: Hero section
+  {
+    name: 'heroBlock',
+    label: 'Hero',
+    type: 'block',
+    fields: [
+      { name: 'heading', type: 'string', required: true },
+      { name: 'subheading', type: 'string' },
+      { name: 'backgroundImage', type: 'image' },
+      { name: 'ctaText', type: 'string' },
+      { name: 'ctaLink', type: 'string' },
+    ],
+  },
+
+  // Block: Text content
+  {
+    name: 'textBlock',
+    label: 'Text',
+    type: 'block',
+    fields: [
+      { name: 'content', type: 'richtext', required: true },
+    ],
+  },
+
+  // Block: Image
+  {
+    name: 'imageBlock',
+    label: 'Image',
+    type: 'block',
+    fields: [
+      { name: 'image', type: 'image', required: true },
+      { name: 'caption', type: 'string' },
+      {
+        name: 'size',
+        type: 'select',
+        options: ['small', 'medium', 'large', 'full'],
+        default: 'medium',
+      },
+    ],
+  },
+]

@@ -3,9 +3,11 @@ services:
   cms:
     build: .
     ports:
-      - "3000:3000"
+      - "3333:3000"
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+      # Custom schemas (copy schemas.example.js to schemas.js and uncomment):
+      # - ./schemas.js:/app/schemas.js
     env_file: .env
     restart: unless-stopped
