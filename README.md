@@ -43,6 +43,185 @@ bun run start
 
 In production, the admin UI is served from `/admin` on the same port as the API.
 
+## Docker Deployment
+
+EggCMS is published to GitHub Container Registry and can be deployed alongside your static site generator.
+
+### Quick Start with Docker
+
+```bash
+docker pull ghcr.io/lowercasename/eggcms:latest
+```
+
+### Deploying with a Static Site (Eleventy, Astro, etc.)
+
+Here's how to run EggCMS alongside your static site in a single Docker Compose setup:
+
+```yaml
+# docker-compose.yml
+services:
+  # Your static site (Eleventy example)
+  site:
+    build: .
+    ports:
+      - "8080:80"
+    depends_on:
+      - cms
+    environment:
+      - CMS_API_URL=http://cms:3000
+    # Optional: rebuild when CMS content changes via webhook
+
+  # EggCMS
+  cms:
+    image: ghcr.io/lowercasename/eggcms:latest
+    ports:
+      - "3333:3000"
+    volumes:
+      - ./cms/data:/app/data           # SQLite database
+      - ./cms/uploads:/app/uploads     # Uploaded media files
+      - ./cms/schemas.js:/app/schemas.js  # Your custom schemas
+    environment:
+      - ADMIN_EMAIL=admin@example.com
+      - ADMIN_PASSWORD=your-secure-password
+      - JWT_SECRET=your-random-32-char-secret-key
+      - WEBHOOK_URL=http://site:8080/rebuild  # Optional: trigger rebuilds
+```
+
+### Directory Structure
+
+```
+your-project/
+├── docker-compose.yml
+├── cms/
+│   ├── schemas.js          # Your content schemas
+│   ├── data/               # Created automatically (SQLite DB)
+│   └── uploads/            # Created automatically (media files)
+├── src/                    # Your static site source
+└── Dockerfile              # Your static site build
+```
+
+### Custom Schemas
+
+Create a `cms/schemas.js` file to define your content types:
+
+```javascript
+// cms/schemas.js
+export default [
+  // Singleton for site-wide settings
+  {
+    name: 'settings',
+    label: 'Site Settings',
+    type: 'singleton',
+    fields: [
+      { name: 'siteTitle', type: 'string', required: true },
+      { name: 'tagline', type: 'string' },
+      { name: 'logo', type: 'image' },
+    ],
+  },
+
+  // Collection for blog posts
+  {
+    name: 'post',
+    label: 'Blog Posts',
+    type: 'collection',
+    fields: [
+      { name: 'title', type: 'string', required: true },
+      { name: 'slug', type: 'slug', from: 'title' },
+      { name: 'content', type: 'richtext' },
+      { name: 'featuredImage', type: 'image' },
+      { name: 'publishedAt', type: 'datetime' },
+    ],
+  },
+
+  // Collection with page builder blocks
+  {
+    name: 'page',
+    label: 'Pages',
+    type: 'collection',
+    fields: [
+      { name: 'title', type: 'string', required: true },
+      { name: 'slug', type: 'slug', from: 'title' },
+      { name: 'blocks', type: 'blocks', blocks: ['heroBlock', 'textBlock'] },
+    ],
+  },
+
+  // Block definitions (referenced by name above)
+  {
+    name: 'heroBlock',
+    label: 'Hero Section',
+    type: 'block',
+    fields: [
+      { name: 'heading', type: 'string', required: true },
+      { name: 'subheading', type: 'string' },
+      { name: 'backgroundImage', type: 'image' },
+    ],
+  },
+
+  {
+    name: 'textBlock',
+    label: 'Text Content',
+    type: 'block',
+    fields: [
+      { name: 'content', type: 'richtext', required: true },
+    ],
+  },
+]
+```
+
+### Fetching Content in Your Static Site
+
+**Eleventy (JavaScript):**
+
+```javascript
+// _data/posts.js
+module.exports = async function() {
+  const response = await fetch('http://cms:3000/api/content/post');
+  const { data } = await response.json();
+  return data;
+};
+```
+
+**Astro:**
+
+```astro
+---
+const response = await fetch('http://cms:3000/api/content/post');
+const { data: posts } = await response.json();
+---
+{posts.map(post => <article>{post.title}</article>)}
+```
+
+### Triggering Rebuilds
+
+Set `WEBHOOK_URL` to automatically rebuild your static site when content is published:
+
+```yaml
+environment:
+  - WEBHOOK_URL=http://site:8080/webhook/rebuild
+```
+
+The CMS will POST to this URL when content is published or deleted.
+
+### Volumes Reference
+
+| Volume | Purpose | Required |
+|--------|---------|----------|
+| `/app/data` | SQLite database storage | Yes |
+| `/app/uploads` | Uploaded media files | Yes |
+| `/app/schemas.js` | Custom schema definitions | Yes (for custom schemas) |
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ADMIN_EMAIL` | Yes | Admin login email |
+| `ADMIN_PASSWORD` | Yes | Admin login password |
+| `JWT_SECRET` | Yes | Random 32+ character secret |
+| `PORT` | No | Server port (default: 3000) |
+| `PUBLIC_API` | No | Allow public read access (default: true) |
+| `WEBHOOK_URL` | No | URL for content change notifications |
+| `SCHEMAS_PATH` | No | Custom path to schemas file (default: /app/schemas.js) |
+
 ## Configuration
 
 All configuration is done via environment variables. Create a `.env` file in the project root:
