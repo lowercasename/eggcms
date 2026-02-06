@@ -1,8 +1,9 @@
 // src/admin/components/Sidebar.tsx
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import NavLink from "./NavLink";
 import { useAuth } from "../context/AuthContext";
 import type { Schema } from "../types";
-import { Layers, Square, List, Image, LogOut, Egg } from "lucide-react";
+import { Image, LogOut, Egg, FileText, Folder } from "lucide-react";
 
 interface SidebarProps {
   schemas: Schema[];
@@ -39,7 +40,7 @@ export default function Sidebar({ schemas }: SidebarProps) {
             </h2>
             <div className="space-y-0.5">
               {singletons.map((s) => (
-                <Link
+                <NavLink
                   key={s.name}
                   href={`/singletons/${s.name}`}
                   className={`
@@ -52,9 +53,9 @@ export default function Sidebar({ schemas }: SidebarProps) {
                     }
                   `}
                 >
-                  <Square className="w-4 h-4 opacity-60" />
+                  <FileText className="w-4 h-4 opacity-60" />
                   {s.label}
-                </Link>
+                </NavLink>
               ))}
             </div>
           </div>
@@ -67,7 +68,7 @@ export default function Sidebar({ schemas }: SidebarProps) {
             </h2>
             <div className="space-y-0.5">
               {collections.map((s) => (
-                <Link
+                <NavLink
                   key={s.name}
                   href={`/collections/${s.name}`}
                   className={`
@@ -80,16 +81,16 @@ export default function Sidebar({ schemas }: SidebarProps) {
                     }
                   `}
                 >
-                  <List className="w-4 h-4 opacity-60" />
+                  <Folder className="w-4 h-4 opacity-60" />
                   {s.label}
-                </Link>
+                </NavLink>
               ))}
             </div>
           </div>
         )}
 
         <div className="pt-2">
-          <Link
+          <NavLink
             href="/media"
             className={`
               flex items-center gap-2 px-3 py-2 rounded-lg text-sm
@@ -103,7 +104,7 @@ export default function Sidebar({ schemas }: SidebarProps) {
           >
             <Image className="w-4 h-4 opacity-60" />
             Media
-          </Link>
+          </NavLink>
         </div>
       </nav>
 

@@ -41,6 +41,28 @@ const calloutBlock = defineBlock({
   ],
 })
 
+// Nested blocks example: Accordion with items
+const accordionItem = defineBlock({
+  name: 'accordionItem',
+  label: 'Accordion Item',
+  fields: [
+    f.string('title', { required: true }),
+    f.richtext('content', { required: true }),
+  ],
+})
+
+const accordionBlock = defineBlock({
+  name: 'accordion',
+  label: 'Accordion',
+  fields: [
+    f.string('heading', { label: 'Section Heading' }),
+    f.blocks('items', {
+      label: 'Accordion Items',
+      blocks: [accordionItem],
+    }),
+  ],
+})
+
 export default defineCollection({
   name: 'page',
   label: 'Pages',
@@ -49,7 +71,7 @@ export default defineCollection({
     f.slug('slug', { from: 'title' }),
     f.blocks('content', {
       label: 'Page content',
-      blocks: [heroBlock, textBlock, imageBlock, calloutBlock],
+      blocks: [heroBlock, textBlock, imageBlock, calloutBlock, accordionBlock],
     }),
   ],
 })

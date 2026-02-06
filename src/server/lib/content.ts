@@ -6,7 +6,7 @@ import type { SchemaDefinition, FieldDefinition } from '../../lib/schema'
 type SQLBindValue = string | number | boolean | null | bigint
 
 // Fields that store JSON data
-const JSON_FIELD_TYPES = ['blocks']
+const JSON_FIELD_TYPES = ['blocks', 'block']
 
 function toSqlValue(value: unknown, field: FieldDefinition): SQLBindValue {
   if (value === null || value === undefined) return null
@@ -25,17 +25,33 @@ function fromSqlValue(value: unknown, field: FieldDefinition): unknown {
       return value
     }
   }
+  // Convert boolean fields from SQLite integer (0/1) to boolean
+  if (field.type === 'boolean') {
+    return Boolean(value)
+  }
   return value
 }
 
 function deserializeRow(row: Record<string, unknown>, schema: SchemaDefinition): Record<string, unknown> {
   if (!row) return row
-  const result = { ...row }
+
+  // Start with id at top level
+  const result: Record<string, unknown> = { id: row.id }
+
+  // Add schema fields
   for (const field of schema.fields) {
-    if (field.name in result) {
-      result[field.name] = fromSqlValue(result[field.name], field)
+    if (field.name in row) {
+      result[field.name] = fromSqlValue(row[field.name], field)
     }
   }
+
+  // Add meta fields
+  result._meta = {
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    ...(schema.type === 'collection' && { draft: Boolean(row.draft) }),
+  }
+
   return result
 }
 

@@ -46,16 +46,18 @@ async function sendWebhook(url: string, payload: WebhookPayload): Promise<void> 
 export function shouldFireWebhook(
   schema: { type: string },
   action: 'create' | 'update' | 'delete',
-  data?: { draft?: number | boolean }
+  data?: { _meta?: { draft?: boolean } }
 ): boolean {
   // Singletons always fire
   if (schema.type === 'singleton') return true
 
+  const isDraft = data?._meta?.draft
+
   // Deleting a published item fires
-  if (action === 'delete' && data && !data.draft) return true
+  if (action === 'delete' && data && !isDraft) return true
 
   // Publishing (draft=false) fires
-  if ((action === 'create' || action === 'update') && data && !data.draft) return true
+  if ((action === 'create' || action === 'update') && data && !isDraft) return true
 
   return false
 }

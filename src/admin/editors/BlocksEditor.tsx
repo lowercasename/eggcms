@@ -4,7 +4,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import type { FieldDefinition } from '../types'
 import { getFieldLabel } from '../types'
 import { Button, Select, FormField, Card } from '../components/ui'
-import { GripVertical, Trash2, LayoutGrid, Plus } from 'lucide-react'
+import { GripVertical, Trash2, LayoutGrid, Plus, ChevronDown, ChevronRight } from 'lucide-react'
 
 // Import all editors for rendering block fields
 import StringEditor from './StringEditor'
@@ -16,6 +16,7 @@ import DatetimeEditor from './DatetimeEditor'
 import SelectEditor from './SelectEditor'
 import SlugEditor from './SlugEditor'
 import ImageEditor from './ImageEditor'
+import BlockEditor from './BlockEditor'
 
 interface BlockDefinition {
   name: string
@@ -35,6 +36,7 @@ interface Props {
   onChange: (v: unknown) => void
 }
 
+// Editor map with self-reference for nested blocks
 const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; value: unknown; onChange: (v: unknown) => void; formData?: Record<string, unknown> }>> = {
   string: StringEditor,
   text: TextEditor,
@@ -47,14 +49,42 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   select: SelectEditor,
 }
 
+// Add blocks and block editors after declaration to enable recursion
+editorMap.blocks = BlocksEditor as typeof editorMap.string
+editorMap.block = BlockEditor as typeof editorMap.string
+
 function generateId(): string {
   return Math.random().toString(36).substring(2, 11)
 }
 
 export default function BlocksEditor({ field, value, onChange }: Props) {
   const [selectedBlockType, setSelectedBlockType] = useState('')
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set())
   const blocks = (value as Block[]) || []
   const blockDefinitions = field.blocks || []
+
+  const toggleCollapse = (blockId: string) => {
+    setExpandedBlocks((prev) => {
+      const next = new Set(prev)
+      if (next.has(blockId)) {
+        next.delete(blockId)
+      } else {
+        next.add(blockId)
+      }
+      return next
+    })
+  }
+
+  const getBlockPreview = (block: Block, blockDef: BlockDefinition): string => {
+    // Try to get a preview from the first string-like field
+    for (const f of blockDef.fields) {
+      if ((f.type === 'string' || f.type === 'text') && block[f.name]) {
+        const val = String(block[f.name])
+        return val.length > 50 ? val.slice(0, 50) + '...' : val
+      }
+    }
+    return ''
+  }
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return
@@ -86,6 +116,8 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
 
     onChange([...blocks, newBlock])
     setSelectedBlockType('')
+    // Auto-expand the newly added block
+    setExpandedBlocks((prev) => new Set(prev).add(newBlock._id))
   }
 
   const updateBlock = (index: number, fieldName: string, fieldValue: unknown) => {
@@ -129,6 +161,9 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
                 const blockDef = getBlockDefinition(block._type)
                 if (!blockDef) return null
 
+                const isCollapsed = !expandedBlocks.has(block._id)
+                const preview = isCollapsed ? getBlockPreview(block, blockDef) : ''
+
                 return (
                   <Draggable key={block._id} draggableId={block._id} index={index}>
                     {(provided, snapshot) => (
@@ -137,15 +172,31 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
                         {...provided.draggableProps}
                         className={`p-4 ${snapshot.isDragging ? 'shadow-lg ring-2 ring-[#E5644E]' : ''}`}
                       >
-                        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[#E8E8E3]">
+                        <div className={`flex items-center gap-3 ${isCollapsed ? '' : 'mb-4 pb-3 border-b border-[#E8E8E3]'}`}>
                           <div
                             {...provided.dragHandleProps}
                             className="cursor-grab text-[#9C9C91] hover:text-[#6B6B63] transition-colors"
                           >
                             <GripVertical className="w-4 h-4" />
                           </div>
+                          <button
+                            onClick={() => toggleCollapse(block._id)}
+                            className="p-1 rounded-md text-[#9C9C91] hover:text-[#6B6B63] hover:bg-[#F5F5F3] transition-colors"
+                            title={isCollapsed ? 'Expand' : 'Collapse'}
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </button>
                           <span className="font-medium text-sm text-[#1A1A18] flex-1">
                             {blockDef.label}
+                            {preview && (
+                              <span className="font-normal text-[#9C9C91] ml-2">
+                                — {preview}
+                              </span>
+                            )}
                           </span>
                           <button
                             onClick={() => removeBlock(index)}
@@ -156,26 +207,28 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
                           </button>
                         </div>
 
-                        <div className="space-y-4">
-                          {blockDef.fields.map((blockField) => {
-                            const Editor = editorMap[blockField.type] || StringEditor
+                        {!isCollapsed && (
+                          <div className="space-y-4">
+                            {blockDef.fields.map((blockField) => {
+                              const Editor = editorMap[blockField.type] || StringEditor
 
-                            return (
-                              <FormField
-                                key={blockField.name}
-                                label={getFieldLabel(blockField)}
-                                required={blockField.required}
-                              >
-                                <Editor
-                                  field={blockField}
-                                  value={block[blockField.name]}
-                                  onChange={(v) => updateBlock(index, blockField.name, v)}
-                                  formData={block}
-                                />
-                              </FormField>
-                            )
-                          })}
-                        </div>
+                              return (
+                                <FormField
+                                  key={blockField.name}
+                                  label={getFieldLabel(blockField)}
+                                  required={blockField.required}
+                                >
+                                  <Editor
+                                    field={blockField}
+                                    value={block[blockField.name]}
+                                    onChange={(v) => updateBlock(index, blockField.name, v)}
+                                    formData={block}
+                                  />
+                                </FormField>
+                              )
+                            })}
+                          </div>
+                        )}
                       </Card>
                     )}
                   </Draggable>

@@ -1,14 +1,17 @@
 // src/admin/components/ItemList.tsx
-import { Link, useLocation } from 'wouter'
+import { useLocation } from 'wouter'
+import NavLink from './NavLink'
 import { Plus, Archive } from 'lucide-react'
 
 interface Item {
   id: string
   title?: string
   name?: string
-  draft?: number
-  created_at?: string
-  updated_at?: string
+  _meta?: {
+    draft?: boolean
+    createdAt?: string
+    updatedAt?: string
+  }
 }
 
 interface ItemListProps {
@@ -30,7 +33,7 @@ export default function ItemList({ items, schemaName, labelField = 'title' }: It
     <div className="w-72 border-r border-[#E8E8E3] bg-[#FAFAF8] h-screen overflow-y-auto">
       {/* Header with New button */}
       <div className="p-4 border-b border-[#E8E8E3] bg-white sticky top-0 z-10">
-        <Link
+        <NavLink
           href={`/collections/${schemaName}/new`}
           className="
             flex items-center justify-center gap-2 w-full
@@ -42,7 +45,7 @@ export default function ItemList({ items, schemaName, labelField = 'title' }: It
         >
           <Plus className="w-4 h-4" strokeWidth={2.5} />
           New entry
-        </Link>
+        </NavLink>
       </div>
 
       {/* Items list */}
@@ -53,7 +56,7 @@ export default function ItemList({ items, schemaName, labelField = 'title' }: It
           const label = (item as Record<string, unknown>)[labelField] as string || 'Untitled'
 
           return (
-            <Link
+            <NavLink
               key={item.id}
               href={href}
               className={`
@@ -71,20 +74,20 @@ export default function ItemList({ items, schemaName, labelField = 'title' }: It
               <div className="flex items-center gap-2 mt-1">
                 <span className={`
                   inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
-                  ${item.draft
+                  ${item._meta?.draft
                     ? 'bg-[#FEF8EC] text-[#B8862B]'
                     : 'bg-[#F0F9F3] text-[#3D9A5D]'
                   }
                 `}>
-                  {item.draft ? 'Draft' : 'Published'}
+                  {item._meta?.draft ? 'Draft' : 'Published'}
                 </span>
-                {item.updated_at && (
+                {item._meta?.updatedAt && (
                   <span className="text-[11px] text-[#9C9C91]">
-                    {formatDate(item.updated_at)}
+                    {formatDate(item._meta.updatedAt)}
                   </span>
                 )}
               </div>
-            </Link>
+            </NavLink>
           )
         })}
 

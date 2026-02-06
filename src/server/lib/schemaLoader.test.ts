@@ -1,6 +1,6 @@
 // src/server/lib/schemaLoader.test.ts
 import { describe, it, expect } from 'vitest'
-import { validateSchemas } from './schemaLoader'
+import { validateSchemas, resolveBlockReferences } from './schemaLoader'
 import type { SchemaDefinition } from '../../lib/schema'
 
 describe('schemaLoader', () => {
@@ -130,6 +130,153 @@ describe('schemaLoader', () => {
       ]
 
       expect(() => validateSchemas(schemas)).toThrow(/index 1/)
+    })
+  })
+
+  describe('resolveBlockReferences', () => {
+    it('resolves blocks array from string names to block definitions', () => {
+      const heroBlock: SchemaDefinition = {
+        name: 'heroBlock',
+        label: 'Hero',
+        type: 'block',
+        fields: [{ name: 'title', type: 'string' }],
+      }
+
+      const schemas: SchemaDefinition[] = [
+        {
+          name: 'page',
+          label: 'Pages',
+          type: 'collection',
+          fields: [
+            { name: 'blocks', type: 'blocks', blocks: ['heroBlock'] as unknown as SchemaDefinition[] },
+          ],
+        },
+        heroBlock,
+      ]
+
+      const result = resolveBlockReferences(schemas)
+
+      const pageSchema = result.find(s => s.name === 'page')!
+      const blocksField = pageSchema.fields.find(f => f.name === 'blocks')!
+      expect(blocksField.blocks).toEqual([heroBlock])
+    })
+
+    it('resolves single block reference from string to block definition', () => {
+      const imageBlock: SchemaDefinition = {
+        name: 'imageBlock',
+        label: 'Image',
+        type: 'block',
+        fields: [{ name: 'src', type: 'string' }],
+      }
+
+      const schemas: SchemaDefinition[] = [
+        {
+          name: 'post',
+          label: 'Posts',
+          type: 'collection',
+          fields: [
+            { name: 'featuredImage', type: 'block', block: 'imageBlock' as unknown as SchemaDefinition },
+          ],
+        },
+        imageBlock,
+      ]
+
+      const result = resolveBlockReferences(schemas)
+
+      const postSchema = result.find(s => s.name === 'post')!
+      const blockField = postSchema.fields.find(f => f.name === 'featuredImage')!
+      expect(blockField.block).toEqual(imageBlock)
+    })
+
+    it('leaves already-resolved block objects unchanged', () => {
+      const heroBlock: SchemaDefinition = {
+        name: 'heroBlock',
+        label: 'Hero',
+        type: 'block',
+        fields: [],
+      }
+
+      const schemas: SchemaDefinition[] = [
+        {
+          name: 'page',
+          label: 'Pages',
+          type: 'collection',
+          fields: [
+            { name: 'blocks', type: 'blocks', blocks: [heroBlock] },
+          ],
+        },
+        heroBlock,
+      ]
+
+      const result = resolveBlockReferences(schemas)
+
+      const pageSchema = result.find(s => s.name === 'page')!
+      const blocksField = pageSchema.fields.find(f => f.name === 'blocks')!
+      expect(blocksField.blocks).toEqual([heroBlock])
+    })
+
+    it('throws when referenced block is not found', () => {
+      const schemas: SchemaDefinition[] = [
+        {
+          name: 'page',
+          label: 'Pages',
+          type: 'collection',
+          fields: [
+            { name: 'blocks', type: 'blocks', blocks: ['nonExistentBlock'] as unknown as SchemaDefinition[] },
+          ],
+        },
+      ]
+
+      expect(() => resolveBlockReferences(schemas)).toThrow(/Block 'nonExistentBlock' referenced.*not found/)
+    })
+
+    it('throws when single block reference is not found', () => {
+      const schemas: SchemaDefinition[] = [
+        {
+          name: 'post',
+          label: 'Posts',
+          type: 'collection',
+          fields: [
+            { name: 'hero', type: 'block', block: 'missingBlock' as unknown as SchemaDefinition },
+          ],
+        },
+      ]
+
+      expect(() => resolveBlockReferences(schemas)).toThrow(/Block 'missingBlock' referenced.*not found/)
+    })
+
+    it('resolves multiple block references in same field', () => {
+      const heroBlock: SchemaDefinition = {
+        name: 'heroBlock',
+        label: 'Hero',
+        type: 'block',
+        fields: [],
+      }
+      const textBlock: SchemaDefinition = {
+        name: 'textBlock',
+        label: 'Text',
+        type: 'block',
+        fields: [],
+      }
+
+      const schemas: SchemaDefinition[] = [
+        {
+          name: 'page',
+          label: 'Pages',
+          type: 'collection',
+          fields: [
+            { name: 'blocks', type: 'blocks', blocks: ['heroBlock', 'textBlock'] as unknown as SchemaDefinition[] },
+          ],
+        },
+        heroBlock,
+        textBlock,
+      ]
+
+      const result = resolveBlockReferences(schemas)
+
+      const pageSchema = result.find(s => s.name === 'page')!
+      const blocksField = pageSchema.fields.find(f => f.name === 'blocks')!
+      expect(blocksField.blocks).toEqual([heroBlock, textBlock])
     })
   })
 })

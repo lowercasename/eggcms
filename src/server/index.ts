@@ -49,7 +49,11 @@ async function initialize() {
 const adminPath = path.join(process.cwd(), 'dist', 'admin')
 if (fs.existsSync(adminPath)) {
   // Serve static files from admin build
-  app.use('/admin/*', serveStatic({ root: './dist/admin' }))
+  // Strip /admin prefix so /admin/assets/foo.js serves ./dist/admin/assets/foo.js
+  app.use('/admin/*', serveStatic({
+    root: './dist/admin',
+    rewriteRequestPath: (p) => p.replace(/^\/admin/, ''),
+  }))
 
   // For SPA routing, serve index.html for all /admin routes that don't match static files
   app.get('/admin/*', async (c) => {

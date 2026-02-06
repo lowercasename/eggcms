@@ -16,6 +16,7 @@ export interface FieldDefinition {
   options?: string[]  // For select fields
   from?: string       // For slug fields (source field name)
   blocks?: BlockDefinition[]  // For blocks fields
+  block?: BlockDefinition  // For single block field
 }
 
 /**

@@ -107,13 +107,140 @@ body {
   color: var(--color-accent-hover);
 }
 
-/* Rich text image alignment */
-.richtext-editor .ProseMirror img {
-  max-width: 100%;
-  height: auto;
-  border-radius: var(--radius-md);
+/* Internal links indicator */
+.richtext-editor .ProseMirror a[data-content-ref] {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-decoration-style: dashed;
 }
 
+/* Blockquote styling */
+.richtext-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* Image figure wrapper (NodeView) */
+.richtext-editor .image-figure {
+  position: relative;
+  margin: 1rem 0;
+}
+
+.richtext-editor .image-figure[data-alignment="left"] {
+  float: left;
+  margin-right: 1.5rem;
+  clear: left;
+}
+
+.richtext-editor .image-figure[data-alignment="right"] {
+  float: right;
+  margin-left: 1.5rem;
+  clear: right;
+}
+
+.richtext-editor .image-figure[data-alignment="center"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  float: none;
+  clear: both;
+}
+
+.richtext-editor .image-figure .image-container {
+  display: block;
+  position: relative;
+}
+
+.richtext-editor .image-figure img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+.richtext-editor .image-figure img.selected {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Image caption */
+.richtext-editor .image-figure figcaption {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.5rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Image popover */
+.image-popover {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 50;
+  white-space: nowrap;
+}
+
+.popover-group {
+  display: flex;
+  gap: 2px;
+}
+
+.popover-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+  margin: 0 4px;
+}
+
+.popover-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.popover-btn:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+}
+
+.popover-btn.active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.popover-btn-danger:hover {
+  background: var(--color-error-subtle);
+  color: var(--color-error);
+}
+
+/* Clear floats after paragraphs following floated images */
+.richtext-editor .ProseMirror p::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Legacy image styles (for backwards compatibility with old content) */
 .richtext-editor .ProseMirror img.image-left {
   float: left;
   margin-right: 1.5rem;
@@ -134,17 +261,4 @@ body {
   margin-right: auto;
   float: none;
   clear: both;
-}
-
-/* Clear floats after paragraphs following floated images */
-.richtext-editor .ProseMirror p::after {
-  content: "";
-  display: table;
-  clear: both;
-}
-
-/* Selected image highlight */
-.richtext-editor .ProseMirror img.ProseMirror-selectednode {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
 }

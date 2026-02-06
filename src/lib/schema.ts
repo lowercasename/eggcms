@@ -36,6 +36,11 @@ export function validateSchema(schema: SchemaDefinition): void {
     if (field.type === 'blocks' && (!field.blocks || field.blocks.length === 0)) {
       throw new SchemaValidationError(`Blocks field '${field.name}' requires 'blocks' array`)
     }
+
+    // Validate block (singular) has a block definition
+    if (field.type === 'block' && !field.block) {
+      throw new SchemaValidationError(`Block field '${field.name}' requires 'block' definition`)
+    }
   }
 }
 
@@ -50,6 +55,7 @@ export type FieldType =
   | 'slug'
   | 'select'
   | 'blocks'
+  | 'block'
 
 export interface FieldDefinition {
   name: string
@@ -61,6 +67,7 @@ export interface FieldDefinition {
   options?: string[]
   from?: string
   blocks?: BlockDefinition[]
+  block?: BlockDefinition  // For single block field
 }
 
 /**
@@ -120,4 +127,5 @@ export const f = {
   slug: (name: string, opts: { from: string } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'slug', ...opts }),
   select: (name: string, opts: { options: string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'select', ...opts }),
   blocks: (name: string, opts: { blocks: BlockDefinition[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'blocks', ...opts }),
+  block: (name: string, opts: { block: BlockDefinition } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'block', ...opts }),
 }

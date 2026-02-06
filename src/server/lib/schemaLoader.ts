@@ -50,6 +50,47 @@ export function validateSchemas(schemas: unknown): SchemaDefinition[] {
   return schemas as SchemaDefinition[]
 }
 
+// Resolve block references from string names to actual block definitions
+export function resolveBlockReferences(schemas: SchemaDefinition[]): SchemaDefinition[] {
+  // Build a map of block definitions by name
+  const blockMap = new Map<string, SchemaDefinition>()
+  for (const schema of schemas) {
+    if (schema.type === 'block') {
+      blockMap.set(schema.name, schema)
+    }
+  }
+
+  // Resolve references in fields
+  for (const schema of schemas) {
+    for (const field of schema.fields) {
+      // Resolve blocks array (e.g., blocks: ['heroBlock', 'textBlock'])
+      if (field.type === 'blocks' && Array.isArray(field.blocks)) {
+        field.blocks = field.blocks.map((b: unknown) => {
+          if (typeof b === 'string') {
+            const blockDef = blockMap.get(b)
+            if (!blockDef) {
+              throw new Error(`Block '${b}' referenced in field '${field.name}' of schema '${schema.name}' not found`)
+            }
+            return blockDef
+          }
+          return b // Already a block definition object
+        })
+      }
+
+      // Resolve single block reference (e.g., block: 'imageBlock')
+      if (field.type === 'block' && typeof field.block === 'string') {
+        const blockDef = blockMap.get(field.block)
+        if (!blockDef) {
+          throw new Error(`Block '${field.block}' referenced in field '${field.name}' of schema '${schema.name}' not found`)
+        }
+        field.block = blockDef
+      }
+    }
+  }
+
+  return schemas
+}
+
 export async function loadSchemas(): Promise<SchemaDefinition[]> {
   const schemasPath = process.env.SCHEMAS_PATH || DEFAULT_SCHEMAS_PATH
 
@@ -61,7 +102,8 @@ export async function loadSchemas(): Promise<SchemaDefinition[]> {
     const externalModule = await import(schemasPath)
     const schemas = externalModule.default
 
-    return validateSchemas(schemas)
+    const validated = validateSchemas(schemas)
+    return resolveBlockReferences(validated)
   } catch (error) {
     // Log error but fall back to compiled schemas
     console.error(`Failed to load external schemas from ${schemasPath}:`, error)

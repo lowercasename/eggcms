@@ -7,6 +7,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   root: 'src/admin',
+  base: '/admin/',
   build: {
     outDir: '../../dist/admin',
     emptyOutDir: true,

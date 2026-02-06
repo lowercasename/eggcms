@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { Switch, Route, Redirect } from 'wouter'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { DirtyStateProvider } from './contexts/DirtyStateContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Collection from './pages/Collection'
@@ -59,17 +60,19 @@ function AppRoutes() {
         {/* Protected routes wrapped in Layout */}
         <Route>
           {user ? (
-            <Layout schemas={schemas}>
-              <Switch>
-                <Route path="/" component={() => (
-                  <Redirect to={firstCollection ? `/collections/${firstCollection}` : '/media'} />
-                )} />
-                <Route path="/collections/:schema/:id?" component={Collection} />
-                <Route path="/singletons/:schema" component={Singleton} />
-                <Route path="/media" component={Media} />
-                <Route component={() => <Redirect to="/" />} />
-              </Switch>
-            </Layout>
+            <DirtyStateProvider>
+              <Layout schemas={schemas}>
+                <Switch>
+                  <Route path="/" component={() => (
+                    <Redirect to={firstCollection ? `/collections/${firstCollection}` : '/media'} />
+                  )} />
+                  <Route path="/collections/:schema/:id?" component={Collection} />
+                  <Route path="/singletons/:schema" component={Singleton} />
+                  <Route path="/media" component={Media} />
+                  <Route component={() => <Redirect to="/" />} />
+                </Switch>
+              </Layout>
+            </DirtyStateProvider>
           ) : (
             <Redirect to="/login" />
           )}

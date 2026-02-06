@@ -5,7 +5,9 @@ import { api } from '../lib/api'
 import type { Schema, FieldDefinition } from '../types'
 import { getFieldLabel } from '../types'
 import { Heading, Alert, FormField, Button } from '../components/ui'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Loader2, Trash2, CircleDot } from 'lucide-react'
+import { useDirtyState } from '../hooks/useDirtyState'
+import { useDirtyStateContext } from '../contexts/DirtyStateContext'
 import StringEditor from '../editors/StringEditor'
 import TextEditor from '../editors/TextEditor'
 import NumberEditor from '../editors/NumberEditor'
@@ -16,6 +18,7 @@ import SelectEditor from '../editors/SelectEditor'
 import SlugEditor from '../editors/SlugEditor'
 import ImageEditor from '../editors/ImageEditor'
 import BlocksEditor from '../editors/BlocksEditor'
+import BlockEditor from '../editors/BlockEditor'
 
 interface ItemEditProps {
   schema: Schema
@@ -34,6 +37,7 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   image: ImageEditor,
   select: SelectEditor,
   blocks: BlocksEditor,
+  block: BlockEditor,
 }
 
 export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps) {
@@ -46,10 +50,23 @@ export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps)
 
   const isNew = itemId === 'new'
 
+  // Track dirty state to warn before navigation with unsaved changes
+  const { isDirty, markClean } = useDirtyState(data, loading, itemId)
+  const { setDirty } = useDirtyStateContext()
+
+  // Sync dirty state with global context for navigation guards
+  useEffect(() => {
+    setDirty(isDirty)
+    return () => setDirty(false) // Clear on unmount
+  }, [isDirty, setDirty])
+
+  // Helper to get draft status from _meta (API response) - new items are always drafts
+  const isDraft = isNew ? true : (data._meta as { draft?: boolean } | undefined)?.draft
+
   useEffect(() => {
     if (isNew) {
-      // Set defaults
-      const defaults: Record<string, unknown> = { draft: 1 }
+      // Set field defaults only - no _meta needed for new items
+      const defaults: Record<string, unknown> = {}
       for (const field of schema.fields) {
         if (field.default !== undefined) {
           defaults[field.name] = field.default
@@ -72,15 +89,20 @@ export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps)
     setError('')
 
     try {
-      const saveData = { ...data, draft: asDraft ? 1 : 0 }
+      // Send draft at top level (backend expects it there), exclude _meta from payload
+      const { _meta, ...fields } = data
+      const saveData = { ...fields, draft: asDraft ? 1 : 0 }
 
       if (isNew) {
         const result = await api.createItem(schema.name, saveData)
-        const newId = (result.data as { id: string }).id
+        const newItem = result.data as { id: string }
+        markClean()
         refreshList()
-        navigate(`/collections/${schema.name}/${newId}`, { replace: true })
+        navigate(`/collections/${schema.name}/${newItem.id}`, { replace: true })
       } else {
-        await api.updateItem(schema.name, itemId, saveData)
+        const result = await api.updateItem(schema.name, itemId, saveData)
+        setData(result.data as Record<string, unknown>) // Use API response with correct _meta structure
+        markClean()
         refreshList()
       }
     } catch (err) {
@@ -95,6 +117,7 @@ export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps)
 
     try {
       await api.deleteItem(schema.name, itemId)
+      markClean() // Clear dirty state before navigation
       refreshList()
       navigate(`/collections/${schema.name}`)
     } catch (err) {
@@ -114,56 +137,67 @@ export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps)
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
-          <Heading>
-            {isNew ? `New ${schema.label.replace(/s$/, '')}` : `Edit ${schema.label.replace(/s$/, '')}`}
-          </Heading>
-          {!isNew && (
-            <span className={`
-              inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
-              ${data.draft
-                ? 'bg-[#FEF8EC] text-[#B8862B]'
-                : 'bg-[#F0F9F3] text-[#3D9A5D]'
-              }
-            `}>
-              {data.draft ? 'Draft' : 'Published'}
-            </span>
-          )}
+    <div className="h-full flex flex-col">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-3xl">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-1">
+              <Heading>
+                {isNew ? `New ${schema.label.replace(/s$/, '')}` : `Edit ${schema.label.replace(/s$/, '')}`}
+              </Heading>
+              {isDirty && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-[#FEF8EC] text-[#B8862B]">
+                  <CircleDot className="w-3 h-3" />
+                  Unsaved
+                </span>
+              )}
+              {!isNew && !isDirty && (
+                <span className={`
+                  inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
+                  ${isDraft
+                    ? 'bg-[#FEF8EC] text-[#B8862B]'
+                    : 'bg-[#F0F9F3] text-[#3D9A5D]'
+                  }
+                `}>
+                  {isDraft ? 'Draft' : 'Published'}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-[#9C9C91]">
+              {isNew ? 'Fill in the details below to create a new entry' : 'Make changes and save when ready'}
+            </p>
+          </div>
+
+          {error && <Alert variant="error" className="mb-6">{error}</Alert>}
+
+          <div className="space-y-6">
+            {schema.fields.map((field) => {
+              const Editor = editorMap[field.type] || StringEditor
+
+              return (
+                <FormField key={field.name} label={getFieldLabel(field)} required={field.required}>
+                  <Editor
+                    field={field}
+                    value={data[field.name]}
+                    onChange={(v) => setData({ ...data, [field.name]: v })}
+                    formData={data}
+                  />
+                </FormField>
+              )
+            })}
+          </div>
         </div>
-        <p className="text-sm text-[#9C9C91]">
-          {isNew ? 'Fill in the details below to create a new entry' : 'Make changes and save when ready'}
-        </p>
       </div>
 
-      {error && <Alert variant="error" className="mb-6">{error}</Alert>}
-
-      <div className="space-y-6">
-        {schema.fields.map((field) => {
-          const Editor = editorMap[field.type] || StringEditor
-
-          return (
-            <FormField key={field.name} label={getFieldLabel(field)} required={field.required}>
-              <Editor
-                field={field}
-                value={data[field.name]}
-                onChange={(v) => setData({ ...data, [field.name]: v })}
-                formData={data}
-              />
-            </FormField>
-          )
-        })}
-      </div>
-
-      {/* Action bar */}
-      <div className="mt-10 pt-6 border-t border-[#E8E8E3] flex items-center gap-3">
+      {/* Sticky action bar */}
+      <div className="flex-shrink-0 px-8 py-4 border-t border-[#E8E8E3] bg-white flex items-center gap-3">
         <Button onClick={() => handleSave(false)} loading={saving}>
-          {isNew ? 'Publish' : 'Save & Publish'}
+          {isNew ? 'Publish' : isDraft ? 'Save & Publish' : 'Save'}
         </Button>
         <Button variant="secondary" onClick={() => handleSave(true)} disabled={saving}>
-          {isNew ? 'Save as Draft' : 'Save Draft'}
+          {isNew ? 'Save as Draft' : isDraft ? 'Save Draft' : 'Revert to Draft'}
         </Button>
         {!isNew && (
           <Button variant="ghost" onClick={handleDelete} className="ml-auto text-[#DC4E42] hover:bg-[#FEF2F1]">

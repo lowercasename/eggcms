@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import type { FieldDefinition } from '../types'
 import { api } from '../lib/api'
-import { FileInput, Button } from '../components/ui'
+import { Button } from '../components/ui'
 import { X, Image, FolderOpen, Upload, Loader2 } from 'lucide-react'
 
 interface MediaItem {
@@ -39,39 +39,55 @@ export default function ImageEditor({ value, onChange }: Props) {
   const imagePath = value as string
 
   return (
-    <div className="space-y-3">
-      {imagePath ? (
-        <div className="relative inline-block group">
-          <img
-            src={imagePath}
-            alt="Preview"
-            className="max-w-xs max-h-48 rounded-lg border border-[#E8E8E3] object-cover"
-          />
+    <>
+      <div className="flex items-center gap-4 p-3 rounded-lg border border-[#E8E8E3] bg-[#FAFAF8]">
+        {/* Preview */}
+        {imagePath ? (
+          <div className="relative flex-shrink-0">
+            <img
+              src={imagePath}
+              alt="Preview"
+              className="w-16 h-16 rounded-md border border-[#E8E8E3] object-cover"
+            />
+            <button
+              onClick={() => onChange(null)}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#DC4E42] text-white flex items-center justify-center shadow-sm hover:bg-[#c44339] transition-colors"
+            >
+              <X className="w-3 h-3" strokeWidth={2.5} />
+            </button>
+          </div>
+        ) : (
+          <div className="w-16 h-16 flex-shrink-0 rounded-md border border-dashed border-[#D4D4CF] flex items-center justify-center bg-white">
+            <Image className="w-6 h-6 text-[#9C9C91]" strokeWidth={1.5} />
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-col gap-1.5">
+          <label className="inline-flex items-center gap-1.5 text-sm text-[#6B6B63] hover:text-[#1A1A18] transition-colors cursor-pointer">
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            {uploading ? 'Uploading...' : 'Upload new'}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleUpload(e.target.files?.[0] || null)}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
           <button
-            onClick={() => onChange(null)}
-            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#DC4E42] text-white flex items-center justify-center shadow-sm hover:bg-[#c44339] transition-colors"
+            type="button"
+            onClick={() => setShowPicker(true)}
+            className="inline-flex items-center gap-1.5 text-sm text-[#6B6B63] hover:text-[#1A1A18] transition-colors"
           >
-            <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <FolderOpen className="w-4 h-4" />
+            Choose from library
           </button>
         </div>
-      ) : (
-        <div className="w-full max-w-xs h-32 rounded-lg border-2 border-dashed border-[#E8E8E3] flex flex-col items-center justify-center bg-[#FAFAF8]">
-          <Image className="w-8 h-8 text-[#9C9C91] mb-2" strokeWidth={1.5} />
-          <p className="text-xs text-[#9C9C91]">No image selected</p>
-        </div>
-      )}
-
-      <div className="flex gap-2">
-        <FileInput
-          accept="image/*"
-          onChange={handleUpload}
-          loading={uploading}
-          label={uploading ? 'Uploading...' : 'Upload new'}
-        />
-        <Button variant="secondary" onClick={() => setShowPicker(true)}>
-          <FolderOpen className="w-4 h-4 mr-1.5" />
-          Choose from library
-        </Button>
       </div>
 
       {showPicker && (
@@ -83,7 +99,7 @@ export default function ImageEditor({ value, onChange }: Props) {
           onClose={() => setShowPicker(false)}
         />
       )}
-    </div>
+    </>
   )
 }
 
