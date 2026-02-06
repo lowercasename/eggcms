@@ -280,11 +280,120 @@ By default, files are stored locally in the `uploads/` directory.
 
 ## Defining Schemas
 
-Schemas define your content types. Create schema files in `src/schemas/`:
+Schemas define your content types. For Docker deployments, create a `schemas.js` file:
 
-### Collections
+```javascript
+// schemas.js
+export default [
+  // Singleton: single record (e.g., site settings)
+  {
+    name: 'settings',
+    label: 'Site Settings',
+    type: 'singleton',
+    fields: [
+      { name: 'siteTitle', type: 'string', required: true, default: 'My Site' },
+      { name: 'tagline', type: 'string' },
+      { name: 'logo', type: 'image' },
+    ],
+  },
 
-Collections are lists of items (e.g., blog posts, products):
+  // Collection: list of items (e.g., blog posts)
+  {
+    name: 'post',
+    label: 'Blog Posts',
+    type: 'collection',
+    fields: [
+      { name: 'title', type: 'string', required: true },
+      { name: 'slug', type: 'slug', from: 'title' },
+      { name: 'content', type: 'richtext' },
+      { name: 'featuredImage', type: 'image', label: 'Featured image' },
+      { name: 'publishedAt', type: 'datetime', label: 'Publish date' },
+      { name: 'featured', type: 'boolean' },
+    ],
+  },
+
+  // Collection with page builder blocks
+  {
+    name: 'page',
+    label: 'Pages',
+    type: 'collection',
+    fields: [
+      { name: 'title', type: 'string', required: true },
+      { name: 'slug', type: 'slug', from: 'title' },
+      { name: 'blocks', type: 'blocks', blocks: ['heroBlock', 'textBlock'] },
+    ],
+  },
+
+  // Block: reusable field group (referenced by name in blocks fields)
+  {
+    name: 'heroBlock',
+    label: 'Hero Section',
+    type: 'block',
+    fields: [
+      { name: 'heading', type: 'string', required: true },
+      { name: 'backgroundImage', type: 'image' },
+    ],
+  },
+
+  {
+    name: 'textBlock',
+    label: 'Text Content',
+    type: 'block',
+    fields: [
+      { name: 'content', type: 'richtext', required: true },
+    ],
+  },
+]
+```
+
+Mount it in Docker: `-v ./schemas.js:/app/schemas.js`
+
+### Schema Types
+
+| Type | Description |
+|------|-------------|
+| `singleton` | Single record (site settings, homepage config) |
+| `collection` | List of items with drafts (blog posts, products) |
+| `block` | Reusable field group for page builders |
+
+### Field Types
+
+| Type | Description | Options |
+|------|-------------|---------|
+| `string` | Single-line text | `required`, `default`, `placeholder`, `label` |
+| `text` | Multi-line text | `required`, `default`, `placeholder`, `label` |
+| `richtext` | Rich text editor (HTML) | `required`, `label` |
+| `number` | Numeric input | `required`, `default`, `placeholder`, `label` |
+| `boolean` | Toggle switch | `default`, `label` |
+| `datetime` | Date and time picker | `required`, `default`, `label` |
+| `image` | Image upload | `required`, `label` |
+| `slug` | URL-friendly slug | `from` (source field name), `label` |
+| `select` | Dropdown select | `options` (string array), `required`, `default`, `label` |
+| `blocks` | Page builder blocks | `blocks` (array of block names) |
+| `block` | Single block instance | `block` (block name) |
+
+### Field Options
+
+```javascript
+// Required field
+{ name: 'title', type: 'string', required: true }
+
+// With default value
+{ name: 'status', type: 'select', options: ['draft', 'published'], default: 'draft' }
+
+// Custom label (otherwise auto-generated from name)
+{ name: 'publishedAt', type: 'datetime', label: 'Publish date' }
+
+// Slug from another field
+{ name: 'slug', type: 'slug', from: 'title' }
+
+// Page builder with specific blocks
+{ name: 'content', type: 'blocks', blocks: ['heroBlock', 'textBlock', 'imageBlock'] }
+```
+
+### TypeScript Schemas (Development)
+
+When developing EggCMS itself, you can use TypeScript helpers in `src/schemas/`:
 
 ```typescript
 // src/schemas/post.ts
@@ -297,72 +406,11 @@ export default defineCollection({
     f.string('title', { required: true }),
     f.slug('slug', { from: 'title' }),
     f.richtext('content'),
-    f.image('featuredImage', { label: 'Featured image' }),
-    f.datetime('publishedAt', { label: 'Publish date' }),
-    f.boolean('featured'),
   ],
 })
 ```
 
-### Singletons
-
-Singletons are single records (e.g., site settings, homepage):
-
-```typescript
-// src/schemas/settings.ts
-import { defineSingleton, f } from '../lib/schema'
-
-export default defineSingleton({
-  name: 'settings',
-  label: 'Site Settings',
-  fields: [
-    f.string('siteTitle', { required: true, default: 'My Site' }),
-    f.string('tagline'),
-    f.image('logo'),
-    f.text('footerText', { label: 'Footer text' }),
-  ],
-})
-```
-
-### Register Schemas
-
-Export all schemas from `src/schemas/index.ts`:
-
-```typescript
-import type { SchemaDefinition } from '../lib/schema'
-import settings from './settings'
-import post from './post'
-
-const schemas: SchemaDefinition[] = [settings, post]
-
-export default schemas
-```
-
-### Field Types
-
-| Type | Description | Options |
-|------|-------------|---------|
-| `f.string(name)` | Single-line text | `required`, `default`, `placeholder`, `label` |
-| `f.text(name)` | Multi-line text | `required`, `default`, `placeholder`, `label` |
-| `f.richtext(name)` | Rich text editor (HTML) | `required`, `label` |
-| `f.number(name)` | Numeric input | `required`, `default`, `placeholder`, `label` |
-| `f.boolean(name)` | Toggle switch | `default`, `label` |
-| `f.datetime(name)` | Date and time picker | `required`, `default`, `label` |
-| `f.image(name)` | Image upload | `required`, `label` |
-| `f.slug(name)` | URL-friendly slug | `from` (required - source field), `label` |
-| `f.select(name)` | Dropdown select | `options` (required - string array), `required`, `label` |
-
-### Field Labels
-
-Fields support custom labels. If not provided, camelCase names are automatically converted to sentence case:
-
-```typescript
-// Custom label
-f.string('siteTitle', { label: 'Site title' })
-
-// Auto-converted: "publishedAt" -> "Published at"
-f.datetime('publishedAt')
-```
+Register schemas in `src/schemas/index.ts`. These are compiled into the Docker image.
 
 ## Schema Updates / Migrations
 
@@ -375,8 +423,8 @@ EggCMS automatically handles schema migrations on server startup:
 
 To update a schema:
 
-1. Edit the schema file in `src/schemas/`
-2. Restart the server (or let `--watch` restart it automatically in dev mode)
+1. Edit your `schemas.js` file
+2. Restart the container (`docker-compose restart cms`)
 3. Migrations run automatically
 
 You'll see output like:
