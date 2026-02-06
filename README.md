@@ -242,6 +242,7 @@ The CMS sends a POST request to the webhook URL when content is published or del
 | `JWT_SECRET` | Yes | Random 32+ character secret |
 | `PORT` | No | Server port (default: 3000) |
 | `PUBLIC_API` | No | Allow public read access (default: true) |
+| `PUBLIC_URL` | No | Base URL for media files (e.g., `https://cms.example.com`) |
 | `WEBHOOK_URL` | No | URL for content change notifications |
 | `SCHEMAS_PATH` | No | Custom path to schemas file (default: /app/schemas.js) |
 
@@ -263,6 +264,7 @@ All configuration is done via environment variables. Create a `.env` file in the
 |----------|---------|-------------|
 | `PORT` | `3000` | Server port |
 | `PUBLIC_API` | `true` | Allow unauthenticated read access to published content |
+| `PUBLIC_URL` | - | Base URL for media files (e.g., `https://cms.example.com`). When set, image paths in API responses become full URLs. |
 | `WEBHOOK_URL` | - | URL to POST webhook notifications |
 | `WEBHOOK_DEBOUNCE_MS` | `5000` | Debounce webhook calls (ms). Set to `0` to disable |
 

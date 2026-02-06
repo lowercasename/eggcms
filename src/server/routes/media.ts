@@ -4,15 +4,31 @@ import { Hono } from 'hono'
 import sharp from 'sharp'
 import { requireAuth } from '../middleware/auth'
 import { createStorage } from '../lib/storage'
+import { toPublicUrl } from '../lib/url'
 import { sqlite } from '../db'
 
 const media = new Hono()
 const storage = createStorage()
 
+interface MediaItem {
+  id: string
+  filename: string
+  path: string
+  mimetype: string
+  size: number
+  width: number | null
+  height: number | null
+  created_at: string
+}
+
+function withPublicUrl(item: MediaItem): MediaItem {
+  return { ...item, path: toPublicUrl(item.path) }
+}
+
 // GET /api/media - List all media
 media.get('/', (c) => {
-  const items = sqlite.prepare('SELECT * FROM _media ORDER BY created_at DESC').all()
-  return c.json({ data: items, meta: { total: items.length } })
+  const items = sqlite.prepare('SELECT * FROM _media ORDER BY created_at DESC').all() as MediaItem[]
+  return c.json({ data: items.map(withPublicUrl), meta: { total: items.length } })
 })
 
 // POST /api/media - Upload file
@@ -64,9 +80,9 @@ media.post('/', requireAuth, async (c) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, filename, filePath, file.type, file.size, width, height, now)
 
-  const item = sqlite.prepare('SELECT * FROM _media WHERE id = ?').get(id)
+  const item = sqlite.prepare('SELECT * FROM _media WHERE id = ?').get(id) as MediaItem
 
-  return c.json({ data: item }, 201)
+  return c.json({ data: withPublicUrl(item) }, 201)
 })
 
 // DELETE /api/media/:id - Delete file
