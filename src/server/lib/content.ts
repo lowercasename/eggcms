@@ -1,6 +1,7 @@
 // src/server/lib/content.ts
 import { randomUUID } from 'crypto'
 import { sqlite } from '../db'
+import { toPublicUrl, transformHtmlImageUrls } from './url'
 import type { SchemaDefinition, FieldDefinition } from '../../lib/schema'
 
 type SQLBindValue = string | number | boolean | null | bigint
@@ -28,6 +29,14 @@ function fromSqlValue(value: unknown, field: FieldDefinition): unknown {
   // Convert boolean fields from SQLite integer (0/1) to boolean
   if (field.type === 'boolean') {
     return Boolean(value)
+  }
+  // Apply PUBLIC_URL to image fields
+  if (field.type === 'image' && typeof value === 'string') {
+    return toPublicUrl(value)
+  }
+  // Transform image URLs in richtext HTML
+  if (field.type === 'richtext' && typeof value === 'string') {
+    return transformHtmlImageUrls(value)
   }
   return value
 }

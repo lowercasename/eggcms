@@ -1,5 +1,5 @@
 // src/server/lib/content.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { SchemaDefinition } from '../../lib/schema'
 
 // Mock the sqlite database
@@ -398,6 +398,171 @@ describe('content', () => {
 
       // Should return the raw string instead of crashing
       expect(result[0].blocks).toBe('not valid json')
+    })
+  })
+
+  describe('image field URL transformation', () => {
+    const schemaWithImage: SchemaDefinition = {
+      name: 'posts',
+      label: 'Posts',
+      type: 'collection',
+      fields: [
+        { name: 'title', type: 'string' },
+        { name: 'featuredImage', type: 'image' },
+      ],
+    }
+
+    const originalEnv = process.env.PUBLIC_URL
+
+    beforeEach(() => {
+      delete process.env.PUBLIC_URL
+    })
+
+    afterEach(() => {
+      if (originalEnv) {
+        process.env.PUBLIC_URL = originalEnv
+      } else {
+        delete process.env.PUBLIC_URL
+      }
+    })
+
+    it('returns image paths unchanged when PUBLIC_URL not set', () => {
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', featuredImage: '/uploads/image.jpg', draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithImage, true) as Array<Record<string, unknown>>
+
+      expect(result[0].featuredImage).toBe('/uploads/image.jpg')
+    })
+
+    it('prepends PUBLIC_URL to relative image paths', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', featuredImage: '/uploads/image.jpg', draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithImage, true) as Array<Record<string, unknown>>
+
+      expect(result[0].featuredImage).toBe('https://cms.example.com/uploads/image.jpg')
+    })
+
+    it('does not modify already-absolute image URLs', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', featuredImage: 'https://s3.amazonaws.com/bucket/image.jpg', draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithImage, true) as Array<Record<string, unknown>>
+
+      expect(result[0].featuredImage).toBe('https://s3.amazonaws.com/bucket/image.jpg')
+    })
+
+    it('handles null image values', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', featuredImage: null, draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithImage, true) as Array<Record<string, unknown>>
+
+      expect(result[0].featuredImage).toBeNull()
+    })
+  })
+
+  describe('richtext image URL transformation', () => {
+    const schemaWithRichtext: SchemaDefinition = {
+      name: 'posts',
+      label: 'Posts',
+      type: 'collection',
+      fields: [
+        { name: 'title', type: 'string' },
+        { name: 'content', type: 'richtext' },
+      ],
+    }
+
+    const originalEnv = process.env.PUBLIC_URL
+
+    beforeEach(() => {
+      delete process.env.PUBLIC_URL
+    })
+
+    afterEach(() => {
+      if (originalEnv) {
+        process.env.PUBLIC_URL = originalEnv
+      } else {
+        delete process.env.PUBLIC_URL
+      }
+    })
+
+    it('returns richtext unchanged when PUBLIC_URL not set', () => {
+      const html = '<p>Hello</p><img src="/uploads/image.jpg"><p>World</p>'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', content: html, draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithRichtext, true) as Array<Record<string, unknown>>
+
+      expect(result[0].content).toBe(html)
+    })
+
+    it('prepends PUBLIC_URL to image src in richtext', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      const html = '<p>Hello</p><img src="/uploads/image.jpg"><p>World</p>'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', content: html, draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithRichtext, true) as Array<Record<string, unknown>>
+
+      expect(result[0].content).toBe('<p>Hello</p><img src="https://cms.example.com/uploads/image.jpg"><p>World</p>')
+    })
+
+    it('handles multiple images in richtext', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      const html = '<img src="/uploads/a.jpg"><p>Text</p><img src="/uploads/b.png">'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', content: html, draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithRichtext, true) as Array<Record<string, unknown>>
+
+      expect(result[0].content).toBe('<img src="https://cms.example.com/uploads/a.jpg"><p>Text</p><img src="https://cms.example.com/uploads/b.png">')
+    })
+
+    it('does not modify already-absolute URLs in richtext', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      const html = '<img src="https://external.com/image.jpg">'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', content: html, draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithRichtext, true) as Array<Record<string, unknown>>
+
+      expect(result[0].content).toBe('<img src="https://external.com/image.jpg">')
+    })
+
+    it('handles images with other attributes', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      const html = '<img alt="Test" src="/uploads/image.jpg" width="100">'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', content: html, draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithRichtext, true) as Array<Record<string, unknown>>
+
+      expect(result[0].content).toBe('<img alt="Test" src="https://cms.example.com/uploads/image.jpg" width="100">')
+    })
+
+    it('handles null richtext values', () => {
+      process.env.PUBLIC_URL = 'https://cms.example.com'
+      mockAll.mockReturnValue([
+        { id: '1', title: 'Test', content: null, draft: 0, created_at: '', updated_at: '' },
+      ])
+
+      const result = listItems(schemaWithRichtext, true) as Array<Record<string, unknown>>
+
+      expect(result[0].content).toBeNull()
     })
   })
 
