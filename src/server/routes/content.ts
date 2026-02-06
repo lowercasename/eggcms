@@ -12,8 +12,8 @@ type Variables = {
 export function createContentRoutes(schemas: SchemaDefinition[]) {
   const app = new Hono<{ Variables: Variables }>()
 
-  // GET /api/content/_schemas - List all schemas (for admin UI)
-  app.get('/_schemas', requireAuth, (c) => {
+  // GET /api/content/schemas - List all schemas (public, for introspection)
+  app.get('/schemas', (c) => {
     const mapField = (f: typeof schemas[0]['fields'][0]): Record<string, unknown> => ({
       name: f.name,
       type: f.type,

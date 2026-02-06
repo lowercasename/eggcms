@@ -452,14 +452,15 @@ The database is stored at `data/eggcms.db` (SQLite).
 
 ## API Reference
 
-### Public Endpoints (when `PUBLIC_API=true`)
+### Public Endpoints
 
 ```
-GET /api/content/:schema          # List items or get singleton
-GET /api/content/:schema/:id      # Get single item
+GET /api/content/schemas          # List all schema definitions (always public)
+GET /api/content/:schema          # List items or get singleton (when PUBLIC_API=true)
+GET /api/content/:schema/:id      # Get single item (when PUBLIC_API=true)
 ```
 
-Draft items are never exposed to the public API.
+The `/schemas` endpoint is always public, allowing API introspection for building frontends. Content endpoints require `PUBLIC_API=true` (the default). Draft items are never exposed to the public API.
 
 ### Authenticated Endpoints
 

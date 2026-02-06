@@ -35,7 +35,7 @@ Collections support these options:
 **Important:** When adding new schema properties, you must update THREE places:
 1. `src/lib/schema.ts` - Add to `SchemaDefinition` interface
 2. `src/admin/types/index.ts` - Add to `Schema` interface
-3. `src/server/routes/content.ts` - Include in `/_schemas` API response mapping
+3. `src/server/routes/content.ts` - Include in `/schemas` API response mapping
 
 ## Adding New Field Types
 
@@ -51,7 +51,7 @@ To add a new field type (e.g., `f.myField()`), update these files:
 - Mirror any new `FieldDefinition` properties here
 
 ### 3. API Schema Mapping (`src/server/routes/content.ts`)
-- In the `mapField()` function inside `/_schemas` route, include any new field properties so they're sent to the admin UI
+- In the `mapField()` function inside `/schemas` route, include any new field properties so they're sent to the admin UI
 
 ### 4. Content Storage (`src/server/lib/content.ts`)
 - If the field stores JSON data (objects/arrays), add the type to `JSON_FIELD_TYPES` array

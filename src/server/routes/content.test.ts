@@ -87,23 +87,15 @@ describe('content routes', () => {
     }
   })
 
-  describe('GET /_schemas', () => {
-    it('returns schemas when authenticated', async () => {
-      const res = await app.request('/_schemas', {
-        headers: { Authorization: 'Bearer valid-token' },
-      })
+  describe('GET /schemas', () => {
+    it('returns schemas without authentication (public endpoint)', async () => {
+      const res = await app.request('/schemas')
 
       expect(res.status).toBe(200)
       const json = await res.json()
       expect(json.data).toHaveLength(2)
       expect(json.data[0].name).toBe('posts')
       expect(json.data[1].name).toBe('settings')
-    })
-
-    it('returns 401 when not authenticated', async () => {
-      const res = await app.request('/_schemas')
-
-      expect(res.status).toBe(401)
     })
 
     it('excludes block type schemas', async () => {
@@ -113,9 +105,7 @@ describe('content routes', () => {
       ]
       const appWithBlock = createContentRoutes(schemasWithBlock)
 
-      const res = await appWithBlock.request('/_schemas', {
-        headers: { Authorization: 'Bearer valid-token' },
-      })
+      const res = await appWithBlock.request('/schemas')
 
       const json = await res.json()
       expect(json.data).toHaveLength(2)
