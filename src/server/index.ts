@@ -7,6 +7,7 @@ import { runMigrations } from './lib/migrator'
 import { loadSchemas } from './lib/schemaLoader'
 import auth from './routes/auth'
 import { createContentRoutes } from './routes/content'
+import { createSchemasRoute } from './routes/schemas'
 import media from './routes/media'
 
 const app = new Hono()
@@ -35,6 +36,7 @@ async function initialize() {
   const schemas = await loadSchemas()
 
   // Add content routes with loaded schemas
+  app.route('/api', createSchemasRoute(schemas))
   app.route('/api/content', createContentRoutes(schemas))
   contentRoutesInitialized = true
 

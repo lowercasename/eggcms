@@ -87,32 +87,6 @@ describe('content routes', () => {
     }
   })
 
-  describe('GET /schemas', () => {
-    it('returns schemas without authentication (public endpoint)', async () => {
-      const res = await app.request('/schemas')
-
-      expect(res.status).toBe(200)
-      const json = await res.json()
-      expect(json.data).toHaveLength(2)
-      expect(json.data[0].name).toBe('posts')
-      expect(json.data[1].name).toBe('settings')
-    })
-
-    it('excludes block type schemas', async () => {
-      const schemasWithBlock: SchemaDefinition[] = [
-        ...testSchemas,
-        { name: 'imageBlock', label: 'Image Block', type: 'block', fields: [] },
-      ]
-      const appWithBlock = createContentRoutes(schemasWithBlock)
-
-      const res = await appWithBlock.request('/schemas')
-
-      const json = await res.json()
-      expect(json.data).toHaveLength(2)
-      expect(json.data.find((s: { name: string }) => s.name === 'imageBlock')).toBeUndefined()
-    })
-  })
-
   describe('GET /:schema (list)', () => {
     it('returns items for collection', async () => {
       const mockItems = [

@@ -42,7 +42,7 @@ export const api = {
 
   // Schemas
   getSchemas: () =>
-    request<{ data: Array<{ name: string; label: string; type: string; fields: Array<{ name: string; type: string; label?: string; required?: boolean; default?: unknown; placeholder?: string; options?: string[]; from?: string }> }> }>('/content/schemas'),
+    request<{ data: Array<{ name: string; label: string; type: string; fields: Array<{ name: string; type: string; label?: string; required?: boolean; default?: unknown; placeholder?: string; options?: string[]; from?: string }> }> }>('/schemas'),
 
   // Content
   getContent: <T>(schema: string, drafts = true) =>
