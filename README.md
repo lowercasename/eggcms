@@ -55,49 +55,40 @@ docker pull ghcr.io/lowercasename/eggcms:latest
 
 ### Deploying with a Static Site (Eleventy, Astro, etc.)
 
-Here's how to run EggCMS alongside your static site in a single Docker Compose setup:
+The typical production setup is:
+
+- **EggCMS** runs on a server (VPS, fly.io, Railway, etc.)
+- **Your static site** builds and deploys to Vercel, Netlify, or Cloudflare Pages
+- **Webhooks** trigger rebuilds when content changes
 
 ```yaml
-# docker-compose.yml
+# docker-compose.yml (for EggCMS on your server)
 services:
-  # Your static site (Eleventy example)
-  site:
-    build: .
-    ports:
-      - "8080:80"
-    depends_on:
-      - cms
-    environment:
-      - CMS_API_URL=http://cms:3000
-    # Optional: rebuild when CMS content changes via webhook
-
-  # EggCMS
   cms:
     image: ghcr.io/lowercasename/eggcms:latest
     ports:
       - "3333:3000"
     volumes:
-      - ./cms/data:/app/data           # SQLite database
-      - ./cms/uploads:/app/uploads     # Uploaded media files
-      - ./cms/schemas.js:/app/schemas.js  # Your custom schemas
+      - ./data:/app/data               # SQLite database
+      - ./uploads:/app/uploads         # Uploaded media files
+      - ./schemas.js:/app/schemas.js   # Your custom schemas
     environment:
       - ADMIN_EMAIL=admin@example.com
       - ADMIN_PASSWORD=your-secure-password
       - JWT_SECRET=your-random-32-char-secret-key
-      - WEBHOOK_URL=http://site:8080/rebuild  # Optional: trigger rebuilds
+      # Trigger Vercel rebuild when content is published:
+      - WEBHOOK_URL=https://api.vercel.com/v1/integrations/deploy/prj_xxxx/yyyy
+    restart: unless-stopped
 ```
 
 ### Directory Structure
 
 ```
-your-project/
+your-server/
 ├── docker-compose.yml
-├── cms/
-│   ├── schemas.js          # Your content schemas
-│   ├── data/               # Created automatically (SQLite DB)
-│   └── uploads/            # Created automatically (media files)
-├── src/                    # Your static site source
-└── Dockerfile              # Your static site build
+├── schemas.js              # Your content schemas
+├── data/                   # Created automatically (SQLite DB)
+└── uploads/                # Created automatically (media files)
 ```
 
 ### Custom Schemas
@@ -170,12 +161,15 @@ export default [
 
 ### Fetching Content in Your Static Site
 
+Use your CMS server's public URL (or set it via environment variable):
+
 **Eleventy (JavaScript):**
 
 ```javascript
 // _data/posts.js
 module.exports = async function() {
-  const response = await fetch('http://cms:3000/api/content/post');
+  const cmsUrl = process.env.CMS_URL || 'https://cms.yoursite.com';
+  const response = await fetch(`${cmsUrl}/api/content/post`);
   const { data } = await response.json();
   return data;
 };
@@ -185,7 +179,8 @@ module.exports = async function() {
 
 ```astro
 ---
-const response = await fetch('http://cms:3000/api/content/post');
+const cmsUrl = import.meta.env.CMS_URL || 'https://cms.yoursite.com';
+const response = await fetch(`${cmsUrl}/api/content/post`);
 const { data: posts } = await response.json();
 ---
 {posts.map(post => <article>{post.title}</article>)}
@@ -193,14 +188,42 @@ const { data: posts } = await response.json();
 
 ### Triggering Rebuilds
 
-Set `WEBHOOK_URL` to automatically rebuild your static site when content is published:
+EggCMS can notify external services when content is published or deleted, triggering a rebuild of your static site.
+
+**Vercel:**
+
+1. Go to your Vercel project → Settings → Git → Deploy Hooks
+2. Create a hook (e.g., "CMS Update") and copy the URL
+3. Set it as your webhook:
 
 ```yaml
 environment:
-  - WEBHOOK_URL=http://site:8080/webhook/rebuild
+  - WEBHOOK_URL=https://api.vercel.com/v1/integrations/deploy/prj_xxxx/yyyy
 ```
 
-The CMS will POST to this URL when content is published or deleted.
+**Netlify:**
+
+1. Go to Site settings → Build & deploy → Build hooks
+2. Create a hook and copy the URL
+3. Set it as your webhook:
+
+```yaml
+environment:
+  - WEBHOOK_URL=https://api.netlify.com/build_hooks/xxxxxxxxxxxx
+```
+
+**Cloudflare Pages:**
+
+1. Go to your Pages project → Settings → Builds & deployments → Deploy hooks
+2. Create a hook and copy the URL
+3. Set it as your webhook:
+
+```yaml
+environment:
+  - WEBHOOK_URL=https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/xxxx
+```
+
+The CMS sends a POST request to the webhook URL when content is published or deleted. Use `WEBHOOK_DEBOUNCE_MS` (default: 5000) to batch rapid changes.
 
 ### Volumes Reference
 
