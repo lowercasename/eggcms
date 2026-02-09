@@ -16,8 +16,8 @@ FROM oven/bun:1.3.8-alpine
 
 WORKDIR /app
 
-# Install runtime dependencies for sharp
-RUN apk add --no-cache vips
+# Install runtime dependencies for sharp and bash for WEBHOOK_COMMAND
+RUN apk add --no-cache vips bash
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
