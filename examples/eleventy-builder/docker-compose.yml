@@ -1,0 +1,38 @@
+services:
+  cms:
+    container_name: my-cms
+    image: ghcr.io/lowercasename/eggcms:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./schemas.js:/app/schemas.js
+    environment:
+      - ADMIN_EMAIL=admin@example.com
+      - ADMIN_PASSWORD=change-me
+      - JWT_SECRET=generate-a-random-32-char-string
+      - WEBHOOK_URL=http://builder:8080
+      - WEBHOOK_DEBOUNCE_MS=5000
+
+  builder:
+    container_name: my-builder
+    build: .
+    volumes:
+      - /path/to/your/eleventy-site:/app/site
+      - site-output:/app/site/_site
+
+  caddy:
+    container_name: my-caddy
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - site-output:/var/www/site:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+
+volumes:
+  site-output:
+  caddy-data:
