@@ -99,7 +99,7 @@ your-server/
 
 Create a schemas file to define your content types. Both YAML and JavaScript formats are supported.
 
-**YAML** (recommended for Docker deployments):
+**YAML**:
 
 ```yaml
 # cms/schemas.yaml
