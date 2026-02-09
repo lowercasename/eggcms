@@ -57,7 +57,7 @@ let commandPending = false
 let pendingResolvers: Array<() => void> = []
 
 let spawnProcess: SpawnFn = async (command: string, cwd: string) => {
-  const proc = Bun.spawn(['/bin/bash', '-c', command], {
+  const proc = Bun.spawn(['/bin/sh', '-c', command], {
     cwd,
     stdout: 'pipe',
     stderr: 'pipe',
