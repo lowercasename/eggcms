@@ -55,7 +55,10 @@ export default function RichtextEditor({ value, onChange }: Props) {
   const currentContentRef = linkAttrs.contentRef;
 
   return (
-    <div className="border border-[#E8E8E3] rounded-lg bg-white max-h-[70vh] flex flex-col">
+    <div
+      className="border border-[#E8E8E3] rounded-lg bg-white max-h-[70vh] flex flex-col transition-all duration-200 hover:border-[#DDDDD8] focus-within:border-[#E5644E] focus-within:ring-2 focus-within:ring-[#E5644E]/10"
+      onClick={() => editor.commands.focus()}
+    >
       {/* Toolbar */}
       <div className="flex gap-1 px-3 py-2 border-b border-[#E8E8E3] bg-[#FAFAF8] flex-wrap rounded-t-lg sticky top-0 z-10">
         <ToolbarButton
@@ -151,7 +154,7 @@ export default function RichtextEditor({ value, onChange }: Props) {
       <div className="flex-1 overflow-y-auto">
         <EditorContent
           editor={editor}
-          className="richtext-editor prose prose-sm max-w-none p-4 min-h-50 focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-42"
+          className="richtext-editor prose prose-sm max-w-none p-4 min-h-50 [&_.ProseMirror]:outline-none [&_.ProseMirror]:shadow-none [&_.ProseMirror:focus-visible]:shadow-none [&_.ProseMirror]:min-h-42"
         />
       </div>
 
