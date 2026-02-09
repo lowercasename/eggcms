@@ -49,6 +49,36 @@ describe('SlugEditor', () => {
     expect(onChange).toHaveBeenCalledWith('kabo')
   })
 
+  it('transliterates Cyrillic to Latin', async () => {
+    const onChange = vi.fn()
+    render(
+      <SlugEditor
+        field={{ name: 'slug', type: 'slug', from: 'title' }}
+        value=""
+        onChange={onChange}
+        formData={{ title: 'Привет мир' }}
+      />
+    )
+
+    await userEvent.click(screen.getByText('Generate'))
+    expect(onChange).toHaveBeenCalledWith('privet-mir')
+  })
+
+  it('transliterates Cyrillic from multiple fields', async () => {
+    const onChange = vi.fn()
+    render(
+      <SlugEditor
+        field={{ name: 'slug', type: 'slug', from: ['lastName', 'firstName'] }}
+        value=""
+        onChange={onChange}
+        formData={{ lastName: 'Кабо', firstName: 'Рафаэль' }}
+      />
+    )
+
+    await userEvent.click(screen.getByText('Generate'))
+    expect(onChange).toHaveBeenCalledWith('kabo-rafael')
+  })
+
   it('shows generate button when from is an array', () => {
     render(
       <SlugEditor

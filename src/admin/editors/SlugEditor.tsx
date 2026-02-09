@@ -1,21 +1,13 @@
 // src/admin/editors/SlugEditor.tsx
 import type { FieldDefinition } from '../types'
 import { Input, Button } from '../components/ui'
+import { slugify } from 'transliteration'
 
 interface Props {
   field: FieldDefinition
   value: unknown
   onChange: (v: unknown) => void
   formData?: Record<string, unknown>  // To access the source field
-}
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
 }
 
 export default function SlugEditor({ field, value, onChange, formData }: Props) {
