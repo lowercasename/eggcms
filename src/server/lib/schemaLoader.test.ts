@@ -1,6 +1,6 @@
 // src/server/lib/schemaLoader.test.ts
-import { describe, it, expect } from 'vitest'
-import { validateSchemas, resolveBlockReferences } from './schemaLoader'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { validateSchemas, resolveBlockReferences, parseYamlSchemas } from './schemaLoader'
 import type { SchemaDefinition } from '../../lib/schema'
 
 describe('schemaLoader', () => {
@@ -277,6 +277,140 @@ describe('schemaLoader', () => {
       const pageSchema = result.find(s => s.name === 'page')!
       const blocksField = pageSchema.fields.find(f => f.name === 'blocks')!
       expect(blocksField.blocks).toEqual([heroBlock, textBlock])
+    })
+  })
+
+  describe('parseYamlSchemas', () => {
+    it('parses a simple YAML schema', () => {
+      const yaml = `
+- name: post
+  label: Blog Posts
+  type: collection
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: content
+      type: richtext
+`
+      const result = parseYamlSchemas(yaml)
+
+      expect(result).toEqual([
+        {
+          name: 'post',
+          label: 'Blog Posts',
+          type: 'collection',
+          fields: [
+            { name: 'title', type: 'string', required: true },
+            { name: 'content', type: 'richtext' },
+          ],
+        },
+      ])
+    })
+
+    it('parses multiple schemas including blocks', () => {
+      const yaml = `
+- name: settings
+  label: Site Settings
+  type: singleton
+  fields:
+    - name: siteName
+      type: string
+      required: true
+
+- name: post
+  label: Blog Posts
+  type: collection
+  fields:
+    - name: title
+      type: string
+      required: true
+
+- name: heroBlock
+  label: Hero
+  type: block
+  fields:
+    - name: heading
+      type: string
+      required: true
+`
+      const result = parseYamlSchemas(yaml)
+
+      expect(result).toHaveLength(3)
+      expect(result[0].type).toBe('singleton')
+      expect(result[1].type).toBe('collection')
+      expect(result[2].type).toBe('block')
+    })
+
+    it('parses blocks field references as string arrays', () => {
+      const yaml = `
+- name: page
+  label: Pages
+  type: collection
+  fields:
+    - name: blocks
+      type: blocks
+      blocks:
+        - heroBlock
+        - textBlock
+`
+      const result = parseYamlSchemas(yaml)
+
+      const blocksField = result[0].fields[0]
+      expect(blocksField.blocks).toEqual(['heroBlock', 'textBlock'])
+    })
+
+    it('parses schema with labelField', () => {
+      const yaml = `
+- name: person
+  label: Team
+  type: collection
+  labelField: name
+  fields:
+    - name: name
+      type: string
+      required: true
+`
+      const result = parseYamlSchemas(yaml)
+
+      expect(result[0].labelField).toBe('name')
+    })
+
+    it('parses select field with options', () => {
+      const yaml = `
+- name: post
+  label: Posts
+  type: collection
+  fields:
+    - name: status
+      type: select
+      options:
+        - draft
+        - published
+        - archived
+      default: draft
+`
+      const result = parseYamlSchemas(yaml)
+
+      const field = result[0].fields[0]
+      expect(field.options).toEqual(['draft', 'published', 'archived'])
+      expect(field.default).toBe('draft')
+    })
+
+    it('throws on invalid YAML', () => {
+      const yaml = `
+- name: post
+  label: [invalid
+`
+      expect(() => parseYamlSchemas(yaml)).toThrow()
+    })
+
+    it('throws when YAML does not contain an array', () => {
+      const yaml = `
+name: post
+label: Blog Posts
+`
+      expect(() => parseYamlSchemas(yaml)).toThrow(/must be a YAML array/)
     })
   })
 })

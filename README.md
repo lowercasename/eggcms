@@ -2,6 +2,10 @@
 
 A lightweight, schema-driven headless CMS built with Bun, Hono, and React. Designed to deploy alongside static site generators.
 
+EggCMS is named in honour of [Eggbug](https://bumblebee.city/blog/eggbugs-obituary-goodbye-cohost.html). _Vale_, comrade. Your service will never be forgotten.
+
+EggCMS is largely coded by Claude Code, with a lot of very stern direction from me. I am very happy to hear about (egg)bugs and issues, and will always use my human brain to consider them first rather than just handing them over to an LLM.
+
 ## Quick Start
 
 ```bash
@@ -71,7 +75,7 @@ services:
     volumes:
       - ./data:/app/data               # SQLite database
       - ./uploads:/app/uploads         # Uploaded media files
-      - ./schemas.js:/app/schemas.js   # Your custom schemas
+      - ./schemas.yaml:/app/schemas.yaml # Your custom schemas
     environment:
       - ADMIN_EMAIL=admin@example.com
       - ADMIN_PASSWORD=your-secure-password
@@ -86,74 +90,90 @@ services:
 ```
 your-server/
 ├── docker-compose.yml
-├── schemas.js              # Your content schemas
+├── schemas.yaml            # Your content schemas (or schemas.js)
 ├── data/                   # Created automatically (SQLite DB)
 └── uploads/                # Created automatically (media files)
 ```
 
 ### Custom Schemas
 
-Create a `cms/schemas.js` file to define your content types:
+Create a schemas file to define your content types. Both YAML and JavaScript formats are supported.
+
+**YAML** (recommended for Docker deployments):
+
+```yaml
+# cms/schemas.yaml
+- name: settings
+  label: Site Settings
+  type: singleton
+  fields:
+    - name: siteTitle
+      type: string
+      required: true
+    - name: tagline
+      type: string
+    - name: logo
+      type: image
+
+- name: post
+  label: Blog Posts
+  type: collection
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: slug
+      type: slug
+      from: title
+    - name: content
+      type: richtext
+    - name: featuredImage
+      type: image
+
+- name: page
+  label: Pages
+  type: collection
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: blocks
+      type: blocks
+      blocks:
+        - heroBlock
+        - textBlock
+
+- name: heroBlock
+  label: Hero Section
+  type: block
+  fields:
+    - name: heading
+      type: string
+      required: true
+    - name: subheading
+      type: string
+
+- name: textBlock
+  label: Text Content
+  type: block
+  fields:
+    - name: content
+      type: richtext
+      required: true
+```
+
+**JavaScript** (also supported):
 
 ```javascript
 // cms/schemas.js
 export default [
-  // Singleton for site-wide settings
-  {
-    name: 'settings',
-    label: 'Site Settings',
-    type: 'singleton',
-    fields: [
-      { name: 'siteTitle', type: 'string', required: true },
-      { name: 'tagline', type: 'string' },
-      { name: 'logo', type: 'image' },
-    ],
-  },
-
-  // Collection for blog posts
   {
     name: 'post',
     label: 'Blog Posts',
     type: 'collection',
     fields: [
       { name: 'title', type: 'string', required: true },
-      { name: 'slug', type: 'slug', from: 'title' },
       { name: 'content', type: 'richtext' },
-      { name: 'featuredImage', type: 'image' },
-      { name: 'publishedAt', type: 'datetime' },
-    ],
-  },
-
-  // Collection with page builder blocks
-  {
-    name: 'page',
-    label: 'Pages',
-    type: 'collection',
-    fields: [
-      { name: 'title', type: 'string', required: true },
-      { name: 'slug', type: 'slug', from: 'title' },
-      { name: 'blocks', type: 'blocks', blocks: ['heroBlock', 'textBlock'] },
-    ],
-  },
-
-  // Block definitions (referenced by name above)
-  {
-    name: 'heroBlock',
-    label: 'Hero Section',
-    type: 'block',
-    fields: [
-      { name: 'heading', type: 'string', required: true },
-      { name: 'subheading', type: 'string' },
-      { name: 'backgroundImage', type: 'image' },
-    ],
-  },
-
-  {
-    name: 'textBlock',
-    label: 'Text Content',
-    type: 'block',
-    fields: [
-      { name: 'content', type: 'richtext', required: true },
     ],
   },
 ]
@@ -257,7 +277,7 @@ example.com {
 |--------|---------|----------|
 | `/app/data` | SQLite database storage | Yes |
 | `/app/uploads` | Uploaded media files | Yes |
-| `/app/schemas.js` | Custom schema definitions | Yes (for custom schemas) |
+| `/app/schemas.yaml` | Custom schema definitions (also supports `.yml` or `.js`) | Yes (for custom schemas) |
 
 ### Environment Variables
 
@@ -270,7 +290,7 @@ example.com {
 | `PUBLIC_API` | No | Allow public read access (default: true) |
 | `PUBLIC_URL` | No | Base URL for media files (e.g., `https://cms.example.com`) |
 | `WEBHOOK_URL` | No | URL for content change notifications |
-| `SCHEMAS_PATH` | No | Custom path to schemas file (default: /app/schemas.js) |
+| `SCHEMAS_PATH` | No | Custom path to schemas file (default: `/app/schemas.yaml`, `.yml`, or `.js`) |
 
 ## Configuration
 
@@ -308,73 +328,86 @@ By default, files are stored locally in the `uploads/` directory.
 
 ## Defining Schemas
 
-Schemas define your content types. For Docker deployments, create a `schemas.js` file:
+Schemas define your content types. For Docker deployments, create a `schemas.yaml` file (or `schemas.js` — both formats are supported):
 
-```javascript
-// schemas.js
-export default [
-  // Singleton: single record (e.g., site settings)
-  {
-    name: 'settings',
-    label: 'Site Settings',
-    type: 'singleton',
-    fields: [
-      { name: 'siteTitle', type: 'string', required: true, default: 'My Site' },
-      { name: 'tagline', type: 'string' },
-      { name: 'logo', type: 'image' },
-    ],
-  },
+```yaml
+# schemas.yaml
+# Singleton: single record (e.g., site settings)
+- name: settings
+  label: Site Settings
+  type: singleton
+  fields:
+    - name: siteTitle
+      type: string
+      required: true
+      default: My Site
+    - name: tagline
+      type: string
+    - name: logo
+      type: image
 
-  // Collection: list of items (e.g., blog posts)
-  {
-    name: 'post',
-    label: 'Blog Posts',
-    type: 'collection',
-    fields: [
-      { name: 'title', type: 'string', required: true },
-      { name: 'slug', type: 'slug', from: 'title' },
-      { name: 'content', type: 'richtext' },
-      { name: 'featuredImage', type: 'image', label: 'Featured image' },
-      { name: 'publishedAt', type: 'datetime', label: 'Publish date' },
-      { name: 'featured', type: 'boolean' },
-    ],
-  },
+# Collection: list of items (e.g., blog posts)
+- name: post
+  label: Blog Posts
+  type: collection
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: slug
+      type: slug
+      from: title
+    - name: content
+      type: richtext
+    - name: featuredImage
+      type: image
+      label: Featured image
+    - name: publishedAt
+      type: datetime
+      label: Publish date
+    - name: featured
+      type: boolean
 
-  // Collection with page builder blocks
-  {
-    name: 'page',
-    label: 'Pages',
-    type: 'collection',
-    fields: [
-      { name: 'title', type: 'string', required: true },
-      { name: 'slug', type: 'slug', from: 'title' },
-      { name: 'blocks', type: 'blocks', blocks: ['heroBlock', 'textBlock'] },
-    ],
-  },
+# Collection with page builder blocks
+- name: page
+  label: Pages
+  type: collection
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: slug
+      type: slug
+      from: title
+    - name: blocks
+      type: blocks
+      blocks:
+        - heroBlock
+        - textBlock
 
-  // Block: reusable field group (referenced by name in blocks fields)
-  {
-    name: 'heroBlock',
-    label: 'Hero Section',
-    type: 'block',
-    fields: [
-      { name: 'heading', type: 'string', required: true },
-      { name: 'backgroundImage', type: 'image' },
-    ],
-  },
+# Block: reusable field group (referenced by name above)
+- name: heroBlock
+  label: Hero Section
+  type: block
+  fields:
+    - name: heading
+      type: string
+      required: true
+    - name: backgroundImage
+      type: image
 
-  {
-    name: 'textBlock',
-    label: 'Text Content',
-    type: 'block',
-    fields: [
-      { name: 'content', type: 'richtext', required: true },
-    ],
-  },
-]
+- name: textBlock
+  label: Text Content
+  type: block
+  fields:
+    - name: content
+      type: richtext
+      required: true
 ```
 
-Mount it in Docker: `-v ./schemas.js:/app/schemas.js`
+Mount it in Docker: `-v ./schemas.yaml:/app/schemas.yaml`
+
+The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Use `SCHEMAS_PATH` to specify a custom path.
 
 ### Schema Types
 
@@ -451,7 +484,7 @@ EggCMS automatically handles schema migrations on server startup:
 
 To update a schema:
 
-1. Edit your `schemas.js` file
+1. Edit your schemas file
 2. Restart the container (`docker-compose restart cms`)
 3. Migrations run automatically
 

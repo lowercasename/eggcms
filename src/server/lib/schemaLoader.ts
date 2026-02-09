@@ -1,10 +1,15 @@
 // src/server/lib/schemaLoader.ts
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
+import { parse as parseYaml } from 'yaml'
 import type { SchemaDefinition } from '../../lib/schema'
 import compiledSchemas from '../../schemas'
 
 const VALID_SCHEMA_TYPES = ['collection', 'singleton', 'block']
-const DEFAULT_SCHEMAS_PATH = '/app/schemas.js'
+const YAML_EXTENSIONS = ['.yaml', '.yml']
+
+function isYamlFile(path: string): boolean {
+  return YAML_EXTENSIONS.some(ext => path.endsWith(ext))
+}
 
 function validateSchema(schema: unknown, index: number): schema is SchemaDefinition {
   if (!schema || typeof schema !== 'object') {
@@ -50,6 +55,14 @@ export function validateSchemas(schemas: unknown): SchemaDefinition[] {
   return schemas as SchemaDefinition[]
 }
 
+export function parseYamlSchemas(content: string): SchemaDefinition[] {
+  const parsed = parseYaml(content)
+  if (!Array.isArray(parsed)) {
+    throw new Error('Schemas file must be a YAML array')
+  }
+  return parsed
+}
+
 // Resolve block references from string names to actual block definitions
 export function resolveBlockReferences(schemas: SchemaDefinition[]): SchemaDefinition[] {
   // Build a map of block definitions by name
@@ -91,16 +104,41 @@ export function resolveBlockReferences(schemas: SchemaDefinition[]): SchemaDefin
   return schemas
 }
 
-export async function loadSchemas(): Promise<SchemaDefinition[]> {
-  const schemasPath = process.env.SCHEMAS_PATH || DEFAULT_SCHEMAS_PATH
+// Find the schemas file, checking multiple extensions
+function findSchemasFile(): string | null {
+  const schemasPath = process.env.SCHEMAS_PATH
 
-  if (!existsSync(schemasPath)) {
+  // If explicit path is set, use it directly
+  if (schemasPath) {
+    return existsSync(schemasPath) ? schemasPath : null
+  }
+
+  // Try default paths in order: yaml, yml, js
+  for (const ext of ['.yaml', '.yml', '.js']) {
+    const path = `/app/schemas${ext}`
+    if (existsSync(path)) return path
+  }
+
+  return null
+}
+
+export async function loadSchemas(): Promise<SchemaDefinition[]> {
+  const schemasPath = findSchemasFile()
+
+  if (!schemasPath) {
     return compiledSchemas
   }
 
   try {
-    const externalModule = await import(schemasPath)
-    const schemas = externalModule.default
+    let schemas: unknown
+
+    if (isYamlFile(schemasPath)) {
+      const content = readFileSync(schemasPath, 'utf-8')
+      schemas = parseYamlSchemas(content)
+    } else {
+      const externalModule = await import(schemasPath)
+      schemas = externalModule.default
+    }
 
     const validated = validateSchemas(schemas)
     return resolveBlockReferences(validated)

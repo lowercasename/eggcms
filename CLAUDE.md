@@ -131,32 +131,32 @@ The conversion happens in `src/server/lib/content.ts` in `deserializeRow()`.
 
 ## Custom Schemas in Docker
 
-For Docker deployments, you can provide custom schemas via a JavaScript file instead of rebuilding the image.
+For Docker deployments, provide custom schemas via YAML or JavaScript instead of rebuilding the image.
 
-**1. Create a `schemas.js` file** (see `schemas.example.js` for reference):
+**1. Create a `schemas.yaml` file** (see `schemas.example.yaml` for reference):
 
-```javascript
-export default [
-  {
-    name: 'post',
-    label: 'Blog Posts',
-    type: 'collection',
-    fields: [
-      { name: 'title', type: 'string', required: true },
-      { name: 'content', type: 'richtext' },
-    ],
-  },
-]
+```yaml
+- name: post
+  label: Blog Posts
+  type: collection
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: content
+      type: richtext
 ```
+
+JavaScript (`schemas.js` with `export default [...]`) is also supported.
 
 **2. Mount it in docker-compose.yml:**
 
 ```yaml
 volumes:
-  - ./schemas.js:/app/schemas.js
+  - ./schemas.yaml:/app/schemas.yaml
 ```
 
-**Environment variable:** Set `SCHEMAS_PATH` to use a different file path.
+**File detection:** The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Set `SCHEMAS_PATH` to use a custom path.
 
 **Fallback:** If no external file is found, the built-in compiled schemas are used.
 
