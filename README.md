@@ -225,6 +225,18 @@ environment:
 
 The CMS sends a POST request to the webhook URL when content is published or deleted. Use `WEBHOOK_DEBOUNCE_MS` (default: 5000) to batch rapid changes.
 
+#### Build Command
+
+Instead of (or in addition to) an HTTP webhook, you can run a shell command directly when content changes. This is useful for triggering static site builds on the same server:
+
+```yaml
+environment:
+  - WEBHOOK_COMMAND=npx @11ty/eleventy
+  - WEBHOOK_COMMAND_CWD=/var/www/my-site
+```
+
+The command shares the same debounce as HTTP webhooks. If a build is already running, additional triggers queue one more build (not multiple), ensuring the latest content is always built without pile-up.
+
 ### Volumes Reference
 
 | Volume | Purpose | Required |
@@ -244,6 +256,8 @@ The CMS sends a POST request to the webhook URL when content is published or del
 | `PUBLIC_API` | No | Allow public read access (default: true) |
 | `PUBLIC_URL` | No | Base URL for media files (e.g., `https://cms.example.com`) |
 | `WEBHOOK_URL` | No | URL for content change notifications |
+| `WEBHOOK_COMMAND` | No | Shell command to run on content changes (e.g., `npx @11ty/eleventy`) |
+| `WEBHOOK_COMMAND_CWD` | No | Working directory for the command (default: server cwd) |
 | `SCHEMAS_PATH` | No | Custom path to schemas file (default: /app/schemas.js) |
 
 ## Configuration
@@ -266,6 +280,8 @@ All configuration is done via environment variables. Create a `.env` file in the
 | `PUBLIC_API` | `true` | Allow unauthenticated read access to published content |
 | `PUBLIC_URL` | - | Base URL for media files (e.g., `https://cms.example.com`). When set, image paths in API responses become full URLs. |
 | `WEBHOOK_URL` | - | URL to POST webhook notifications |
+| `WEBHOOK_COMMAND` | - | Shell command to run on content changes |
+| `WEBHOOK_COMMAND_CWD` | - | Working directory for the command (default: server cwd) |
 | `WEBHOOK_DEBOUNCE_MS` | `5000` | Debounce webhook calls (ms). Set to `0` to disable |
 
 ### Storage Settings
@@ -520,6 +536,17 @@ Events:
 - `content.deleted` - Published content deleted
 
 Draft saves do not trigger webhooks. Use `WEBHOOK_DEBOUNCE_MS` to batch rapid changes.
+
+### Build Command
+
+Set `WEBHOOK_COMMAND` to run a shell command when content changes, instead of or in addition to sending an HTTP webhook. Useful for triggering static site builds on the same server:
+
+```bash
+WEBHOOK_COMMAND="npx @11ty/eleventy"
+WEBHOOK_COMMAND_CWD="/var/www/my-site"
+```
+
+Commands are queued so only one runs at a time. If content changes arrive while a build is running, one additional build is queued (further triggers are collapsed). Both `WEBHOOK_URL` and `WEBHOOK_COMMAND` can be used together.
 
 ## Project Structure
 

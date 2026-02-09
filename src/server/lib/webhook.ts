@@ -11,7 +11,8 @@ export interface WebhookPayload {
 
 export async function fireWebhook(payload: WebhookPayload): Promise<void> {
   const url = process.env.WEBHOOK_URL
-  if (!url) return
+  const command = process.env.WEBHOOK_COMMAND
+  if (!url && !command) return
 
   const debounceMs = parseInt(process.env.WEBHOOK_DEBOUNCE_MS || '0')
 
@@ -19,9 +20,13 @@ export async function fireWebhook(payload: WebhookPayload): Promise<void> {
     if (debounceTimer) {
       clearTimeout(debounceTimer)
     }
-    debounceTimer = setTimeout(() => sendWebhook(url, payload), debounceMs)
+    debounceTimer = setTimeout(() => {
+      if (url) sendWebhook(url, payload)
+      if (command) runCommand()
+    }, debounceMs)
   } else {
-    await sendWebhook(url, payload)
+    if (url) await sendWebhook(url, payload)
+    if (command) await runCommand()
   }
 }
 
@@ -40,6 +45,73 @@ async function sendWebhook(url: string, payload: WebhookPayload): Promise<void> 
     }
   } catch (error) {
     console.error('Webhook error:', error)
+  }
+}
+
+// Command execution with queuing
+type SpawnResult = { exitCode: number; stdout: string; stderr: string }
+type SpawnFn = (command: string, cwd: string) => Promise<SpawnResult>
+
+let commandRunning = false
+let commandPending = false
+let pendingResolvers: Array<() => void> = []
+
+let spawnProcess: SpawnFn = async (command: string, cwd: string) => {
+  const proc = Bun.spawn(['sh', '-c', command], {
+    cwd,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  const exitCode = await proc.exited
+  const stdout = await new Response(proc.stdout).text()
+  const stderr = await new Response(proc.stderr).text()
+  return { exitCode, stdout, stderr }
+}
+
+export function setSpawnProcess(fn: SpawnFn): void {
+  spawnProcess = fn
+}
+
+export async function runCommand(): Promise<void> {
+  const command = process.env.WEBHOOK_COMMAND
+  if (!command) return
+
+  // If already running, queue one pending build
+  if (commandRunning) {
+    commandPending = true
+    return new Promise<void>(resolve => {
+      pendingResolvers.push(resolve)
+    })
+  }
+
+  commandRunning = true
+  const cwd = process.env.WEBHOOK_COMMAND_CWD || process.cwd()
+
+  try {
+    console.log(`[build] Starting: ${command}`)
+    const result = await spawnProcess(command, cwd)
+    if (result.exitCode !== 0) {
+      console.error(`[build] Process exited with code ${result.exitCode}`)
+      if (result.stderr) {
+        console.error(`[build] stderr: ${result.stderr}`)
+      }
+    } else {
+      console.log(`[build] Process exited with code 0`)
+    }
+  } catch (error) {
+    console.error('[build] Failed to start process:', error)
+  } finally {
+    commandRunning = false
+
+    // If a build was queued, start it
+    if (commandPending) {
+      commandPending = false
+      const resolvers = pendingResolvers
+      pendingResolvers = []
+      runCommand().then(() => {
+        resolvers.forEach(r => r())
+      })
+    }
   }
 }
 
