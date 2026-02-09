@@ -17,7 +17,17 @@ interface Item {
 interface ItemListProps {
   items: Item[]
   schemaName: string
-  labelField?: string
+  labelField?: string | string[]
+}
+
+function getItemLabel(item: Item, labelField: string | string[]): string {
+  if (Array.isArray(labelField)) {
+    const parts = labelField
+      .map(f => (item as Record<string, unknown>)[f])
+      .filter((v): v is string => typeof v === 'string' && v.length > 0)
+    return parts.join(' ') || 'Untitled'
+  }
+  return (item as Record<string, unknown>)[labelField] as string || 'Untitled'
 }
 
 export default function ItemList({ items, schemaName, labelField = 'title' }: ItemListProps) {
@@ -53,7 +63,7 @@ export default function ItemList({ items, schemaName, labelField = 'title' }: It
         {items.map((item) => {
           const href = `/collections/${schemaName}/${item.id}`
           const isActive = location === href
-          const label = (item as Record<string, unknown>)[labelField] as string || 'Untitled'
+          const label = getItemLabel(item, labelField)
 
           return (
             <NavLink

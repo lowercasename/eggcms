@@ -6,6 +6,15 @@ import ItemList from '../components/ItemList'
 import ItemEdit from './ItemEdit'
 import { useSchemas } from '../App'
 import { AlertCircle, Loader2, Search } from 'lucide-react'
+import type { Schema } from '../types'
+
+// Resolve label field: explicit labelField > slug's from fields > 'title'
+export function resolveLabelField(schema: Schema): string | string[] {
+  if (schema.labelField) return schema.labelField
+  const slugField = schema.fields.find(f => f.type === 'slug' && f.from)
+  if (slugField?.from) return slugField.from
+  return 'title'
+}
 
 export default function Collection() {
   const params = useParams<{ schema: string; id?: string }>()
@@ -46,8 +55,7 @@ export default function Collection() {
     )
   }
 
-  // Use schema's labelField or default to 'title'
-  const labelField = schema.labelField || 'title'
+  const labelField = resolveLabelField(schema)
 
   return (
     <div className="flex h-screen bg-[#FAFAF8]">
