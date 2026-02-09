@@ -350,6 +350,42 @@ describe("ItemEdit", () => {
       expect(screen.getByText("Published")).toBeInTheDocument();
     });
 
+    it("clears Unsaved badge after saving", async () => {
+      mockApi.getItem.mockResolvedValue({
+        data: { id: "123", title: "Test Post", _meta: { draft: true, updatedAt: "2026-01-01T00:00:00Z" } },
+      });
+      mockApi.updateItem.mockResolvedValue({
+        data: { id: "123", title: "Modified Title", _meta: { draft: true, updatedAt: "2026-01-02T00:00:00Z" } },
+      });
+
+      const user = userEvent.setup();
+
+      renderWithProvider(
+        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+      });
+
+      // Make a change
+      const input = screen.getByTestId("string-editor");
+      await user.clear(input);
+      await user.type(input, "Modified Title");
+
+      // Should show Unsaved
+      expect(screen.getByText("Unsaved")).toBeInTheDocument();
+
+      // Save
+      await user.click(screen.getByRole("button", { name: "Save Draft" }));
+
+      // Should clear Unsaved and show Draft badge
+      await waitFor(() => {
+        expect(screen.queryByText("Unsaved")).not.toBeInTheDocument();
+        expect(screen.getByText("Draft")).toBeInTheDocument();
+      });
+    });
+
     it("shows Unsaved badge when image field changes", async () => {
       const schemaWithImage: Schema = {
         name: "posts",

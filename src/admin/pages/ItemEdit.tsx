@@ -1,5 +1,5 @@
 // src/admin/pages/ItemEdit.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLocation } from 'wouter'
 import { api } from '../lib/api'
 import type { Schema, FieldDefinition } from '../types'
@@ -50,8 +50,12 @@ export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps)
 
   const isNew = itemId === 'new'
 
-  // Track dirty state to warn before navigation with unsaved changes
-  const { isDirty, markClean } = useDirtyState(data, loading, itemId)
+  // Only track user-editable fields for dirty state (exclude server metadata)
+  const editableData = useMemo(() => {
+    const { _meta, ...fields } = data
+    return fields
+  }, [data])
+  const { isDirty, markClean } = useDirtyState(editableData, loading, itemId)
   const { setDirty } = useDirtyStateContext()
 
   // Sync dirty state with global context for navigation guards
@@ -101,7 +105,7 @@ export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps)
         navigate(`/collections/${schema.name}/${newItem.id}`, { replace: true })
       } else {
         const result = await api.updateItem(schema.name, itemId, saveData)
-        setData(result.data as Record<string, unknown>) // Use API response with correct _meta structure
+        setData(result.data as Record<string, unknown>)
         markClean()
         refreshList()
       }

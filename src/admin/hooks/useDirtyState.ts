@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 export function useDirtyState<T>(
   currentData: T,
   isLoading: boolean,
-  resetKey?: string
+  resetKey?: string,
 ): {
   isDirty: boolean;
   markClean: () => void;
@@ -51,7 +51,7 @@ export function useDirtyState<T>(
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      // Modern browsers require returnValue to be set
+      // Older browsers require returnValue to be set
       e.returnValue = "";
       return "";
     };
@@ -73,7 +73,7 @@ export function useDirtyState<T>(
  */
 export function useNavigationGuard(
   isDirty: boolean,
-  message = "You have unsaved changes. Are you sure you want to leave?"
+  message = "You have unsaved changes. Are you sure you want to leave?",
 ): () => boolean {
   return useCallback(() => {
     if (isDirty) {
