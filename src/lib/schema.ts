@@ -65,7 +65,7 @@ export interface FieldDefinition {
   default?: unknown
   placeholder?: string
   options?: string[]
-  from?: string
+  from?: string | string[]
   blocks?: BlockDefinition[]
   block?: BlockDefinition  // For single block field
 }
@@ -124,7 +124,7 @@ export const f = {
   boolean: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'boolean', ...opts }),
   datetime: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'datetime', ...opts }),
   image: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'image', ...opts }),
-  slug: (name: string, opts: { from: string } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'slug', ...opts }),
+  slug: (name: string, opts: { from: string | string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'slug', ...opts }),
   select: (name: string, opts: { options: string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'select', ...opts }),
   blocks: (name: string, opts: { blocks: BlockDefinition[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'blocks', ...opts }),
   block: (name: string, opts: { block: BlockDefinition } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'block', ...opts }),

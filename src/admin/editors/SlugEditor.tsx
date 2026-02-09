@@ -21,9 +21,12 @@ function slugify(text: string): string {
 export default function SlugEditor({ field, value, onChange, formData }: Props) {
   const handleGenerate = () => {
     if (field.from && formData) {
-      const sourceValue = formData[field.from]
-      if (typeof sourceValue === 'string') {
-        onChange(slugify(sourceValue))
+      const fields = Array.isArray(field.from) ? field.from : [field.from]
+      const parts = fields
+        .map(f => formData[f])
+        .filter((v): v is string => typeof v === 'string' && v.length > 0)
+      if (parts.length > 0) {
+        onChange(slugify(parts.join(' ')))
       }
     }
   }
