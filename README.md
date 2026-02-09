@@ -237,6 +237,32 @@ environment:
 
 The command shares the same debounce as HTTP webhooks. If a build is already running, additional triggers queue one more build (not multiple), ensuring the latest content is always built without pile-up.
 
+#### Serving with Caddy
+
+If you're running both EggCMS and a static site on the same server, use Caddy to route `/admin`, `/api`, and `/uploads` to the CMS while serving the static site for everything else:
+
+```
+example.com {
+    handle /admin* {
+        reverse_proxy localhost:3000
+    }
+
+    handle /api* {
+        reverse_proxy localhost:3000
+    }
+
+    handle /uploads* {
+        reverse_proxy localhost:3000
+    }
+
+    handle {
+        root * /var/www/my-site/_site
+        try_files {path} {path}.html {path}/index.html
+        file_server
+    }
+}
+```
+
 ### Volumes Reference
 
 | Volume | Purpose | Required |
