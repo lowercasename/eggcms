@@ -69,13 +69,30 @@ export default function ImageNodeView({
       data-alignment={currentAlignment}
       style={{ width: computedWidth }}
     >
-      <div className="image-container" onDoubleClick={handleDoubleClick} ref={containerRef}>
+      <div
+        className={`image-container ${selected ? 'selected' : ''}`}
+        onDoubleClick={handleDoubleClick}
+        ref={containerRef}
+      >
         <img
           src={src}
           alt={alt || ""}
-          className={selected ? "selected" : ""}
           draggable={false}
         />
+        <div className="image-badge">
+          {width
+            ? width
+            : currentSize === 'small' ? 'S'
+            : currentSize === 'medium' ? 'M'
+            : currentSize === 'large' ? 'L'
+            : 'Full'}
+          {currentAlignment !== 'center' && (
+            <>
+              <span style={{ opacity: 0.4 }}>|</span>
+              {currentAlignment === 'left' ? 'Left' : 'Right'}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Floating popover when selected - rendered via portal */}

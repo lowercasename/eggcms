@@ -123,12 +123,13 @@ body {
   font-style: italic;
 }
 
-/* Image figure wrapper (NodeView) */
+/* Image figure wrapper (NodeView) - InDesign-style frame */
 .richtext-editor .image-figure {
   position: relative;
   margin: 1rem 0;
 }
 
+/* Keep existing alignment styles */
 .richtext-editor .image-figure[data-alignment="left"] {
   float: left;
   margin-right: 1.5rem;
@@ -153,18 +154,54 @@ body {
 .richtext-editor .image-figure .image-container {
   display: block;
   position: relative;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  transition: border-color var(--transition-fast);
+}
+
+.richtext-editor .image-figure .image-container:hover {
+  border-color: var(--color-text-muted);
+}
+
+/* Selected state - solid accent border */
+.richtext-editor .image-figure .image-container.selected {
+  border-color: var(--color-accent);
+  border-style: solid;
 }
 
 .richtext-editor .image-figure img {
   width: 100%;
   height: auto;
-  border-radius: var(--radius-md);
+  border-radius: calc(var(--radius-md) - 2px);
   display: block;
 }
 
+/* Remove old selected style on img - now handled by container */
 .richtext-editor .image-figure img.selected {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: none;
+  outline-offset: 0;
+}
+
+/* Size/alignment badge */
+.richtext-editor .image-figure .image-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  backdrop-filter: blur(4px);
 }
 
 /* Image caption */

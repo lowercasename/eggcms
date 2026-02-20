@@ -113,12 +113,111 @@ describe("ImageNodeView", () => {
       expect(figcaption).not.toBeInTheDocument();
     });
 
-    it("applies selected class when selected", () => {
+    it("applies selected class to image-container when selected", () => {
+      const props = { ...defaultProps, selected: true };
+      render(<ImageNodeView {...props} />);
+
+      const container = document.querySelector(".image-container");
+      expect(container).toHaveClass("selected");
+    });
+
+    it("does not apply selected class to img element when selected", () => {
       const props = { ...defaultProps, selected: true };
       render(<ImageNodeView {...props} />);
 
       const img = screen.getByRole("img");
-      expect(img).toHaveClass("selected");
+      expect(img).not.toHaveClass("selected");
+    });
+
+    it("renders badge showing size label for center-aligned image", () => {
+      render(<ImageNodeView {...defaultProps} />);
+
+      const badge = document.querySelector(".image-badge");
+      expect(badge).toBeInTheDocument();
+      expect(badge!.textContent).toBe("M");
+    });
+
+    it("renders badge with alignment for non-center images", () => {
+      const props = {
+        ...defaultProps,
+        node: {
+          attrs: {
+            ...defaultNode.attrs,
+            alignment: "left",
+          },
+        },
+      };
+      render(<ImageNodeView {...props} />);
+
+      const badge = document.querySelector(".image-badge");
+      expect(badge).toBeInTheDocument();
+      expect(badge!.textContent).toContain("M");
+      expect(badge!.textContent).toContain("Left");
+    });
+
+    it("renders badge with custom width when set", () => {
+      const props = {
+        ...defaultProps,
+        node: {
+          attrs: {
+            ...defaultNode.attrs,
+            width: "300px",
+          },
+        },
+      };
+      render(<ImageNodeView {...props} />);
+
+      const badge = document.querySelector(".image-badge");
+      expect(badge).toBeInTheDocument();
+      expect(badge!.textContent).toBe("300px");
+    });
+
+    it("renders badge with Full label for full-size images", () => {
+      const props = {
+        ...defaultProps,
+        node: {
+          attrs: {
+            ...defaultNode.attrs,
+            size: "full",
+          },
+        },
+      };
+      render(<ImageNodeView {...props} />);
+
+      const badge = document.querySelector(".image-badge");
+      expect(badge!.textContent).toBe("Full");
+    });
+
+    it("renders badge with S label for small-size images", () => {
+      const props = {
+        ...defaultProps,
+        node: {
+          attrs: {
+            ...defaultNode.attrs,
+            size: "small",
+          },
+        },
+      };
+      render(<ImageNodeView {...props} />);
+
+      const badge = document.querySelector(".image-badge");
+      expect(badge!.textContent).toBe("S");
+    });
+
+    it("renders badge with Right alignment label", () => {
+      const props = {
+        ...defaultProps,
+        node: {
+          attrs: {
+            ...defaultNode.attrs,
+            alignment: "right",
+          },
+        },
+      };
+      render(<ImageNodeView {...props} />);
+
+      const badge = document.querySelector(".image-badge");
+      expect(badge!.textContent).toContain("Right");
     });
   });
 
