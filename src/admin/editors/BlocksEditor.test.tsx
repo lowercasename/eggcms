@@ -113,7 +113,7 @@ describe('BlocksEditor', () => {
     })
   })
 
-  describe('block selection', () => {
+  describe('multi-block type selection', () => {
     it('shows block type options in select', () => {
       render(
         <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
@@ -129,32 +129,17 @@ describe('BlocksEditor', () => {
       expect(options[2]).toHaveTextContent('Image Block')
     })
 
-    it('disables Add Block button when no type selected', () => {
+    it('does not show a separate Add Block button', () => {
       render(
         <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
       )
 
-      const addButton = screen.getByRole('button', { name: /add block/i })
-      expect(addButton).toBeDisabled()
-    })
-
-    it('enables Add Block button when type selected', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
-      )
-
-      const select = screen.getByRole('combobox')
-      await user.selectOptions(select, 'text')
-
-      const addButton = screen.getByRole('button', { name: /add block/i })
-      expect(addButton).not.toBeDisabled()
+      expect(screen.queryByRole('button', { name: /add block/i })).not.toBeInTheDocument()
     })
   })
 
-  describe('adding blocks', () => {
-    it('adds block when Add Block clicked', async () => {
+  describe('auto-add on select (multi-block)', () => {
+    it('adds block immediately when selecting from dropdown', async () => {
       const user = userEvent.setup()
 
       render(
@@ -164,7 +149,95 @@ describe('BlocksEditor', () => {
       const select = screen.getByRole('combobox')
       await user.selectOptions(select, 'text')
 
-      const addButton = screen.getByRole('button', { name: /add block/i })
+      expect(mockOnChange).toHaveBeenCalledWith([
+        expect.objectContaining({
+          _type: 'text',
+          _id: expect.any(String),
+        }),
+      ])
+    })
+
+    it('resets select after auto-adding', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
+      )
+
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'text')
+
+      // Select should be reset to placeholder
+      expect(select).toHaveValue('')
+    })
+
+    it('initializes block with field defaults', async () => {
+      const user = userEvent.setup()
+
+      const fieldWithDefaults: FieldDefinition & { blocks?: typeof textBlock[] } = {
+        name: 'blocks',
+        type: 'blocks',
+        blocks: [
+          {
+            name: 'withDefault',
+            label: 'With Default',
+            fields: [
+              { name: 'title', type: 'string', default: 'Untitled' },
+              { name: 'count', type: 'number', default: 0 },
+            ],
+          },
+          textBlock,
+        ],
+      }
+
+      render(
+        <BlocksEditor field={fieldWithDefaults} value={[]} onChange={mockOnChange} />
+      )
+
+      const select = screen.getByRole('combobox')
+      await user.selectOptions(select, 'withDefault')
+
+      expect(mockOnChange).toHaveBeenCalledWith([
+        expect.objectContaining({
+          _type: 'withDefault',
+          title: 'Untitled',
+          count: 0,
+        }),
+      ])
+    })
+  })
+
+  describe('single block type', () => {
+    const singleBlockField: FieldDefinition & { blocks?: typeof textBlock[] } = {
+      name: 'blocks',
+      type: 'blocks',
+      blocks: [textBlock],
+    }
+
+    it('hides select dropdown when only one block type', () => {
+      render(
+        <BlocksEditor field={singleBlockField} value={[]} onChange={mockOnChange} />
+      )
+
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    })
+
+    it('shows simplified Add button with block label', () => {
+      render(
+        <BlocksEditor field={singleBlockField} value={[]} onChange={mockOnChange} />
+      )
+
+      expect(screen.getByRole('button', { name: /add text block/i })).toBeInTheDocument()
+    })
+
+    it('adds the single block type directly on Add click', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <BlocksEditor field={singleBlockField} value={[]} onChange={mockOnChange} />
+      )
+
+      const addButton = screen.getByRole('button', { name: /add text block/i })
       await user.click(addButton)
 
       expect(mockOnChange).toHaveBeenCalledWith([
@@ -195,10 +268,7 @@ describe('BlocksEditor', () => {
         <BlocksEditor field={fieldWithDefaults} value={[]} onChange={mockOnChange} />
       )
 
-      const select = screen.getByRole('combobox')
-      await user.selectOptions(select, 'withDefault')
-
-      const addButton = screen.getByRole('button', { name: /add block/i })
+      const addButton = screen.getByRole('button', { name: /add with default/i })
       await user.click(addButton)
 
       expect(mockOnChange).toHaveBeenCalledWith([
@@ -208,23 +278,6 @@ describe('BlocksEditor', () => {
           count: 0,
         }),
       ])
-    })
-
-    it('resets select after adding block', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
-      )
-
-      const select = screen.getByRole('combobox')
-      await user.selectOptions(select, 'text')
-
-      const addButton = screen.getByRole('button', { name: /add block/i })
-      await user.click(addButton)
-
-      // Select should be reset
-      expect(select).toHaveValue('')
     })
   })
 

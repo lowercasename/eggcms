@@ -96,14 +96,12 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
     onChange(items)
   }
 
-  const addBlock = () => {
-    if (!selectedBlockType) return
-
-    const blockDef = blockDefinitions.find((b) => b.name === selectedBlockType)
+  const addBlockByType = (typeName: string) => {
+    const blockDef = blockDefinitions.find((b) => b.name === typeName)
     if (!blockDef) return
 
     const newBlock: Block = {
-      _type: selectedBlockType,
+      _type: typeName,
       _id: generateId(),
     }
 
@@ -251,21 +249,28 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
       )}
 
       <div className="flex gap-2 pt-2">
-        <Select
-          value={selectedBlockType}
-          onChange={(e) => setSelectedBlockType(e.target.value)}
-          options={blockOptions}
-          placeholder="Select block type..."
-          className="flex-1"
-        />
-        <Button
-          variant="secondary"
-          onClick={addBlock}
-          disabled={!selectedBlockType}
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add Block
-        </Button>
+        {blockDefinitions.length === 1 ? (
+          <Button
+            variant="secondary"
+            onClick={() => addBlockByType(blockDefinitions[0].name)}
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Add {blockDefinitions[0].label}
+          </Button>
+        ) : (
+          <Select
+            value={selectedBlockType}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val) {
+                addBlockByType(val)
+              }
+            }}
+            options={blockOptions}
+            placeholder="Select block type..."
+            className="flex-1"
+          />
+        )}
       </div>
     </div>
   )
