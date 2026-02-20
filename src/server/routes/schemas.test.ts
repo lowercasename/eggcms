@@ -81,6 +81,40 @@ describe('schemas route', () => {
       expect(json.data[0].labelField).toBe('firstName')
     })
 
+    it('returns siteName from SITE_NAME env var', async () => {
+      const original = process.env.SITE_NAME
+      try {
+        process.env.SITE_NAME = 'My Cool Site'
+        const app = createSchemasRoute(testSchemas)
+        const res = await app.request('/schemas')
+
+        const json = await res.json()
+        expect(json.siteName).toBe('My Cool Site')
+      } finally {
+        if (original === undefined) {
+          delete process.env.SITE_NAME
+        } else {
+          process.env.SITE_NAME = original
+        }
+      }
+    })
+
+    it('defaults siteName to EggCMS when SITE_NAME env var is not set', async () => {
+      const original = process.env.SITE_NAME
+      try {
+        delete process.env.SITE_NAME
+        const app = createSchemasRoute(testSchemas)
+        const res = await app.request('/schemas')
+
+        const json = await res.json()
+        expect(json.siteName).toBe('EggCMS')
+      } finally {
+        if (original !== undefined) {
+          process.env.SITE_NAME = original
+        }
+      }
+    })
+
     it('includes nested block definitions in blocks fields', async () => {
       const schemasWithBlocks: SchemaDefinition[] = [
         {

@@ -15,9 +15,10 @@ import { Loader2 } from 'lucide-react'
 // Context for sharing schemas across the app
 interface SchemasContextValue {
   schemas: Schema[]
+  siteName: string
 }
 
-const SchemasContext = createContext<SchemasContextValue>({ schemas: [] })
+const SchemasContext = createContext<SchemasContextValue>({ schemas: [], siteName: 'EggCMS' })
 
 export function useSchemas() {
   return useContext(SchemasContext)
@@ -26,12 +27,16 @@ export function useSchemas() {
 function AppRoutes() {
   const { user, loading: authLoading } = useAuth()
   const [schemas, setSchemas] = useState<Schema[]>([])
+  const [siteName, setSiteName] = useState('EggCMS')
   const [schemasLoading, setSchemasLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
       api.getSchemas()
-        .then((res) => setSchemas(res.data as Schema[]))
+        .then((res) => {
+          setSchemas(res.data as Schema[])
+          if (res.siteName) setSiteName(res.siteName as string)
+        })
         .catch(console.error)
         .finally(() => setSchemasLoading(false))
     } else if (!authLoading) {
@@ -53,7 +58,7 @@ function AppRoutes() {
   const firstCollection = schemas.find(s => s.type === 'collection')?.name || ''
 
   return (
-    <SchemasContext.Provider value={{ schemas }}>
+    <SchemasContext.Provider value={{ schemas, siteName }}>
       <Switch>
         <Route path="/login" component={Login} />
 

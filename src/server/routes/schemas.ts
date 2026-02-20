@@ -39,7 +39,7 @@ export function createSchemasRoute(schemas: SchemaDefinition[]) {
         labelField: s.labelField,
         fields: s.fields.map(mapField),
       }))
-    return c.json({ data: publicSchemas })
+    return c.json({ data: publicSchemas, siteName: process.env.SITE_NAME || 'EggCMS' })
   })
 
   return app

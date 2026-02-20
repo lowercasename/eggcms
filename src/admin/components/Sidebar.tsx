@@ -2,6 +2,7 @@
 import { useLocation } from "wouter";
 import NavLink from "./NavLink";
 import { useAuth } from "../context/AuthContext";
+import { useSchemas } from "../App";
 import type { Schema } from "../types";
 import { Image, LogOut, Egg, FileText, Folder } from "lucide-react";
 
@@ -11,6 +12,7 @@ interface SidebarProps {
 
 export default function Sidebar({ schemas }: SidebarProps) {
   const { logout } = useAuth();
+  const { siteName } = useSchemas();
   const [location] = useLocation();
 
   const singletons = schemas.filter((s) => s.type === "singleton");
@@ -27,7 +29,7 @@ export default function Sidebar({ schemas }: SidebarProps) {
           <div className="w-8 h-8 rounded-lg bg-[#E5644E] flex items-center justify-center">
             <Egg className="w-5 h-5 text-white" />
           </div>
-          <span className="text-lg font-semibold text-[#1A1A18]">EggCMS</span>
+          <span className="text-lg font-semibold text-[#1A1A18]">{siteName}</span>
         </div>
       </div>
 
