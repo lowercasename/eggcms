@@ -47,6 +47,12 @@ export default function RichtextEditor({ value, onChange }: Props) {
     },
   });
 
+  // Disable editor when modals are open to prevent keystroke capture
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!showLinkModal && !showImagePicker);
+  }, [editor, showLinkModal, showImagePicker]);
+
   if (!editor) return null;
 
   // Get current link attributes if cursor is in a link

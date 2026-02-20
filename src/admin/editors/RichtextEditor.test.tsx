@@ -132,6 +132,90 @@ describe("RichtextEditor", () => {
     });
   });
 
+  describe("modal focus management", () => {
+    it("disables editor when image modal is open", async () => {
+      const user = userEvent.setup();
+      render(
+        <RichtextEditor
+          field={defaultField}
+          value="<p>Test</p>"
+          onChange={mockOnChange}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTitle("Insert image")).toBeInTheDocument();
+      });
+
+      // Editor should be editable initially
+      const proseMirror = document.querySelector(".ProseMirror");
+      expect(proseMirror).toHaveAttribute("contenteditable", "true");
+
+      // Open image modal
+      await user.click(screen.getByTitle("Insert image"));
+      expect(screen.getByText("Insert Image")).toBeInTheDocument();
+
+      // Editor should be non-editable while modal is open
+      await waitFor(() => {
+        expect(proseMirror).toHaveAttribute("contenteditable", "false");
+      });
+    });
+
+    it("re-enables editor when image modal is closed", async () => {
+      const user = userEvent.setup();
+      render(
+        <RichtextEditor
+          field={defaultField}
+          value="<p>Test</p>"
+          onChange={mockOnChange}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTitle("Insert image")).toBeInTheDocument();
+      });
+
+      const proseMirror = document.querySelector(".ProseMirror");
+
+      // Open then close the modal
+      await user.click(screen.getByTitle("Insert image"));
+      expect(screen.getByText("Insert Image")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+      // Editor should be editable again
+      await waitFor(() => {
+        expect(proseMirror).toHaveAttribute("contenteditable", "true");
+      });
+    });
+
+    it("disables editor when link modal is open", async () => {
+      const user = userEvent.setup();
+      render(
+        <RichtextEditor
+          field={defaultField}
+          value="<p>Test</p>"
+          onChange={mockOnChange}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTitle("Add link")).toBeInTheDocument();
+      });
+
+      const proseMirror = document.querySelector(".ProseMirror");
+      expect(proseMirror).toHaveAttribute("contenteditable", "true");
+
+      // Open link modal
+      await user.click(screen.getByTitle("Add link"));
+
+      // Editor should be non-editable while modal is open
+      await waitFor(() => {
+        expect(proseMirror).toHaveAttribute("contenteditable", "false");
+      });
+    });
+  });
+
   describe("formatting", () => {
     it("toggles bold formatting", async () => {
       const user = userEvent.setup();
