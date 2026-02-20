@@ -28,6 +28,8 @@ export function createSchemasRoute(schemas: SchemaDefinition[]) {
         label: f.block.label,
         fields: f.block.fields.map(mapField),
       } : undefined,
+      // Include collections restriction for link fields
+      collections: f.collections,
     })
 
     const publicSchemas = schemas

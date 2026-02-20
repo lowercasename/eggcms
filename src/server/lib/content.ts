@@ -7,7 +7,7 @@ import type { SchemaDefinition, FieldDefinition } from '../../lib/schema'
 type SQLBindValue = string | number | boolean | null | bigint
 
 // Fields that store JSON data
-const JSON_FIELD_TYPES = ['blocks', 'block']
+const JSON_FIELD_TYPES = ['blocks', 'block', 'link']
 
 function toSqlValue(value: unknown, field: FieldDefinition): SQLBindValue {
   if (value === null || value === undefined) return null

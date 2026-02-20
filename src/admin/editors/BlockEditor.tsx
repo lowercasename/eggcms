@@ -14,6 +14,7 @@ import DatetimeEditor from './DatetimeEditor'
 import SelectEditor from './SelectEditor'
 import SlugEditor from './SlugEditor'
 import ImageEditor from './ImageEditor'
+import LinkFieldEditor from './LinkFieldEditor'
 
 interface Props {
   field: FieldDefinition & { block?: BlockDefinition }
@@ -32,6 +33,7 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   datetime: DatetimeEditor,
   image: ImageEditor,
   select: SelectEditor,
+  link: LinkFieldEditor,
 }
 
 // Add block editor after declaration to enable recursion

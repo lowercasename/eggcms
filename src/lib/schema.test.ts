@@ -40,4 +40,40 @@ describe('validateSchema', () => {
     })
     expect(() => validateSchema(schema)).not.toThrow()
   })
+
+  describe('link field', () => {
+    it('creates a valid link field definition', () => {
+      const field = f.link('cta')
+      expect(field).toEqual({ name: 'cta', type: 'link' })
+    })
+
+    it('creates a link field with collections restriction', () => {
+      const field = f.link('cta', { collections: ['pages', 'posts'] })
+      expect(field).toEqual({ name: 'cta', type: 'link', collections: ['pages', 'posts'] })
+    })
+
+    it('accepts link field in schema validation', () => {
+      const schema = defineCollection({
+        name: 'post',
+        label: 'Posts',
+        fields: [
+          f.string('title'),
+          f.link('cta'),
+        ],
+      })
+      expect(() => validateSchema(schema)).not.toThrow()
+    })
+
+    it('accepts link field with collections in schema validation', () => {
+      const schema = defineCollection({
+        name: 'post',
+        label: 'Posts',
+        fields: [
+          f.string('title'),
+          f.link('cta', { collections: ['pages'] }),
+        ],
+      })
+      expect(() => validateSchema(schema)).not.toThrow()
+    })
+  })
 })

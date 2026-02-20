@@ -56,6 +56,7 @@ export type FieldType =
   | 'select'
   | 'blocks'
   | 'block'
+  | 'link'
 
 export interface FieldDefinition {
   name: string
@@ -68,6 +69,7 @@ export interface FieldDefinition {
   from?: string | string[]
   blocks?: BlockDefinition[]
   block?: BlockDefinition  // For single block field
+  collections?: string[]  // For link fields - restrict to specific collections
 }
 
 /**
@@ -128,4 +130,5 @@ export const f = {
   select: (name: string, opts: { options: string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'select', ...opts }),
   blocks: (name: string, opts: { blocks: BlockDefinition[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'blocks', ...opts }),
   block: (name: string, opts: { block: BlockDefinition } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'block', ...opts }),
+  link: (name: string, opts?: { collections?: string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'link', ...opts }),
 }

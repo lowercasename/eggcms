@@ -19,6 +19,7 @@ import SlugEditor from '../editors/SlugEditor'
 import ImageEditor from '../editors/ImageEditor'
 import BlocksEditor from '../editors/BlocksEditor'
 import BlockEditor from '../editors/BlockEditor'
+import LinkFieldEditor from '../editors/LinkFieldEditor'
 
 interface ItemEditProps {
   schema: Schema
@@ -38,6 +39,7 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   select: SelectEditor,
   blocks: BlocksEditor,
   block: BlockEditor,
+  link: LinkFieldEditor,
 }
 
 export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps) {

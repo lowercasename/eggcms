@@ -17,6 +17,7 @@ export interface FieldDefinition {
   from?: string | string[]  // For slug fields (source field name or names)
   blocks?: BlockDefinition[]  // For blocks fields
   block?: BlockDefinition  // For single block field
+  collections?: string[]  // For link fields - restrict to specific collections
 }
 
 /**
