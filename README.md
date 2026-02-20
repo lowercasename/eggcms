@@ -290,6 +290,7 @@ example.com {
 | `PUBLIC_API` | No | Allow public read access (default: true) |
 | `PUBLIC_URL` | No | Base URL for media files (e.g., `https://cms.example.com`) |
 | `WEBHOOK_URL` | No | URL for content change notifications |
+| `SITE_NAME` | No | Display name shown in admin sidebar (default: "EggCMS") |
 | `SCHEMAS_PATH` | No | Custom path to schemas file (default: `/app/schemas.yaml`, `.yml`, or `.js`) |
 
 ## Configuration
@@ -313,6 +314,7 @@ All configuration is done via environment variables. Create a `.env` file in the
 | `PUBLIC_URL` | - | Base URL for media files (e.g., `https://cms.example.com`). When set, image paths in API responses become full URLs. |
 | `WEBHOOK_URL` | - | URL to POST webhook notifications |
 | `WEBHOOK_DEBOUNCE_MS` | `5000` | Debounce webhook calls (ms). Set to `0` to disable |
+| `SITE_NAME` | `EggCMS` | Display name shown in admin sidebar |
 
 ### Storage Settings
 
@@ -431,6 +433,7 @@ The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Use `SCHEMAS_
 | `slug` | URL-friendly slug | `from` (source field name), `label` |
 | `select` | Dropdown select | `options` (string array), `required`, `default`, `label` |
 | `blocks` | Page builder blocks | `blocks` (array of block names) |
+| `link` | Internal or external link | `collections` (restrict to specific collections) |
 | `block` | Single block instance | `block` (block name) |
 
 ### Field Options
@@ -447,6 +450,10 @@ The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Use `SCHEMAS_
 
 // Slug from another field
 { name: 'slug', type: 'slug', from: 'title' }
+
+// Link (internal ref or external URL)
+{ name: 'cta', type: 'link' }
+{ name: 'cta', type: 'link', collections: ['pages', 'posts'] }  // restrict targets
 
 // Page builder with specific blocks
 { name: 'content', type: 'blocks', blocks: ['heroBlock', 'textBlock', 'imageBlock'] }
