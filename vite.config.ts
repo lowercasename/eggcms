@@ -20,8 +20,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:3333',
-      '/uploads': 'http://localhost:3333',
+      '/api': `http://localhost:${process.env.PORT || 3333}`,
+      '/uploads': `http://localhost:${process.env.PORT || 3333}`,
     },
   },
 })

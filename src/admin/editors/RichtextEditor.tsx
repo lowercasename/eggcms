@@ -160,7 +160,7 @@ export default function RichtextEditor({ value, onChange }: Props) {
       <div className="flex-1 overflow-y-auto">
         <EditorContent
           editor={editor}
-          className="richtext-editor prose prose-sm max-w-none p-4 min-h-50 [&_.ProseMirror]:outline-none [&_.ProseMirror]:shadow-none [&_.ProseMirror:focus-visible]:shadow-none [&_.ProseMirror]:min-h-42"
+          className="richtext-editor prose prose-sm max-w-none [&_.ProseMirror]:p-4 [&_.ProseMirror]:min-h-42 [&_.ProseMirror]:outline-none [&_.ProseMirror]:shadow-none [&_.ProseMirror:focus-visible]:shadow-none"
         />
       </div>
 

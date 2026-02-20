@@ -113,10 +113,12 @@ function findSchemasFile(): string | null {
     return existsSync(schemasPath) ? schemasPath : null
   }
 
-  // Try default paths in order: yaml, yml, js
-  for (const ext of ['.yaml', '.yml', '.js']) {
-    const path = `/app/schemas${ext}`
-    if (existsSync(path)) return path
+  // Try default paths in order: project root first, then /app/ (Docker)
+  for (const base of ['./schemas', '/app/schemas']) {
+    for (const ext of ['.yaml', '.yml', '.js']) {
+      const path = `${base}${ext}`
+      if (existsSync(path)) return path
+    }
   }
 
   return null

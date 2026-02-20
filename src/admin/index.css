@@ -95,6 +95,11 @@ body {
   color: var(--color-accent);
 }
 
+/* ProseMirror should not get the global focus ring */
+.richtext-editor .ProseMirror:focus-visible {
+  box-shadow: none;
+}
+
 /* Prose overrides for rich text */
 .prose {
   --tw-prose-body: var(--color-text);

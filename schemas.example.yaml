@@ -68,6 +68,32 @@
         - textBlock
         - imageBlock
 
+# Collection: Navigation menus
+- name: menu
+  label: Menus
+  type: collection
+  labelField: title
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: items
+      type: blocks
+      blocks:
+        - menuItem
+
+# Block: Menu item
+- name: menuItem
+  label: Menu Item
+  type: block
+  fields:
+    - name: label
+      type: string
+      required: true
+    - name: target
+      type: link
+      required: true
+
 # Block: Hero section
 - name: heroBlock
   label: Hero
