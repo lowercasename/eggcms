@@ -89,6 +89,29 @@ Files modified when adding `block`:
 - `src/admin/pages/ItemEdit.tsx` - Added to editorMap
 - `src/admin/editors/BlocksEditor.tsx` - Added to editorMap for nesting
 
+### Example: The `link` field type
+
+The `link` field stores either an internal content reference or an external URL:
+
+```typescript
+// Schema definition
+f.link('cta')                                      // Any collection
+f.link('cta', { collections: ['pages', 'posts'] }) // Restricted
+
+// Stores as JSON:
+// Internal: { "type": "internal", "ref": "posts:abc-123", "label": "My Post" }
+// External: { "type": "external", "url": "https://example.com" }
+```
+
+Files modified when adding `link`:
+- `src/lib/schema.ts` - Added 'link' to FieldType, `collections?: string[]` to FieldDefinition, `f.link()` helper
+- `src/admin/types/index.ts` - Added `collections?: string[]`
+- `src/server/routes/schemas.ts` - Added `collections` mapping in `mapField()`
+- `src/server/lib/content.ts` - Added 'link' to `JSON_FIELD_TYPES`
+- `src/admin/editors/LinkFieldEditor.tsx` - Created editor component (reuses LinkModal)
+- `src/admin/pages/ItemEdit.tsx` - Added to editorMap
+- `src/admin/editors/BlocksEditor.tsx` + `BlockEditor.tsx` - Added to editorMaps for nesting
+
 ## API Response Structure
 
 Content items returned from the API separate schema fields from system metadata:
