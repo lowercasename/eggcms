@@ -2,7 +2,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import ItemList from './ItemList'
 import { resolveLabelField } from '../pages/Collection'
+import { DirtyStateProvider, useDirtyStateContext } from '../contexts/DirtyStateContext'
 import type { Schema } from '../types'
+import { act } from '@testing-library/react'
 
 // Mock wouter
 vi.mock('wouter', () => ({
@@ -62,6 +64,67 @@ describe('ItemList', () => {
     )
 
     expect(screen.getByText('Raphael')).toBeTruthy()
+  })
+
+  it('shows Unsaved badge when item is in dirtyItems', () => {
+    // Helper to mark an item dirty from inside the provider
+    let markDirty: () => void
+    function DirtyMarker() {
+      const { setItemDirty } = useDirtyStateContext()
+      markDirty = () => setItemDirty('1', true)
+      return null
+    }
+
+    render(
+      <DirtyStateProvider>
+        <DirtyMarker />
+        <ItemList
+          items={[{ id: '1', title: 'My Post', _meta: { draft: false } }]}
+          schemaName="post"
+          labelField="title"
+        />
+      </DirtyStateProvider>
+    )
+
+    // Initially no Unsaved badge
+    expect(screen.queryByText('Unsaved')).toBeNull()
+
+    // Mark item dirty
+    act(() => {
+      markDirty()
+    })
+
+    // Now Unsaved badge should appear
+    expect(screen.getByText('Unsaved')).toBeTruthy()
+  })
+
+  it('does not show Unsaved badge when item is not in dirtyItems', () => {
+    render(
+      <DirtyStateProvider>
+        <ItemList
+          items={[{ id: '1', title: 'My Post', _meta: { draft: false } }]}
+          schemaName="post"
+          labelField="title"
+        />
+      </DirtyStateProvider>
+    )
+
+    expect(screen.queryByText('Unsaved')).toBeNull()
+    expect(screen.getByText('Published')).toBeTruthy()
+  })
+
+  it('works without DirtyStateProvider (no Unsaved badge)', () => {
+    // Renders without provider - should not crash, no Unsaved badge
+    render(
+      <ItemList
+        items={[{ id: '1', title: 'My Post', _meta: { draft: true } }]}
+        schemaName="post"
+        labelField="title"
+      />
+    )
+
+    expect(screen.queryByText('Unsaved')).toBeNull()
+    expect(screen.getByText('Draft')).toBeTruthy()
   })
 })
 

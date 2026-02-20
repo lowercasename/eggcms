@@ -1,7 +1,8 @@
 // src/admin/components/ItemList.tsx
 import { useLocation } from 'wouter'
 import NavLink from './NavLink'
-import { Plus, Archive } from 'lucide-react'
+import { Plus, Archive, CircleDot } from 'lucide-react'
+import { useDirtyItems } from '../contexts/DirtyStateContext'
 
 interface Item {
   id: string
@@ -32,6 +33,7 @@ function getItemLabel(item: Item, labelField: string | string[]): string {
 
 export default function ItemList({ items, schemaName, labelField = 'title' }: ItemListProps) {
   const [location] = useLocation()
+  const { dirtyItems } = useDirtyItems()
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return ''
@@ -64,6 +66,7 @@ export default function ItemList({ items, schemaName, labelField = 'title' }: It
           const href = `/collections/${schemaName}/${item.id}`
           const isActive = location === href
           const label = getItemLabel(item, labelField)
+          const isItemDirty = dirtyItems.has(item.id)
 
           return (
             <NavLink
@@ -82,15 +85,22 @@ export default function ItemList({ items, schemaName, labelField = 'title' }: It
                 {label}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`
-                  inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
-                  ${item._meta?.draft
-                    ? 'bg-[#FEF8EC] text-[#B8862B]'
-                    : 'bg-[#F0F9F3] text-[#3D9A5D]'
-                  }
-                `}>
-                  {item._meta?.draft ? 'Draft' : 'Published'}
-                </span>
+                {isItemDirty ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-[#FEF8EC] text-[#B8862B]">
+                    <CircleDot className="w-3 h-3" />
+                    Unsaved
+                  </span>
+                ) : (
+                  <span className={`
+                    inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
+                    ${item._meta?.draft
+                      ? 'bg-[#FEF8EC] text-[#B8862B]'
+                      : 'bg-[#F0F9F3] text-[#3D9A5D]'
+                    }
+                  `}>
+                    {item._meta?.draft ? 'Draft' : 'Published'}
+                  </span>
+                )}
                 {item._meta?.updatedAt && (
                   <span className="text-[11px] text-[#9C9C91]">
                     {formatDate(item._meta.updatedAt)}

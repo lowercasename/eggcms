@@ -56,13 +56,21 @@ export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps)
     return fields
   }, [data])
   const { isDirty, markClean } = useDirtyState(editableData, loading, itemId)
-  const { setDirty } = useDirtyStateContext()
+  const { setDirty, setItemDirty } = useDirtyStateContext()
 
   // Sync dirty state with global context for navigation guards
   useEffect(() => {
     setDirty(isDirty)
     return () => setDirty(false) // Clear on unmount
   }, [isDirty, setDirty])
+
+  // Sync item-level dirty state for sidebar badge (only for existing items)
+  useEffect(() => {
+    if (!isNew) {
+      setItemDirty(itemId, isDirty)
+      return () => setItemDirty(itemId, false)
+    }
+  }, [isDirty, itemId, isNew, setItemDirty])
 
   // Helper to get draft status from _meta (API response) - new items are always drafts
   const isDraft = isNew ? true : (data._meta as { draft?: boolean } | undefined)?.draft
