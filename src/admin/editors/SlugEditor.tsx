@@ -1,7 +1,7 @@
 // src/admin/editors/SlugEditor.tsx
 import type { FieldDefinition } from '../types'
 import { Input, Button } from '../components/ui'
-import { slugify } from 'transliteration'
+import { slugify } from '../../lib/slugify'
 
 interface Props {
   field: FieldDefinition
