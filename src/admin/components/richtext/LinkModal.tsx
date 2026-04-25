@@ -119,7 +119,11 @@ export default function LinkModal({
       if (url.trim()) {
         // Auto-add https:// if no protocol
         let finalUrl = url.trim();
-        if (!/^https?:\/\//i.test(finalUrl) && !finalUrl.startsWith("/")) {
+        if (
+          !/^https?:\/\//i.test(finalUrl) &&
+          !finalUrl.startsWith("/") &&
+          !finalUrl.startsWith("#")
+        ) {
           finalUrl = "https://" + finalUrl;
         }
         onSaveExternal(finalUrl);
