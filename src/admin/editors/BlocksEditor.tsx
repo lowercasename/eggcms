@@ -172,7 +172,7 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
 	}));
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-2">
 			<DragDropContext onDragEnd={handleDragEnd}>
 				<Droppable droppableId="blocks">
 					{(provided) => (
@@ -287,7 +287,7 @@ export default function BlocksEditor({ field, value, onChange }: Props) {
 				</div>
 			)}
 
-			<div className="flex gap-2 pt-2">
+			<div className="flex gap-2">
 				{blockDefinitions.length === 1 ? (
 					<Button
 						variant="secondary"

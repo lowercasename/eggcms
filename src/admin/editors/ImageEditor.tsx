@@ -37,6 +37,7 @@ export default function ImageEditor({ value, onChange }: Props) {
   }
 
   const imagePath = value as string
+  const filename = imagePath ? imagePath.split('/').pop() || '' : ''
 
   return (
     <>
@@ -63,7 +64,16 @@ export default function ImageEditor({ value, onChange }: Props) {
         )}
 
         {/* Actions */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 min-w-0">
+          {filename && (
+            <p
+              data-testid="image-filename"
+              className="text-sm font-medium text-[#1A1A18] truncate"
+              title={filename}
+            >
+              {filename}
+            </p>
+          )}
           <label className="inline-flex items-center gap-1.5 text-sm text-[#6B6B63] hover:text-[#1A1A18] transition-colors cursor-pointer">
             {uploading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
