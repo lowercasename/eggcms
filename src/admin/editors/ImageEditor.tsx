@@ -21,6 +21,7 @@ interface Props {
 export default function ImageEditor({ value, onChange }: Props) {
   const [uploading, setUploading] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
+  const [libraryName, setLibraryName] = useState<string | null>(null)
 
   const handleUpload = async (file: File | null) => {
     if (!file) return
@@ -37,7 +38,31 @@ export default function ImageEditor({ value, onChange }: Props) {
   }
 
   const imagePath = value as string
-  const filename = imagePath ? imagePath.split('/').pop() || '' : ''
+
+  // Look up the original filename from the media library — the on-disk
+  // filename is a UUID, but _media.filename is the user's original name.
+  useEffect(() => {
+    if (!imagePath) {
+      setLibraryName(null)
+      return
+    }
+    let cancelled = false
+    api.getMedia()
+      .then((res) => {
+        if (cancelled) return
+        const match = (res.data as MediaItem[]).find((m) => m.path === imagePath)
+        setLibraryName(match?.filename ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setLibraryName(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [imagePath])
+
+  const filename =
+    libraryName ?? (imagePath ? imagePath.split('/').pop() || '' : '')
 
   return (
     <>
