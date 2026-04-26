@@ -28,9 +28,27 @@ export async function runMigrations(schemas: SchemaDefinition[]): Promise<void> 
       "width" INTEGER,
       "height" INTEGER,
       "alt" TEXT,
+      "hash" TEXT,
+      "hidden" INTEGER NOT NULL DEFAULT 0,
       "created_at" TEXT NOT NULL
     )
   `)
+
+  // Add hash + hidden columns to _media for installs that pre-date them.
+  // SQLite has no IF NOT EXISTS for ADD COLUMN, so swallow the duplicate-column error.
+  for (const stmt of [
+    `ALTER TABLE "_media" ADD COLUMN "hash" TEXT`,
+    `ALTER TABLE "_media" ADD COLUMN "hidden" INTEGER NOT NULL DEFAULT 0`,
+  ]) {
+    try {
+      sqlite.exec(stmt)
+    } catch (err) {
+      const msg = (err as Error).message || ''
+      if (!msg.includes('duplicate column')) throw err
+    }
+  }
+
+  sqlite.exec(`CREATE INDEX IF NOT EXISTS "_media_hash_idx" ON "_media"("hash")`)
 
   let migrationsRun = 0
 

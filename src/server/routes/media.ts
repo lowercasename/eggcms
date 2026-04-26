@@ -1,5 +1,5 @@
 // src/server/routes/media.ts
-import { randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import { Hono } from 'hono'
 import sharp from 'sharp'
 import { requireAuth } from '../middleware/auth'
@@ -18,6 +18,8 @@ interface MediaItem {
   size: number
   width: number | null
   height: number | null
+  hash: string | null
+  hidden: number
   created_at: string
 }
 
@@ -25,13 +27,15 @@ function withPublicUrl(item: MediaItem): MediaItem {
   return { ...item, path: toPublicUrl(item.path) }
 }
 
-// GET /api/media - List all media
+// GET /api/media - List all visible media (hidden items excluded)
 media.get('/', (c) => {
-  const items = sqlite.prepare('SELECT * FROM _media ORDER BY created_at DESC').all() as MediaItem[]
+  const items = sqlite
+    .prepare('SELECT * FROM _media WHERE hidden = 0 ORDER BY created_at DESC')
+    .all() as MediaItem[]
   return c.json({ data: items.map(withPublicUrl), meta: { total: items.length } })
 })
 
-// POST /api/media - Upload file
+// POST /api/media - Upload file (with content-hash dedupe)
 media.post('/', requireAuth, async (c) => {
   const body = await c.req.parseBody()
   const file = body.file
@@ -46,15 +50,29 @@ media.post('/', requireAuth, async (c) => {
     return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid file type' } }, 400)
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const hash = createHash('sha256').update(buffer).digest('hex')
+
+  // Dedupe: if a row with the same hash exists, reuse it.
+  // If it was soft-deleted, restore (un-hide) it.
+  const existing = sqlite
+    .prepare('SELECT * FROM _media WHERE hash = ? LIMIT 1')
+    .get(hash) as MediaItem | undefined
+
+  if (existing) {
+    if (existing.hidden) {
+      sqlite.prepare('UPDATE _media SET hidden = 0 WHERE id = ?').run(existing.id)
+      existing.hidden = 0
+    }
+    return c.json({ data: withPublicUrl(existing) }, 201)
+  }
+
   let filePath: string
   let filename: string
   let width: number | null = null
   let height: number | null = null
 
   try {
-    const buffer = Buffer.from(await file.arrayBuffer())
-
-    // Get image dimensions for supported formats
     if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
       try {
         const metadata = await sharp(buffer).metadata()
@@ -76,32 +94,29 @@ media.post('/', requireAuth, async (c) => {
   const id = randomUUID()
 
   sqlite.prepare(`
-    INSERT INTO _media (id, filename, path, mimetype, size, width, height, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, filename, filePath, file.type, file.size, width, height, now)
+    INSERT INTO _media (id, filename, path, mimetype, size, width, height, hash, hidden, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+  `).run(id, filename, filePath, file.type, file.size, width, height, hash, now)
 
   const item = sqlite.prepare('SELECT * FROM _media WHERE id = ?').get(id) as MediaItem
 
   return c.json({ data: withPublicUrl(item) }, 201)
 })
 
-// DELETE /api/media/:id - Delete file
+// DELETE /api/media/:id - Soft-delete: hide from library, keep file on disk so
+// existing references in content keep working.
 media.delete('/:id', requireAuth, async (c) => {
   const id = c.req.param('id')
 
-  const item = sqlite.prepare('SELECT * FROM _media WHERE id = ?').get(id) as { path: string } | undefined
+  const item = sqlite.prepare('SELECT id FROM _media WHERE id = ?').get(id) as
+    | { id: string }
+    | undefined
 
   if (!item) {
     return c.json({ error: { code: 'NOT_FOUND', message: 'Media not found' } }, 404)
   }
 
-  try {
-    await storage.delete(item.path)
-  } catch (err) {
-    return c.json({ error: { code: 'STORAGE_ERROR', message: 'Failed to delete file' } }, 500)
-  }
-
-  sqlite.prepare('DELETE FROM _media WHERE id = ?').run(id)
+  sqlite.prepare('UPDATE _media SET hidden = 1 WHERE id = ?').run(id)
 
   return c.json({ data: { success: true } })
 })
