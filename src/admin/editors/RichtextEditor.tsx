@@ -47,10 +47,12 @@ export default function RichtextEditor({ value, onChange }: Props) {
     },
   });
 
-  // Disable editor when modals are open to prevent keystroke capture
+  // Disable editor when modals are open to prevent keystroke capture.
+  // Pass emitUpdate=false so toggling editability doesn't fire onUpdate —
+  // otherwise the form goes dirty on mount before any user input.
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!showLinkModal && !showImagePicker);
+    editor.setEditable(!showLinkModal && !showImagePicker, false);
   }, [editor, showLinkModal, showImagePicker]);
 
   if (!editor) return null;

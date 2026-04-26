@@ -36,7 +36,7 @@ export function transformHtmlImageUrls(html: string): string {
     return html
   }
 
-  const $ = cheerio.load(html, { xml: { xmlMode: false } }, false)
+  const $ = cheerio.load(html, { xml: false, decodeEntities: false }, false)
 
   $('img').each((_, el) => {
     const src = $(el).attr('src')

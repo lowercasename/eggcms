@@ -216,6 +216,57 @@ describe("RichtextEditor", () => {
     });
   });
 
+  describe("dirty state on mount", () => {
+    it("does not call onChange on initial mount with link content", async () => {
+      // Regression: setEditable defaulted to emitUpdate=true, which fired
+      // onUpdate on mount. Combined with @tiptap/extension-link injecting
+      // target/rel into <a> tags, the form was marked dirty before any input.
+      const onChange = vi.fn();
+      render(
+        <RichtextEditor
+          field={defaultField}
+          value='<p>See <a href="https://example.com">this link</a>.</p>'
+          onChange={onChange}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTitle("Bold")).toBeInTheDocument();
+      });
+
+      // Give Tiptap a beat to settle any async transactions.
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("does not call onChange when link or image modal toggles", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(
+        <RichtextEditor
+          field={defaultField}
+          value="<p>Hello</p>"
+          onChange={onChange}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTitle("Add link")).toBeInTheDocument();
+      });
+
+      onChange.mockClear();
+
+      await user.click(screen.getByTitle("Add link"));
+      await waitFor(() => {
+        const pm = document.querySelector(".ProseMirror");
+        expect(pm).toHaveAttribute("contenteditable", "false");
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
+
   describe("formatting", () => {
     it("toggles bold formatting", async () => {
       const user = userEvent.setup();
