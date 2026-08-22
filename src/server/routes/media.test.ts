@@ -78,6 +78,96 @@ beforeEach(() => {
   db().exec(CREATE_MEDIA)
   savedFiles.length = 0
   deletedPaths.length = 0
+  delete process.env.MAX_UPLOAD_MB
+})
+
+describe('media routes - accepted file types', () => {
+  it('accepts a PDF and classifies it as a document', async () => {
+    const res = await uploadFile(makeFile('essay.pdf', 'PDF-BYTES', 'application/pdf'))
+
+    expect(res.status).toBe(201)
+    expect(res.data.data.kind).toBe('document')
+    expect(res.data.data.mimetype).toBe('application/pdf')
+    expect(res.data.data.filename).toBe('essay.pdf')
+  })
+
+  it('still accepts images', async () => {
+    const res = await uploadFile(makeFile('photo.jpg', 'JPEG-BYTES', 'image/jpeg'))
+
+    expect(res.status).toBe(201)
+    expect(res.data.data.kind).toBe('image')
+  })
+
+  it('accepts audio and video', async () => {
+    const audio = await uploadFile(makeFile('talk.mp3', 'MP3', 'audio/mpeg'))
+    const video = await uploadFile(makeFile('clip.mp4', 'MP4', 'video/mp4'))
+
+    expect(audio.data.data.kind).toBe('audio')
+    expect(video.data.data.kind).toBe('video')
+  })
+
+  it('accepts a PDF that the browser reported as octet-stream', async () => {
+    // Safari and some Windows browsers do this; going by the extension keeps
+    // the upload from being refused for no reason the user can see.
+    const res = await uploadFile(makeFile('scan.pdf', 'PDF', 'application/octet-stream'))
+
+    expect(res.status).toBe(201)
+    expect(res.data.data.mimetype).toBe('application/pdf')
+    expect(res.data.data.kind).toBe('document')
+  })
+
+  it('rejects a type that is not allowed, and names it', async () => {
+    const res = await uploadFile(makeFile('installer.exe', 'MZ', 'application/x-msdownload'))
+
+    expect(res.status).toBe(400)
+    expect(res.data.error.message).toContain('application/x-msdownload')
+  })
+})
+
+describe('media routes - size limit', () => {
+  it('rejects a file over MAX_UPLOAD_MB', async () => {
+    process.env.MAX_UPLOAD_MB = '1'
+    const res = await uploadFile(
+      makeFile('huge.pdf', 'x'.repeat(2 * 1024 * 1024), 'application/pdf')
+    )
+
+    expect(res.status).toBe(413)
+    expect(res.data.error.message).toMatch(/The limit is 1\.0 MB/)
+  })
+
+  it('accepts a file under the limit', async () => {
+    process.env.MAX_UPLOAD_MB = '1'
+    const res = await uploadFile(makeFile('small.pdf', 'x'.repeat(1024), 'application/pdf'))
+
+    expect(res.status).toBe(201)
+  })
+})
+
+describe('media routes - listing', () => {
+  it('includes the kind of each item', async () => {
+    await uploadFile(makeFile('essay.pdf', 'PDF', 'application/pdf'))
+    await uploadFile(makeFile('photo.jpg', 'JPEG', 'image/jpeg'))
+
+    const list = await (await media.request('/')).json()
+    const kinds = list.data.map((m: { kind: string }) => m.kind).sort()
+    expect(kinds).toEqual(['document', 'image'])
+  })
+
+  it('filters by kind', async () => {
+    await uploadFile(makeFile('essay.pdf', 'PDF', 'application/pdf'))
+    await uploadFile(makeFile('photo.jpg', 'JPEG', 'image/jpeg'))
+
+    const list = await (await media.request('/?kind=document')).json()
+    expect(list.data).toHaveLength(1)
+    expect(list.data[0].filename).toBe('essay.pdf')
+  })
+
+  it('ignores an unknown kind filter rather than returning nothing', async () => {
+    await uploadFile(makeFile('photo.jpg', 'JPEG', 'image/jpeg'))
+
+    const list = await (await media.request('/?kind=nonsense')).json()
+    expect(list.data).toHaveLength(1)
+  })
 })
 
 describe('media routes - upload dedupe by content hash', () => {

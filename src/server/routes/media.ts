@@ -5,6 +5,15 @@ import sharp from 'sharp'
 import { requireAuth } from '../middleware/auth'
 import { createStorage } from '../lib/storage'
 import { toPublicUrl } from '../lib/url'
+import {
+  ALLOWED_MIME_TYPES,
+  formatBytes,
+  isAllowedMimeType,
+  kindForMimeType,
+  maxUploadBytes,
+  resolveMimeType,
+  type MediaKind,
+} from '../lib/mediaTypes'
 import { sqlite } from '../db'
 
 const media = new Hono()
@@ -23,16 +32,35 @@ interface MediaItem {
   created_at: string
 }
 
-function withPublicUrl(item: MediaItem): MediaItem {
-  return { ...item, path: toPublicUrl(item.path) }
+type MediaItemResponse = MediaItem & { kind: MediaKind | null }
+
+function present(item: MediaItem): MediaItemResponse {
+  return { ...item, path: toPublicUrl(item.path), kind: kindForMimeType(item.mimetype) }
 }
 
-// GET /api/media - List all visible media (hidden items excluded)
+// GET /api/media - List all visible media (hidden items excluded).
+// Optional ?kind=image|document|audio|video narrows the list. An unrecognised
+// kind is ignored rather than returning an empty library.
 media.get('/', (c) => {
-  const items = sqlite
-    .prepare('SELECT * FROM _media WHERE hidden = 0 ORDER BY created_at DESC')
-    .all() as MediaItem[]
-  return c.json({ data: items.map(withPublicUrl), meta: { total: items.length } })
+  const kind = c.req.query('kind')
+  const types = Object.entries(ALLOWED_MIME_TYPES)
+    .filter(([, k]) => k === kind)
+    .map(([type]) => type)
+
+  const items =
+    types.length > 0
+      ? (sqlite
+          .prepare(
+            `SELECT * FROM _media WHERE hidden = 0 AND mimetype IN (${types
+              .map(() => '?')
+              .join(', ')}) ORDER BY created_at DESC`
+          )
+          .all(...types) as MediaItem[])
+      : (sqlite
+          .prepare('SELECT * FROM _media WHERE hidden = 0 ORDER BY created_at DESC')
+          .all() as MediaItem[])
+
+  return c.json({ data: items.map(present), meta: { total: items.length } })
 })
 
 // POST /api/media - Upload file (with content-hash dedupe)
@@ -44,10 +72,33 @@ media.post('/', requireAuth, async (c) => {
     return c.json({ error: { code: 'BAD_REQUEST', message: 'No file provided' } }, 400)
   }
 
-  // Validate file type
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
-  if (!allowedTypes.includes(file.type)) {
-    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid file type' } }, 400)
+  // Browsers disagree about types (Safari sends octet-stream for PDFs), so
+  // fall back to the extension before deciding.
+  const mimetype = resolveMimeType(file.type, file.name)
+
+  if (!isAllowedMimeType(mimetype)) {
+    return c.json(
+      {
+        error: {
+          code: 'BAD_REQUEST',
+          message: `Files of type ${mimetype || 'unknown'} can't be uploaded`,
+        },
+      },
+      400
+    )
+  }
+
+  const limit = maxUploadBytes()
+  if (file.size > limit) {
+    return c.json(
+      {
+        error: {
+          code: 'PAYLOAD_TOO_LARGE',
+          message: `${file.name} is ${formatBytes(file.size)}. The limit is ${formatBytes(limit)}.`,
+        },
+      },
+      413
+    )
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
@@ -64,7 +115,7 @@ media.post('/', requireAuth, async (c) => {
       sqlite.prepare('UPDATE _media SET hidden = 0 WHERE id = ?').run(existing.id)
       existing.hidden = 0
     }
-    return c.json({ data: withPublicUrl(existing) }, 201)
+    return c.json({ data: present(existing) }, 201)
   }
 
   let filePath: string
@@ -73,7 +124,7 @@ media.post('/', requireAuth, async (c) => {
   let height: number | null = null
 
   try {
-    if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    if (mimetype.startsWith('image/') && mimetype !== 'image/svg+xml') {
       try {
         const metadata = await sharp(buffer).metadata()
         width = metadata.width || null
@@ -96,11 +147,11 @@ media.post('/', requireAuth, async (c) => {
   sqlite.prepare(`
     INSERT INTO _media (id, filename, path, mimetype, size, width, height, hash, hidden, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
-  `).run(id, filename, filePath, file.type, file.size, width, height, hash, now)
+  `).run(id, filename, filePath, mimetype, file.size, width, height, hash, now)
 
   const item = sqlite.prepare('SELECT * FROM _media WHERE id = ?').get(id) as MediaItem
 
-  return c.json({ data: withPublicUrl(item) }, 201)
+  return c.json({ data: present(item) }, 201)
 })
 
 // DELETE /api/media/:id - Soft-delete: hide from library, keep file on disk so
