@@ -120,6 +120,26 @@
       type: richtext
       required: true
 
+# Block: Publication with an attached PDF
+- name: publicationBlock
+  label: Publication
+  type: block
+  fields:
+    - name: title
+      type: string
+      required: true
+    - name: citation
+      type: richtext
+    # File fields attach something from the media library. They default to
+    # documents; pass `kinds` to accept audio or video as well.
+    - name: pdf
+      type: file
+    - name: recording
+      type: file
+      kinds:
+        - audio
+        - video
+
 # Block: Image
 - name: imageBlock
   label: Image

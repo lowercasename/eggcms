@@ -89,6 +89,26 @@ Files modified when adding `block`:
 - `src/admin/pages/ItemEdit.tsx` - Added to editorMap
 - `src/admin/editors/BlocksEditor.tsx` - Added to editorMap for nesting
 
+### Example: The `file` field type
+
+The `file` field attaches a document (or audio/video) from the media library:
+
+```typescript
+f.file('pdf')                              // documents only (the default)
+f.file('recording', { kinds: ['audio'] })  // audio only
+```
+
+Stores the upload path as a plain string, e.g. `/uploads/<uuid>.pdf`.
+
+Files modified when adding `file`:
+- `src/lib/schema.ts` - Added 'file' to FieldType, `kinds?: string[]` to FieldDefinition, `f.file()` helper
+- `src/admin/types/index.ts` - Added `kinds?: string[]`
+- `src/server/routes/schemas.ts` - Added `kinds` mapping in `mapField()`
+- `src/admin/editors/FileEditor.tsx` - Created editor component (drop target + library picker)
+- `src/admin/pages/ItemEdit.tsx` + `BlocksEditor.tsx` + `BlockEditor.tsx` - Added to editorMaps
+
+No entry in `JSON_FIELD_TYPES`: the value is a string, like `image`.
+
 ### Example: The `link` field type
 
 The `link` field stores either an internal content reference or an external URL:
@@ -142,6 +162,17 @@ Content items returned from the API separate schema fields from system metadata:
 ```
 
 The conversion happens in `src/server/lib/content.ts` in `deserializeRow()`.
+
+## Media library
+
+`src/server/lib/mediaTypes.ts` is the single source of truth for what may be
+uploaded. Every allowed MIME type maps to a kind (`image`, `document`, `audio`,
+`video`) which the API returns on each item and accepts as a `?kind=` filter.
+
+- Uploads are capped by `MAX_UPLOAD_MB` (default 100).
+- Browsers report PDFs as `application/octet-stream` often enough that the type
+  falls back to the file extension before an upload is refused.
+- Files can be dropped anywhere on the Media page, and onto a `file` field.
 
 ## Architecture
 
