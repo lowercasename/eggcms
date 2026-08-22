@@ -1,0 +1,22 @@
+# Dependencies are installed inside the image. Copying a host node_modules in
+# breaks the build when it was installed by a different package manager.
+node_modules
+
+# Build output
+dist
+
+# Local instance state
+data
+uploads
+.env
+.env.*
+!.env.example
+
+# Repo furniture
+.git
+.gitignore
+.github
+.claude
+docs
+*.md
+!README.md
