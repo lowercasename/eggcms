@@ -30,6 +30,8 @@ export function createSchemasRoute(schemas: SchemaDefinition[]) {
       } : undefined,
       // Include collections restriction for link fields
       collections: f.collections,
+      // Include accepted media kinds for file fields
+      kinds: f.kinds,
     })
 
     const publicSchemas = schemas

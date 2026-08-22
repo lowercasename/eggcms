@@ -18,6 +18,7 @@ export interface FieldDefinition {
   blocks?: BlockDefinition[]  // For blocks fields
   block?: BlockDefinition  // For single block field
   collections?: string[]  // For link fields - restrict to specific collections
+  kinds?: string[]  // For file fields - which media kinds may be attached
 }
 
 /**

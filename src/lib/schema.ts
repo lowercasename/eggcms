@@ -57,6 +57,7 @@ export type FieldType =
   | 'blocks'
   | 'block'
   | 'link'
+  | 'file'
 
 export interface FieldDefinition {
   name: string
@@ -70,6 +71,7 @@ export interface FieldDefinition {
   blocks?: BlockDefinition[]
   block?: BlockDefinition  // For single block field
   collections?: string[]  // For link fields - restrict to specific collections
+  kinds?: string[]  // For file fields - which media kinds may be attached (default: document)
 }
 
 /**
@@ -131,4 +133,5 @@ export const f = {
   blocks: (name: string, opts: { blocks: BlockDefinition[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'blocks', ...opts }),
   block: (name: string, opts: { block: BlockDefinition } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'block', ...opts }),
   link: (name: string, opts?: { collections?: string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'link', ...opts }),
+  file: (name: string, opts?: { kinds?: string[] } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'file', ...opts }),
 }

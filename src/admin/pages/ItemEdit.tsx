@@ -20,6 +20,7 @@ import ImageEditor from '../editors/ImageEditor'
 import BlocksEditor from '../editors/BlocksEditor'
 import BlockEditor from '../editors/BlockEditor'
 import LinkFieldEditor from '../editors/LinkFieldEditor'
+import FileEditor from '../editors/FileEditor'
 
 interface ItemEditProps {
   schema: Schema
@@ -40,6 +41,7 @@ const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; va
   blocks: BlocksEditor,
   block: BlockEditor,
   link: LinkFieldEditor,
+  file: FileEditor,
 }
 
 export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps) {

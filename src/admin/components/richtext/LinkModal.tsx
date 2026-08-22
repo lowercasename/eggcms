@@ -1,6 +1,6 @@
 // src/admin/components/richtext/LinkModal.tsx
 import { useState, useEffect } from "react";
-import { ExternalLink, FileText, Loader2, Search } from "lucide-react";
+import { ExternalLink, FileText, Loader2, Paperclip, Search } from "lucide-react";
 import Modal, { ModalBody, ModalFooter } from "../Modal";
 import { api } from "../../lib/api";
 
@@ -9,6 +9,13 @@ interface Schema {
   label: string;
   type: string;
   labelField?: string;
+}
+
+interface MediaItem {
+  id: string;
+  filename: string;
+  path: string;
+  kind: string | null;
 }
 
 interface ContentItem {
@@ -30,7 +37,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Tab = "external" | "internal";
+type Tab = "external" | "internal" | "file";
 
 export default function LinkModal({
   currentHref,
@@ -40,8 +47,13 @@ export default function LinkModal({
   onRemove,
   onClose,
 }: Props) {
-  // Determine initial tab based on current link type
-  const initialTab: Tab = currentContentRef ? "internal" : "external";
+  // Determine initial tab based on current link type. A link pointing into the
+  // uploads directory is a file link, so editing one reopens on that tab.
+  const initialTab: Tab = currentContentRef
+    ? "internal"
+    : currentHref?.startsWith("/uploads/")
+      ? "file"
+      : "external";
 
   const [tab, setTab] = useState<Tab>(initialTab);
   const [url, setUrl] = useState(currentHref || "");
@@ -54,6 +66,15 @@ export default function LinkModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingSchemas, setLoadingSchemas] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
+
+  // File link state. Images are deliberately excluded: those belong in the
+  // editor's image button, not in a text link.
+  const [files, setFiles] = useState<MediaItem[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string>(
+    currentHref?.startsWith("/uploads/") ? currentHref : ""
+  );
+  const [fileQuery, setFileQuery] = useState("");
+  const [loadingFiles, setLoadingFiles] = useState(true);
 
   // Parse current contentRef if present
   useEffect(() => {
@@ -85,6 +106,20 @@ export default function LinkModal({
       .finally(() => setLoadingSchemas(false));
   }, [currentContentRef]);
 
+  // Load linkable files on mount
+  useEffect(() => {
+    api
+      .getMedia()
+      .then((res) => {
+        const linkable = (res.data as MediaItem[]).filter(
+          (item) => item.kind !== "image"
+        );
+        setFiles(linkable);
+      })
+      .catch(console.error)
+      .finally(() => setLoadingFiles(false));
+  }, []);
+
   // Load items when schema is selected
   useEffect(() => {
     if (!selectedSchema) {
@@ -115,6 +150,10 @@ export default function LinkModal({
   });
 
   const handleSave = () => {
+    if (tab === "file") {
+      if (selectedFile) onSaveExternal(selectedFile);
+      return;
+    }
     if (tab === "external") {
       if (url.trim()) {
         // Auto-add https:// if no protocol
@@ -139,9 +178,14 @@ export default function LinkModal({
   };
 
   const hasExistingLink = currentHref || currentContentRef;
+  const filteredFiles = files.filter((file) =>
+    fileQuery ? file.filename.toLowerCase().includes(fileQuery.toLowerCase()) : true
+  );
+
   const canSave =
     (tab === "external" && url.trim()) ||
-    (tab === "internal" && selectedSchema && selectedItem);
+    (tab === "internal" && selectedSchema && selectedItem) ||
+    (tab === "file" && selectedFile);
 
   return (
     <Modal title={hasExistingLink ? "Edit Link" : "Insert Link"} onClose={onClose}>
@@ -169,10 +213,74 @@ export default function LinkModal({
           <FileText className="w-4 h-4 inline-block mr-2" />
           Internal Link
         </button>
+        <button
+          onClick={() => setTab("file")}
+          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            tab === "file"
+              ? "text-[#E5644E] border-b-2 border-[#E5644E]"
+              : "text-[#6B6B63] hover:text-[#1A1A18]"
+          }`}
+        >
+          <Paperclip className="w-4 h-4 inline-block mr-2" />
+          File
+        </button>
       </div>
 
       <ModalBody>
-        {tab === "external" ? (
+        {tab === "file" ? (
+          loadingFiles ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-[#9C9C91]" />
+            </div>
+          ) : files.length === 0 ? (
+            <div className="text-center py-12">
+              <Paperclip
+                className="w-12 h-12 mx-auto mb-3 text-[#9C9C91]"
+                strokeWidth={1.5}
+              />
+              <p className="text-sm text-[#9C9C91]">No files in the library</p>
+              <p className="text-xs text-[#9C9C91] mt-1">
+                Upload a PDF on the Media page first
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C91]" />
+                <input
+                  type="text"
+                  value={fileQuery}
+                  onChange={(e) => setFileQuery(e.target.value)}
+                  placeholder="Search files..."
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-[#E8E8E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5644E]/20 focus:border-[#E5644E]"
+                />
+              </div>
+
+              <div className="border border-[#E8E8E3] rounded-lg max-h-64 overflow-y-auto divide-y divide-[#E8E8E3]">
+                {filteredFiles.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-[#9C9C91]">
+                    No matching files
+                  </div>
+                ) : (
+                  filteredFiles.map((file) => (
+                    <button
+                      key={file.id}
+                      onClick={() => setSelectedFile(file.path)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                        selectedFile === file.path
+                          ? "bg-[#FEF2F0] text-[#E5644E]"
+                          : "hover:bg-[#F5F5F3] text-[#1A1A18]"
+                      }`}
+                    >
+                      <Paperclip className="w-4 h-4 flex-shrink-0 text-[#9C9C91]" />
+                      <span className="text-sm truncate">{file.filename}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )
+        ) : tab === "external" ? (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#1A1A18] mb-2">

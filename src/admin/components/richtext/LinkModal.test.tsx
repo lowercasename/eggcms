@@ -4,8 +4,37 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import LinkModal from "./LinkModal";
 import { api } from "../../lib/api";
 
+const mediaLibrary = [
+  {
+    id: "1",
+    filename: "2021_Govor_Belarus.pdf",
+    path: "/uploads/belarus.pdf",
+    mimetype: "application/pdf",
+    kind: "document",
+    size: 1024,
+  },
+  {
+    id: "2",
+    filename: "interview.mp3",
+    path: "/uploads/interview.mp3",
+    mimetype: "audio/mpeg",
+    kind: "audio",
+    size: 2048,
+  },
+  {
+    id: "3",
+    filename: "cover.jpg",
+    path: "/uploads/cover.jpg",
+    mimetype: "image/jpeg",
+    kind: "image",
+    size: 512,
+  },
+];
+
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.mocked(api.getSchemas).mockResolvedValue({ data: [] });
+  vi.mocked(api.getMedia).mockResolvedValue({ data: mediaLibrary } as never);
 });
 
 describe("LinkModal external URL normalization", () => {
@@ -67,5 +96,63 @@ describe("LinkModal external URL normalization", () => {
     );
     fireEvent.click(screen.getByText("Update"));
     expect(onSaveExternal).toHaveBeenCalledWith("#section-2");
+  });
+});
+
+describe("LinkModal file links", () => {
+  const open = (props: Partial<React.ComponentProps<typeof LinkModal>> = {}) =>
+    render(
+      <LinkModal
+        onSaveExternal={vi.fn()}
+        onSaveInternal={vi.fn()}
+        onRemove={vi.fn()}
+        onClose={vi.fn()}
+        {...props}
+      />
+    );
+
+  it("offers a File tab", () => {
+    open();
+    expect(screen.getByRole("button", { name: /file/i })).toBeInTheDocument();
+  });
+
+  it("lists documents and audio, but not images", async () => {
+    open();
+    fireEvent.click(screen.getByRole("button", { name: /^file$/i }));
+
+    expect(await screen.findByText("2021_Govor_Belarus.pdf")).toBeInTheDocument();
+    expect(screen.getByText("interview.mp3")).toBeInTheDocument();
+    // Images belong in the editor's image button, not in a text link.
+    expect(screen.queryByText("cover.jpg")).not.toBeInTheDocument();
+  });
+
+  it("saves the file path as the link href", async () => {
+    const onSaveExternal = vi.fn();
+    open({ onSaveExternal });
+
+    fireEvent.click(screen.getByRole("button", { name: /^file$/i }));
+    fireEvent.click(await screen.findByText("2021_Govor_Belarus.pdf"));
+    fireEvent.click(screen.getByText("Insert"));
+
+    expect(onSaveExternal).toHaveBeenCalledWith("/uploads/belarus.pdf");
+  });
+
+  it("filters the list by filename", async () => {
+    open();
+    fireEvent.click(screen.getByRole("button", { name: /^file$/i }));
+    await screen.findByText("2021_Govor_Belarus.pdf");
+
+    fireEvent.change(screen.getByPlaceholderText(/search files/i), {
+      target: { value: "belarus" },
+    });
+
+    expect(screen.getByText("2021_Govor_Belarus.pdf")).toBeInTheDocument();
+    expect(screen.queryByText("interview.mp3")).not.toBeInTheDocument();
+  });
+
+  it("opens on the File tab when editing a link that points at an upload", async () => {
+    open({ currentHref: "/uploads/belarus.pdf" });
+
+    expect(await screen.findByText("2021_Govor_Belarus.pdf")).toBeInTheDocument();
   });
 });

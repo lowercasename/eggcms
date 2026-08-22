@@ -30,6 +30,7 @@ import SlugEditor from "./SlugEditor";
 import ImageEditor from "./ImageEditor";
 import BlockEditor from "./BlockEditor";
 import LinkFieldEditor from "./LinkFieldEditor";
+import FileEditor from "./FileEditor";
 
 interface BlockDefinition {
 	name: string;
@@ -69,6 +70,7 @@ const editorMap: Record<
 	image: ImageEditor,
 	select: SelectEditor,
 	link: LinkFieldEditor,
+	file: FileEditor,
 };
 
 // Add blocks and block editors after declaration to enable recursion
