@@ -1,8 +1,8 @@
 // src/server/lib/storage.ts
 import fs from 'fs'
 import path from 'path'
-import { randomUUID } from 'crypto'
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import { storageFilename } from './filenames'
 
 export interface StorageService {
   save(file: File): Promise<{ path: string; filename: string }>
@@ -19,8 +19,11 @@ export function createLocalStorage(): StorageService {
 
   return {
     async save(file: File) {
-      const ext = path.extname(file.name) || ''
-      const filename = `${randomUUID()}${ext}`
+      // Stored under a readable version of the name it arrived with, so the
+      // public URL of a paper is something a person can read and cite.
+      const filename = storageFilename(file.name, (candidate) =>
+        fs.existsSync(path.join(uploadsDir, candidate))
+      )
       const filePath = path.join(uploadsDir, filename)
 
       const buffer = Buffer.from(await file.arrayBuffer())
@@ -63,8 +66,24 @@ export function createS3Storage(): StorageService {
 
   return {
     async save(file: File) {
-      const ext = path.extname(file.name) || ''
-      const key = `${randomUUID()}${ext}`
+      // Same readable naming as local storage. Each candidate costs one
+      // HeadObject, and collisions are rare: the media route has already
+      // deduped identical content by hash.
+      const taken = new Set<string>()
+      let key = storageFilename(file.name, (name) => taken.has(name))
+
+      for (let attempt = 0; attempt < 5; attempt++) {
+        let inUse = false
+        try {
+          await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
+          inUse = true
+        } catch {
+          inUse = false
+        }
+        if (!inUse) break
+        taken.add(key)
+        key = storageFilename(file.name, (name) => taken.has(name))
+      }
 
       const buffer = Buffer.from(await file.arrayBuffer())
 

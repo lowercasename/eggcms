@@ -169,6 +169,9 @@ The conversion happens in `src/server/lib/content.ts` in `deserializeRow()`.
 uploaded. Every allowed MIME type maps to a kind (`image`, `document`, `audio`,
 `video`) which the API returns on each item and accepts as a `?kind=` filter.
 
+- Uploads are stored under a slugified version of their original filename
+  (`src/server/lib/filenames.ts`), not a UUID, so public URLs are readable and
+  citable. Names collide into `-2`, `-3`, and Cyrillic is transliterated.
 - Uploads are capped by `MAX_UPLOAD_MB` (default 100).
 - Browsers report PDFs as `application/octet-stream` often enough that the type
   falls back to the file extension before an upload is refused.
