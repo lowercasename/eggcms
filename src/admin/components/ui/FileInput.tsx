@@ -4,17 +4,21 @@ import Button from './Button'
 import { Upload } from 'lucide-react'
 
 interface FileInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
-  onChange: (file: File | null) => void
+  /** Called with the first selected file. */
+  onChange?: (file: File | null) => void
+  /** Called with every selected file. Use with `multiple`. */
+  onFiles?: (files: File[]) => void
   loading?: boolean
   label?: string
 }
 
-export default function FileInput({ onChange, loading, label = 'Choose file', accept, disabled, ...props }: FileInputProps) {
+export default function FileInput({ onChange, onFiles, loading, label = 'Choose file', accept, disabled, ...props }: FileInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    onChange(file)
+    const files = Array.from(e.target.files ?? [])
+    onFiles?.(files)
+    onChange?.(files[0] ?? null)
     if (inputRef.current) {
       inputRef.current.value = ''
     }
