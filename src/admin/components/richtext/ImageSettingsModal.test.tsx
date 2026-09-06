@@ -24,7 +24,7 @@ describe("ImageSettingsModal", () => {
     it("renders the modal with title", () => {
       render(<ImageSettingsModal {...defaultProps} />);
 
-      expect(screen.getByText("Image Settings")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Image settings" })).toBeInTheDocument();
     });
 
     it("displays image preview", () => {
@@ -71,7 +71,7 @@ describe("ImageSettingsModal", () => {
       render(<ImageSettingsModal {...defaultProps} />);
 
       expect(
-        screen.getByRole("button", { name: "Replace Image" })
+        screen.getByRole("button", { name: "Replace image" })
       ).toBeInTheDocument();
     });
 
@@ -88,7 +88,7 @@ describe("ImageSettingsModal", () => {
       render(<ImageSettingsModal {...defaultProps} />);
 
       const mediumBtn = screen.getByRole("button", { name: "Medium" });
-      expect(mediumBtn).toHaveClass("border-[#E5644E]");
+      expect(mediumBtn).toHaveAttribute("aria-pressed", "true");
     });
 
     it("changes size when clicking a preset", async () => {
@@ -98,7 +98,7 @@ describe("ImageSettingsModal", () => {
       await user.click(screen.getByRole("button", { name: "Large" }));
 
       const largeBtn = screen.getByRole("button", { name: "Large" });
-      expect(largeBtn).toHaveClass("border-[#E5644E]");
+      expect(largeBtn).toHaveAttribute("aria-pressed", "true");
     });
 
     it("clears custom width when selecting a size preset", async () => {
@@ -261,12 +261,7 @@ describe("ImageSettingsModal", () => {
       const onClose = vi.fn();
       render(<ImageSettingsModal {...defaultProps} onClose={onClose} />);
 
-      // Find the X button in header (there's an X icon)
-      const closeButtons = screen.getAllByRole("button");
-      const xButton = closeButtons.find((btn) =>
-        btn.querySelector("svg.lucide-x")
-      );
-      await user.click(xButton!);
+      await user.click(screen.getByRole("button", { name: "Close" }));
 
       expect(onClose).toHaveBeenCalled();
     });
@@ -277,7 +272,7 @@ describe("ImageSettingsModal", () => {
       render(<ImageSettingsModal {...defaultProps} onClose={onClose} />);
 
       // Click the backdrop (the semi-transparent overlay)
-      const backdrop = document.querySelector(".bg-black\\/50");
+      const backdrop = document.querySelector(".bg-ink\\/50");
       await user.click(backdrop!);
 
       expect(onClose).toHaveBeenCalled();
@@ -289,21 +284,20 @@ describe("ImageSettingsModal", () => {
       const user = userEvent.setup();
       render(<ImageSettingsModal {...defaultProps} />);
 
-      await user.click(screen.getByRole("button", { name: "Replace Image" }));
+      await user.click(screen.getByRole("button", { name: "Replace image" }));
 
-      expect(screen.getByText("Replace Image")).toBeInTheDocument();
-      expect(screen.getByText("Upload New")).toBeInTheDocument();
-      expect(screen.getByText("Media Library")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Replace image" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /upload files/i })).toBeInTheDocument();
     });
 
     it("can go back from replace modal", async () => {
       const user = userEvent.setup();
       render(<ImageSettingsModal {...defaultProps} />);
 
-      await user.click(screen.getByRole("button", { name: "Replace Image" }));
+      await user.click(screen.getByRole("button", { name: "Replace image" }));
       await user.click(screen.getByRole("button", { name: "Back" }));
 
-      expect(screen.getByText("Image Settings")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Image settings" })).toBeInTheDocument();
     });
   });
 
@@ -321,8 +315,8 @@ describe("ImageSettingsModal", () => {
       render(<ImageSettingsModal {...props} />);
 
       const mediumBtn = screen.getByRole("button", { name: "Medium" });
-      // Should not have the active border color when custom width is set
-      expect(mediumBtn).not.toHaveClass("border-[#E5644E]");
+      // Should not read as pressed when custom width is set
+      expect(mediumBtn).toHaveAttribute("aria-pressed", "false");
     });
   });
 });

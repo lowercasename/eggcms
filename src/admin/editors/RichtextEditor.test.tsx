@@ -34,6 +34,7 @@ describe("RichtextEditor", () => {
       expect(screen.getByTitle("Italic")).toBeInTheDocument();
       expect(screen.getByTitle("Heading 2")).toBeInTheDocument();
       expect(screen.getByTitle("Heading 3")).toBeInTheDocument();
+      expect(screen.getByTitle("Normal text")).toBeInTheDocument();
       expect(screen.getByTitle("Bullet list")).toBeInTheDocument();
       expect(screen.getByTitle("Numbered list")).toBeInTheDocument();
       expect(screen.getByTitle("Horizontal rule")).toBeInTheDocument();
@@ -77,9 +78,8 @@ describe("RichtextEditor", () => {
 
       await user.click(screen.getByTitle("Insert image"));
 
-      expect(screen.getByText("Insert Image")).toBeInTheDocument();
-      expect(screen.getByText("Upload New")).toBeInTheDocument();
-      expect(screen.getByText("Media Library")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Insert image" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /upload files/i })).toBeInTheDocument();
     });
 
     it("closes image picker when Cancel clicked", async () => {
@@ -99,7 +99,7 @@ describe("RichtextEditor", () => {
       await user.click(screen.getByTitle("Insert image"));
       await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-      expect(screen.queryByText("Insert Image")).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
@@ -154,7 +154,7 @@ describe("RichtextEditor", () => {
 
       // Open image modal
       await user.click(screen.getByTitle("Insert image"));
-      expect(screen.getByText("Insert Image")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Insert image" })).toBeInTheDocument();
 
       // Editor should be non-editable while modal is open
       await waitFor(() => {
@@ -180,7 +180,7 @@ describe("RichtextEditor", () => {
 
       // Open then close the modal
       await user.click(screen.getByTitle("Insert image"));
-      expect(screen.getByText("Insert Image")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Insert image" })).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Cancel" }));
 

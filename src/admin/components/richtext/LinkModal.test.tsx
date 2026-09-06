@@ -113,12 +113,12 @@ describe("LinkModal file links", () => {
 
   it("offers a File tab", () => {
     open();
-    expect(screen.getByRole("button", { name: /file/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /file/i })).toBeInTheDocument();
   });
 
   it("lists documents and audio, but not images", async () => {
     open();
-    fireEvent.click(screen.getByRole("button", { name: /^file$/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /^file$/i }));
 
     expect(await screen.findByText("2021_Govor_Belarus.pdf")).toBeInTheDocument();
     expect(screen.getByText("interview.mp3")).toBeInTheDocument();
@@ -130,7 +130,7 @@ describe("LinkModal file links", () => {
     const onSaveExternal = vi.fn();
     open({ onSaveExternal });
 
-    fireEvent.click(screen.getByRole("button", { name: /^file$/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /^file$/i }));
     fireEvent.click(await screen.findByText("2021_Govor_Belarus.pdf"));
     fireEvent.click(screen.getByText("Insert"));
 
@@ -139,7 +139,7 @@ describe("LinkModal file links", () => {
 
   it("filters the list by filename", async () => {
     open();
-    fireEvent.click(screen.getByRole("button", { name: /^file$/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /^file$/i }));
     await screen.findByText("2021_Govor_Belarus.pdf");
 
     fireEvent.change(screen.getByPlaceholderText(/search files/i), {

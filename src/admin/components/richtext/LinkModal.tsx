@@ -1,8 +1,9 @@
 // src/admin/components/richtext/LinkModal.tsx
 import { useState, useEffect } from "react";
-import { ExternalLink, FileText, Loader2, Paperclip, Search } from "lucide-react";
+import { ExternalLink, FileText, Paperclip } from "lucide-react";
 import Modal, { ModalBody, ModalFooter } from "../Modal";
 import { api } from "../../lib/api";
+import { Button, EmptyState, Input, Label, SearchInput, Select } from "../ui";
 
 interface Schema {
   name: string;
@@ -28,16 +29,61 @@ interface Props {
   currentHref?: string;
   /** Current contentRef for internal links (format: "schema:id") */
   currentContentRef?: string;
-  /** Called when saving an external link */
   onSaveExternal: (href: string) => void;
-  /** Called when saving an internal link */
   onSaveInternal: (contentRef: string, displayLabel: string) => void;
-  /** Called when removing the link */
   onRemove: () => void;
   onClose: () => void;
 }
 
 type Tab = "external" | "internal" | "file";
+
+const TABS: Array<{ value: Tab; label: string; Icon: typeof ExternalLink }> = [
+  { value: "external", label: "Web address", Icon: ExternalLink },
+  { value: "internal", label: "A page on this site", Icon: FileText },
+  { value: "file", label: "File", Icon: Paperclip },
+];
+
+/** A list of choices, one highlighted. */
+function ChoiceList<T extends { key: string; label: string }>({
+  items,
+  selected,
+  onSelect,
+  empty,
+  icon,
+}: {
+  items: T[];
+  selected: string;
+  onSelect: (key: string) => void;
+  empty: string;
+  icon?: typeof Paperclip;
+}) {
+  const Icon = icon;
+  return (
+    <div className="control max-h-64 overflow-y-auto divide-y divide-line-hair !rounded-control">
+      {items.length === 0 ? (
+        <p className="m-0 py-6 text-center text-[15px] text-ink-2">{empty}</p>
+      ) : (
+        items.map((item) => {
+          const active = selected === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelect(item.key)}
+              className={`w-full flex items-center gap-3 px-3 py-3 min-h-[48px] text-left text-[15px] transition-colors ${
+                active ? "bg-selected text-white font-semibold" : "text-ink hover:bg-page"
+              }`}
+            >
+              {Icon && <Icon className={`w-4 h-4 shrink-0 ${active ? "text-white" : "text-ink-2"}`} aria-hidden />}
+              <span className="truncate">{item.label}</span>
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
 
 export default function LinkModal({
   currentHref,
@@ -47,18 +93,13 @@ export default function LinkModal({
   onRemove,
   onClose,
 }: Props) {
-  // Determine initial tab based on current link type. A link pointing into the
-  // uploads directory is a file link, so editing one reopens on that tab.
-  const initialTab: Tab = currentContentRef
-    ? "internal"
-    : currentHref?.startsWith("/uploads/")
-      ? "file"
-      : "external";
+  // A link pointing into the uploads directory is a file link, so editing one
+  // reopens on that tab.
+  const initialTab: Tab = currentContentRef ? "internal" : currentHref?.startsWith("/uploads/") ? "file" : "external";
 
   const [tab, setTab] = useState<Tab>(initialTab);
   const [url, setUrl] = useState(currentHref || "");
 
-  // Internal link state
   const [schemas, setSchemas] = useState<Schema[]>([]);
   const [selectedSchema, setSelectedSchema] = useState<string>("");
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -67,16 +108,12 @@ export default function LinkModal({
   const [loadingSchemas, setLoadingSchemas] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
 
-  // File link state. Images are deliberately excluded: those belong in the
-  // editor's image button, not in a text link.
+  // Images are deliberately excluded: those belong in the editor's image button.
   const [files, setFiles] = useState<MediaItem[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string>(
-    currentHref?.startsWith("/uploads/") ? currentHref : ""
-  );
+  const [selectedFile, setSelectedFile] = useState<string>(currentHref?.startsWith("/uploads/") ? currentHref : "");
   const [fileQuery, setFileQuery] = useState("");
   const [loadingFiles, setLoadingFiles] = useState(true);
 
-  // Parse current contentRef if present
   useEffect(() => {
     if (currentContentRef) {
       const [schema, id] = currentContentRef.split(":");
@@ -85,54 +122,38 @@ export default function LinkModal({
     }
   }, [currentContentRef]);
 
-  // Load schemas on mount
   useEffect(() => {
     api
       .getSchemas()
       .then((res) => {
-        // Only show collections (not singletons) for internal links
         const collections = res.data.filter((s) => s.type === "collection");
         setSchemas(collections);
-
-        // If we have a currentContentRef, pre-select its schema
         if (currentContentRef) {
           const [schema] = currentContentRef.split(":");
-          if (collections.find((s) => s.name === schema)) {
-            setSelectedSchema(schema);
-          }
+          if (collections.find((s) => s.name === schema)) setSelectedSchema(schema);
         }
       })
       .catch(console.error)
       .finally(() => setLoadingSchemas(false));
   }, [currentContentRef]);
 
-  // Load linkable files on mount
   useEffect(() => {
     api
       .getMedia()
-      .then((res) => {
-        const linkable = (res.data as MediaItem[]).filter(
-          (item) => item.kind !== "image"
-        );
-        setFiles(linkable);
-      })
+      .then((res) => setFiles((res.data as MediaItem[]).filter((item) => item.kind !== "image")))
       .catch(console.error)
       .finally(() => setLoadingFiles(false));
   }, []);
 
-  // Load items when schema is selected
   useEffect(() => {
     if (!selectedSchema) {
       setItems([]);
       return;
     }
-
     setLoadingItems(true);
     api
       .getContent<ContentItem>(selectedSchema)
-      .then((res) => {
-        setItems(res.data);
-      })
+      .then((res) => setItems(res.data))
       .catch(console.error)
       .finally(() => setLoadingItems(false));
   }, [selectedSchema]);
@@ -143,11 +164,8 @@ export default function LinkModal({
     return (item[labelField] as string) || item.id;
   };
 
-  const filteredItems = items.filter((item) => {
-    if (!searchQuery) return true;
-    const label = getItemLabel(item).toLowerCase();
-    return label.includes(searchQuery.toLowerCase());
-  });
+  const filteredItems = items.filter((item) => !searchQuery || getItemLabel(item).toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredFiles = files.filter((file) => !fileQuery || file.filename.toLowerCase().includes(fileQuery.toLowerCase()));
 
   const handleSave = () => {
     if (tab === "file") {
@@ -155,263 +173,124 @@ export default function LinkModal({
       return;
     }
     if (tab === "external") {
-      if (url.trim()) {
-        // Auto-add https:// if no protocol
-        let finalUrl = url.trim();
-        if (
-          !/^https?:\/\//i.test(finalUrl) &&
-          !finalUrl.startsWith("/") &&
-          !finalUrl.startsWith("#")
-        ) {
-          finalUrl = "https://" + finalUrl;
-        }
-        onSaveExternal(finalUrl);
+      let finalUrl = url.trim();
+      if (!finalUrl) return;
+      if (!/^https?:\/\//i.test(finalUrl) && !finalUrl.startsWith("/") && !finalUrl.startsWith("#")) {
+        finalUrl = "https://" + finalUrl;
       }
-    } else {
-      if (selectedSchema && selectedItem) {
-        const contentRef = `${selectedSchema}:${selectedItem}`;
-        const item = items.find((i) => i.id === selectedItem);
-        const displayLabel = item ? getItemLabel(item) : selectedItem;
-        onSaveInternal(contentRef, displayLabel);
-      }
+      onSaveExternal(finalUrl);
+      return;
+    }
+    if (selectedSchema && selectedItem) {
+      const item = items.find((i) => i.id === selectedItem);
+      onSaveInternal(`${selectedSchema}:${selectedItem}`, item ? getItemLabel(item) : selectedItem);
     }
   };
 
   const hasExistingLink = currentHref || currentContentRef;
-  const filteredFiles = files.filter((file) =>
-    fileQuery ? file.filename.toLowerCase().includes(fileQuery.toLowerCase()) : true
-  );
-
   const canSave =
-    (tab === "external" && url.trim()) ||
-    (tab === "internal" && selectedSchema && selectedItem) ||
-    (tab === "file" && selectedFile);
+    (tab === "external" && url.trim()) || (tab === "internal" && selectedSchema && selectedItem) || (tab === "file" && selectedFile);
 
   return (
-    <Modal title={hasExistingLink ? "Edit Link" : "Insert Link"} onClose={onClose}>
-      {/* Tabs */}
-      <div className="flex border-b border-[#E8E8E3]">
-        <button
-          onClick={() => setTab("external")}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            tab === "external"
-              ? "text-[#E5644E] border-b-2 border-[#E5644E]"
-              : "text-[#6B6B63] hover:text-[#1A1A18]"
-          }`}
-        >
-          <ExternalLink className="w-4 h-4 inline-block mr-2" />
-          External URL
-        </button>
-        <button
-          onClick={() => setTab("internal")}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            tab === "internal"
-              ? "text-[#E5644E] border-b-2 border-[#E5644E]"
-              : "text-[#6B6B63] hover:text-[#1A1A18]"
-          }`}
-        >
-          <FileText className="w-4 h-4 inline-block mr-2" />
-          Internal Link
-        </button>
-        <button
-          onClick={() => setTab("file")}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            tab === "file"
-              ? "text-[#E5644E] border-b-2 border-[#E5644E]"
-              : "text-[#6B6B63] hover:text-[#1A1A18]"
-          }`}
-        >
-          <Paperclip className="w-4 h-4 inline-block mr-2" />
-          File
-        </button>
+    <Modal title={hasExistingLink ? "Edit link" : "Add a link"} onClose={onClose} maxWidth="lg">
+      <div role="tablist" aria-label="Link to" className="flex gap-1.5 px-6 pt-4">
+        {TABS.map(({ value, label, Icon }) => {
+          const active = tab === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(value)}
+              className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-control border-[1.5px] text-[15px] font-semibold transition-colors ${
+                active ? "bg-selected text-white border-selected" : "bg-panel text-ink-nav border-line-input hover:bg-page"
+              }`}
+            >
+              <Icon className="w-4 h-4" aria-hidden />
+              {label}
+            </button>
+          );
+        })}
       </div>
 
-      <ModalBody>
+      <ModalBody className="flex flex-col gap-4">
         {tab === "file" ? (
           loadingFiles ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-[#9C9C91]" />
-            </div>
+            <p className="m-0 text-[15px] text-ink-2">Loading…</p>
           ) : files.length === 0 ? (
-            <div className="text-center py-12">
-              <Paperclip
-                className="w-12 h-12 mx-auto mb-3 text-[#9C9C91]"
-                strokeWidth={1.5}
-              />
-              <p className="text-sm text-[#9C9C91]">No files in the library</p>
-              <p className="text-xs text-[#9C9C91] mt-1">
-                Upload a PDF on the Media page first
-              </p>
-            </div>
+            <EmptyState icon={<Paperclip />} title="No files in the library" description="Upload a PDF on the Media page first." />
           ) : (
-            <div className="space-y-2">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C91]" />
-                <input
-                  type="text"
-                  value={fileQuery}
-                  onChange={(e) => setFileQuery(e.target.value)}
-                  placeholder="Search files..."
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-[#E8E8E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5644E]/20 focus:border-[#E5644E]"
-                />
-              </div>
-
-              <div className="border border-[#E8E8E3] rounded-lg max-h-64 overflow-y-auto divide-y divide-[#E8E8E3]">
-                {filteredFiles.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-[#9C9C91]">
-                    No matching files
-                  </div>
-                ) : (
-                  filteredFiles.map((file) => (
-                    <button
-                      key={file.id}
-                      onClick={() => setSelectedFile(file.path)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                        selectedFile === file.path
-                          ? "bg-[#FEF2F0] text-[#E5644E]"
-                          : "hover:bg-[#F5F5F3] text-[#1A1A18]"
-                      }`}
-                    >
-                      <Paperclip className="w-4 h-4 flex-shrink-0 text-[#9C9C91]" />
-                      <span className="text-sm truncate">{file.filename}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
+            <>
+              <SearchInput value={fileQuery} onChange={setFileQuery} placeholder="Search files..." />
+              <ChoiceList
+                items={filteredFiles.map((f) => ({ key: f.path, label: f.filename }))}
+                selected={selectedFile}
+                onSelect={setSelectedFile}
+                empty="No matching files"
+                icon={Paperclip}
+              />
+            </>
           )
         ) : tab === "external" ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#1A1A18] mb-2">
-                URL
-              </label>
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
-                className="w-full px-3 py-2 text-sm border border-[#E8E8E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5644E]/20 focus:border-[#E5644E]"
-                autoFocus
-              />
-              <p className="mt-1 text-xs text-[#9C9C91]">
-                Enter a full URL or a relative path starting with /
-              </p>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="link-url">Web address</Label>
+            <Input id="link-url" mono value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com" autoFocus />
+            <p className="m-0 text-[14px] text-ink-2">A full address, or a path on this site starting with /</p>
           </div>
         ) : loadingSchemas ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-[#9C9C91]" />
-          </div>
+          <p className="m-0 text-[15px] text-ink-2">Loading…</p>
         ) : schemas.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText
-              className="w-12 h-12 mx-auto mb-3 text-[#9C9C91]"
-              strokeWidth={1.5}
-            />
-            <p className="text-sm text-[#9C9C91]">No collections available</p>
-          </div>
+          <EmptyState icon={<FileText />} title="Nothing to link to yet" />
         ) : (
-          <div className="space-y-4">
-            {/* Collection selector */}
-            <div>
-              <label className="block text-sm font-medium text-[#1A1A18] mb-2">
-                Collection
-              </label>
-              <select
+          <>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="link-collection">Kind of page</Label>
+              <Select
+                id="link-collection"
                 value={selectedSchema}
                 onChange={(e) => {
                   setSelectedSchema(e.target.value);
                   setSelectedItem("");
                   setSearchQuery("");
                 }}
-                className="w-full px-3 py-2 text-sm border border-[#E8E8E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5644E]/20 focus:border-[#E5644E] bg-white"
-              >
-                <option value="">Select a collection...</option>
-                {schemas.map((schema) => (
-                  <option key={schema.name} value={schema.name}>
-                    {schema.label}
-                  </option>
-                ))}
-              </select>
+                options={schemas.map((s) => ({ value: s.name, label: s.label }))}
+                placeholder="Choose…"
+              />
             </div>
 
-            {/* Item selector */}
             {selectedSchema && (
-              <div>
-                <label className="block text-sm font-medium text-[#1A1A18] mb-2">
-                  Item
-                </label>
-
-                {/* Search */}
-                <div className="relative mb-2">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C91]" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search items..."
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-[#E8E8E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5644E]/20 focus:border-[#E5644E]"
+              <div className="flex flex-col gap-2">
+                <Label>Which one</Label>
+                <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="Search items..." />
+                {loadingItems ? (
+                  <p className="m-0 text-[15px] text-ink-2">Loading…</p>
+                ) : (
+                  <ChoiceList
+                    items={filteredItems.map((i) => ({ key: i.id, label: getItemLabel(i) }))}
+                    selected={selectedItem}
+                    onSelect={setSelectedItem}
+                    empty={searchQuery ? "No matching items" : "Nothing in this collection yet"}
                   />
-                </div>
-
-                {/* Items list */}
-                <div className="border border-[#E8E8E3] rounded-lg max-h-48 overflow-y-auto">
-                  {loadingItems ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-5 h-5 animate-spin text-[#9C9C91]" />
-                    </div>
-                  ) : filteredItems.length === 0 ? (
-                    <div className="text-center py-8 text-sm text-[#9C9C91]">
-                      {searchQuery ? "No matching items" : "No items in this collection"}
-                    </div>
-                  ) : (
-                    filteredItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => setSelectedItem(item.id)}
-                        className={`w-full px-3 py-2 text-left text-sm transition-colors ${
-                          selectedItem === item.id
-                            ? "bg-[#FEF2F0] text-[#E5644E]"
-                            : "hover:bg-[#F5F5F3] text-[#1A1A18]"
-                        }`}
-                      >
-                        {getItemLabel(item)}
-                      </button>
-                    ))
-                  )}
-                </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </ModalBody>
 
       <ModalFooter>
         {hasExistingLink && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="px-4 py-2 text-sm font-medium text-[#DC4E42] bg-white border border-[#E8E8E3] rounded-lg hover:bg-[#FEF2F1] transition-colors mr-auto"
-          >
-            Remove Link
-          </button>
+          <Button variant="destructive" onClick={onRemove} className="mr-auto">
+            Remove link
+          </Button>
         )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-[#6B6B63] bg-white border border-[#E8E8E3] rounded-lg hover:bg-[#F5F5F3] transition-colors"
-        >
+        <Button variant="secondary" onClick={onClose}>
           Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="px-4 py-2 text-sm font-medium text-white bg-[#E5644E] rounded-lg hover:bg-[#D45A45] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        </Button>
+        <Button onClick={handleSave} disabled={!canSave}>
           {hasExistingLink ? "Update" : "Insert"}
-        </button>
+        </Button>
       </ModalFooter>
     </Modal>
   );

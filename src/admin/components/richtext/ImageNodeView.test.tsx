@@ -355,7 +355,7 @@ describe("ImageNodeView", () => {
 
       await user.click(screen.getByTitle("Image settings"));
 
-      expect(screen.getByText("Image Settings")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Image settings" })).toBeInTheDocument();
     });
 
     it("opens settings modal on double-click", async () => {
@@ -364,7 +364,7 @@ describe("ImageNodeView", () => {
       const container = document.querySelector(".image-container");
       fireEvent.doubleClick(container!);
 
-      expect(screen.getByText("Image Settings")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Image settings" })).toBeInTheDocument();
     });
   });
 
