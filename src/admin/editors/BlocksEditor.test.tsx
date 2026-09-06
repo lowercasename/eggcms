@@ -1,471 +1,252 @@
 // src/admin/editors/BlocksEditor.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import BlocksEditor from './BlocksEditor'
 import type { FieldDefinition } from '../types'
 
-// Mock child editors
 vi.mock('./StringEditor', () => ({
-  default: ({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) => (
-    <input
-      data-testid="string-editor"
-      value={(value as string) || ''}
-      onChange={(e) => onChange(e.target.value)}
-    />
+  default: ({ field, value, onChange }: { field: { name: string }; value: unknown; onChange: (v: unknown) => void }) => (
+    <input data-testid={`string-editor-${field.name}`} value={(value as string) || ''} onChange={(e) => onChange(e.target.value)} />
   ),
 }))
+vi.mock('./RichtextEditor', () => ({ default: () => <div data-testid="richtext-editor" /> }))
+vi.mock('./ImageEditor', () => ({ default: () => <div data-testid="image-editor" /> }))
 
-vi.mock('./TextEditor', () => ({
-  default: () => <div data-testid="text-editor" />,
-}))
+const heading = { name: 'heading', label: 'Heading', description: 'A large title', fields: [{ name: 'text', type: 'string', required: true }] }
+const text = { name: 'text', label: 'Text', fields: [{ name: 'body', type: 'richtext' }] }
+const book = {
+  name: 'book',
+  label: 'Book',
+  icon: 'book-open',
+  fields: [
+    { name: 'title', type: 'string' },
+    { name: 'details', type: 'richtext' },
+  ],
+}
 
-vi.mock('./NumberEditor', () => ({
-  default: ({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) => (
-    <input
-      data-testid="number-editor"
-      type="number"
-      value={(value as number) || 0}
-      onChange={(e) => onChange(Number(e.target.value))}
-    />
-  ),
-}))
+const field: FieldDefinition = { name: 'sections', type: 'blocks', blocks: [heading, text, book] }
 
-vi.mock('./BooleanEditor', () => ({
-  default: () => <div data-testid="boolean-editor" />,
-}))
+const three = [
+  { _type: 'heading', _id: 'h1', text: 'Books by Elena Govor' },
+  { _type: 'book', _id: 'b1', title: 'Early accounts of Hood Bay' },
+  { _type: 'text', _id: 't1', body: '<p>Media and talks</p>' },
+]
 
-vi.mock('./RichtextEditor', () => ({
-  default: () => <div data-testid="richtext-editor" />,
-}))
+const onChange = vi.fn()
+beforeEach(() => vi.clearAllMocks())
 
-vi.mock('./DatetimeEditor', () => ({
-  default: () => <div data-testid="datetime-editor" />,
-}))
-
-vi.mock('./SelectEditor', () => ({
-  default: () => <div data-testid="select-editor" />,
-}))
-
-vi.mock('./SlugEditor', () => ({
-  default: () => <div data-testid="slug-editor" />,
-}))
-
-vi.mock('./ImageEditor', () => ({
-  default: () => <div data-testid="image-editor" />,
-}))
-
-vi.mock('./BlockEditor', () => ({
-  default: () => <div data-testid="block-editor" />,
-}))
-
-describe('BlocksEditor', () => {
-  const textBlock = {
-    name: 'text',
-    label: 'Text Block',
-    fields: [
-      { name: 'content', type: 'string', required: true },
-    ],
-  }
-
-  const imageBlock = {
-    name: 'image',
-    label: 'Image Block',
-    fields: [
-      { name: 'src', type: 'string', required: true },
-      { name: 'alt', type: 'string' },
-    ],
-  }
-
-  const defaultField: FieldDefinition & { blocks?: typeof textBlock[] } = {
-    name: 'blocks',
-    type: 'blocks',
-    blocks: [textBlock, imageBlock],
-  }
-
-  const mockOnChange = vi.fn()
-
-  beforeEach(() => {
-    vi.clearAllMocks()
+describe('BlocksEditor: rows', () => {
+  it('shows every block collapsed with its type, preview and move buttons', () => {
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    const rows = screen.getAllByTestId('block-row')
+    expect(rows).toHaveLength(3)
+    expect(within(rows[0]).getByText('Heading')).toBeInTheDocument()
+    expect(within(rows[0]).getByText('Books by Elena Govor')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('Media and talks')).toBeInTheDocument()
+    expect(within(rows[0]).getByRole('button', { name: /heading/i })).toHaveAttribute('aria-expanded', 'false')
+    expect(within(rows[0]).getByRole('button', { name: 'Move up' })).toBeDisabled()
+    expect(within(rows[2]).getByRole('button', { name: 'Move down' })).toBeDisabled()
+    expect(screen.queryByTestId('string-editor-text')).not.toBeInTheDocument()
   })
 
-  describe('empty state', () => {
-    it('shows empty message when no blocks', () => {
-      render(
-        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
-      )
+  it('shows a message when no block types are defined', () => {
+    render(<BlocksEditor field={{ name: 'x', type: 'blocks' }} value={[]} onChange={onChange} />)
+    expect(screen.getByText('No block types defined for this field.')).toBeInTheDocument()
+  })
+})
 
-      expect(screen.getByText('No blocks added yet')).toBeInTheDocument()
-      expect(screen.getByText('Add your first block below')).toBeInTheDocument()
-    })
+describe('BlocksEditor: accordion', () => {
+  it('opens one block at a time and shows its position while open', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    const rows = screen.getAllByTestId('block-row')
 
-    it('shows message when no block types defined', () => {
-      const fieldWithoutBlocks: FieldDefinition = {
-        name: 'blocks',
-        type: 'blocks',
-      }
+    await user.click(within(rows[1]).getByRole('button', { name: /^book/i }))
+    expect(within(rows[1]).getByRole('button', { name: /^book/i })).toHaveAttribute('aria-expanded', 'true')
+    expect(within(rows[1]).getByText('2 of 3')).toBeInTheDocument()
+    expect(screen.getByTestId('string-editor-title')).toBeInTheDocument()
 
-      render(
-        <BlocksEditor field={fieldWithoutBlocks} value={[]} onChange={mockOnChange} />
-      )
-
-      expect(screen.getByText('No block types defined for this field.')).toBeInTheDocument()
-    })
+    await user.click(within(rows[0]).getByRole('button', { name: /heading/i }))
+    expect(within(rows[0]).getByRole('button', { name: /heading/i })).toHaveAttribute('aria-expanded', 'true')
+    expect(within(rows[1]).getByRole('button', { name: /^book/i })).toHaveAttribute('aria-expanded', 'false')
+    await waitFor(() => expect(screen.queryByTestId('string-editor-title')).not.toBeInTheDocument())
+    expect(screen.getByTestId('string-editor-text')).toBeInTheDocument()
   })
 
-  describe('multi-block type selection', () => {
-    it('shows block type options in select', () => {
-      render(
-        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
-      )
-
-      const select = screen.getByRole('combobox')
-      expect(select).toBeInTheDocument()
-
-      // Options should be available
-      const options = within(select).getAllByRole('option')
-      expect(options).toHaveLength(3) // placeholder + 2 blocks
-      expect(options[1]).toHaveTextContent('Text Block')
-      expect(options[2]).toHaveTextContent('Image Block')
-    })
-
-    it('does not show a separate Add Block button', () => {
-      render(
-        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
-      )
-
-      expect(screen.queryByRole('button', { name: /add block/i })).not.toBeInTheDocument()
-    })
+  it('clicking the open header closes it', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    const header = within(screen.getAllByTestId('block-row')[0]).getByRole('button', { name: /heading/i })
+    await user.click(header)
+    await user.click(header)
+    expect(header).toHaveAttribute('aria-expanded', 'false')
   })
 
-  describe('auto-add on select (multi-block)', () => {
-    it('adds block immediately when selecting from dropdown', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
-      )
-
-      const select = screen.getByRole('combobox')
-      await user.selectOptions(select, 'text')
-
-      expect(mockOnChange).toHaveBeenCalledWith([
-        expect.objectContaining({
-          _type: 'text',
-          _id: expect.any(String),
-        }),
-      ])
-    })
-
-    it('resets select after auto-adding', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <BlocksEditor field={defaultField} value={[]} onChange={mockOnChange} />
-      )
-
-      const select = screen.getByRole('combobox')
-      await user.selectOptions(select, 'text')
-
-      // Select should be reset to placeholder
-      expect(select).toHaveValue('')
-    })
-
-    it('initializes block with field defaults', async () => {
-      const user = userEvent.setup()
-
-      const fieldWithDefaults: FieldDefinition & { blocks?: typeof textBlock[] } = {
-        name: 'blocks',
-        type: 'blocks',
-        blocks: [
-          {
-            name: 'withDefault',
-            label: 'With Default',
-            fields: [
-              { name: 'title', type: 'string', default: 'Untitled' },
-              { name: 'count', type: 'number', default: 0 },
-            ],
-          },
-          textBlock,
-        ],
-      }
-
-      render(
-        <BlocksEditor field={fieldWithDefaults} value={[]} onChange={mockOnChange} />
-      )
-
-      const select = screen.getByRole('combobox')
-      await user.selectOptions(select, 'withDefault')
-
-      expect(mockOnChange).toHaveBeenCalledWith([
-        expect.objectContaining({
-          _type: 'withDefault',
-          title: 'Untitled',
-          count: 0,
-        }),
-      ])
-    })
+  it('offers Collapse all in the field label row', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    await user.click(within(screen.getAllByTestId('block-row')[0]).getByRole('button', { name: /heading/i }))
+    await user.click(screen.getByRole('button', { name: 'Collapse all' }))
+    expect(within(screen.getAllByTestId('block-row')[0]).getByRole('button', { name: /heading/i })).toHaveAttribute('aria-expanded', 'false')
   })
 
-  describe('single block type', () => {
-    const singleBlockField: FieldDefinition & { blocks?: typeof textBlock[] } = {
-      name: 'blocks',
-      type: 'blocks',
-      blocks: [textBlock],
-    }
+  it('edits a field inside the open block', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    await user.click(within(screen.getAllByTestId('block-row')[0]).getByRole('button', { name: /heading/i }))
+    fireEvent.change(screen.getByTestId('string-editor-text'), { target: { value: 'Updated' } })
+    expect(onChange).toHaveBeenLastCalledWith([
+      { _type: 'heading', _id: 'h1', text: 'Updated' },
+      three[1],
+      three[2],
+    ])
+  })
+})
 
-    it('hides select dropdown when only one block type', () => {
-      render(
-        <BlocksEditor field={singleBlockField} value={[]} onChange={mockOnChange} />
-      )
-
-      expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
-    })
-
-    it('shows simplified Add button with block label', () => {
-      render(
-        <BlocksEditor field={singleBlockField} value={[]} onChange={mockOnChange} />
-      )
-
-      expect(screen.getByRole('button', { name: /add text block/i })).toBeInTheDocument()
-    })
-
-    it('adds the single block type directly on Add click', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <BlocksEditor field={singleBlockField} value={[]} onChange={mockOnChange} />
-      )
-
-      const addButton = screen.getByRole('button', { name: /add text block/i })
-      await user.click(addButton)
-
-      expect(mockOnChange).toHaveBeenCalledWith([
-        expect.objectContaining({
-          _type: 'text',
-          _id: expect.any(String),
-        }),
-      ])
-    })
-
-    it('initializes block with field defaults', async () => {
-      const user = userEvent.setup()
-
-      const fieldWithDefaults: FieldDefinition & { blocks?: typeof textBlock[] } = {
-        name: 'blocks',
-        type: 'blocks',
-        blocks: [{
-          name: 'withDefault',
-          label: 'With Default',
-          fields: [
-            { name: 'title', type: 'string', default: 'Untitled' },
-            { name: 'count', type: 'number', default: 0 },
-          ],
-        }],
-      }
-
-      render(
-        <BlocksEditor field={fieldWithDefaults} value={[]} onChange={mockOnChange} />
-      )
-
-      const addButton = screen.getByRole('button', { name: /add with default/i })
-      await user.click(addButton)
-
-      expect(mockOnChange).toHaveBeenCalledWith([
-        expect.objectContaining({
-          _type: 'withDefault',
-          title: 'Untitled',
-          count: 0,
-        }),
-      ])
-    })
+describe('BlocksEditor: reorder', () => {
+  it('moves a block down with the arrow button without opening it', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    const rows = screen.getAllByTestId('block-row')
+    await user.click(within(rows[0]).getByRole('button', { name: 'Move down' }))
+    expect(onChange).toHaveBeenCalledWith([three[1], three[0], three[2]])
+    expect(within(rows[0]).getByRole('button', { name: /heading/i })).toHaveAttribute('aria-expanded', 'false')
   })
 
-  describe('displaying blocks', () => {
-    it('renders existing blocks', () => {
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'Hello' },
-        { _type: 'image', _id: 'block-2', src: '/image.jpg', alt: 'Test' },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      // Text appears in both dropdown AND block headers, so use getAllByText
-      const textBlockElements = screen.getAllByText('Text Block')
-      const imageBlockElements = screen.getAllByText('Image Block')
-      // At least 2 for each: one in dropdown option, one in block header
-      expect(textBlockElements.length).toBeGreaterThanOrEqual(2)
-      expect(imageBlockElements.length).toBeGreaterThanOrEqual(2)
-    })
-
-    it('shows block label', () => {
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'Hello' },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      // Text Block appears in dropdown AND block header
-      const textBlockElements = screen.getAllByText('Text Block')
-      expect(textBlockElements.length).toBeGreaterThanOrEqual(2)
-    })
+  it('moves a block up', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    await user.click(within(screen.getAllByTestId('block-row')[2]).getByRole('button', { name: 'Move up' }))
+    expect(onChange).toHaveBeenCalledWith([three[0], three[2], three[1]])
   })
 
-  describe('removing blocks', () => {
-    it('removes block when delete clicked', async () => {
-      const user = userEvent.setup()
+  it('reorders by dragging a row onto another', () => {
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    const rows = screen.getAllByTestId('block-row')
+    const dataTransfer = { effectAllowed: '', setData: vi.fn(), getData: vi.fn() }
+    fireEvent.dragStart(rows[2], { dataTransfer })
+    fireEvent.dragOver(rows[0], { dataTransfer })
+    expect(rows[0]).toHaveAttribute('data-drop-target', 'true')
+    fireEvent.drop(rows[0], { dataTransfer })
+    expect(onChange).toHaveBeenCalledWith([three[2], three[0], three[1]])
+  })
+})
 
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'First' },
-        { _type: 'text', _id: 'block-2', content: 'Second' },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      const deleteButtons = screen.getAllByTitle('Remove block')
-      await user.click(deleteButtons[0])
-
-      expect(mockOnChange).toHaveBeenCalledWith([
-        { _type: 'text', _id: 'block-2', content: 'Second' },
-      ])
-    })
+describe('BlocksEditor: insert between', () => {
+  it('has an insert point before the first block and after every block', () => {
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    expect(screen.getAllByRole('button', { name: 'Insert a section here' })).toHaveLength(4)
   })
 
-  describe('collapse/expand', () => {
-    it('blocks start collapsed by default', () => {
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'Hello' },
-      ]
+  it('opens a type menu under the divider, inserts at that place and opens the new block', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    const inserts = screen.getAllByRole('button', { name: 'Insert a section here' })
 
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
+    await user.click(inserts[2])
+    const menu = screen.getByRole('menu', { name: 'Insert a section after “Book”' })
+    expect(within(menu).getByText('A large title')).toBeInTheDocument()
+    expect(within(menu).getByText('Title and Details')).toBeInTheDocument()
 
-      // Should show expand button (ChevronRight), not collapse
-      expect(screen.getByTitle('Expand')).toBeInTheDocument()
-      // Field editor should not be visible
-      expect(screen.queryByTestId('string-editor')).not.toBeInTheDocument()
-    })
+    await user.click(within(menu).getByRole('menuitem', { name: /text/i }))
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const next = onChange.mock.calls[0][0]
+    expect(next.map((b: { _type: string }) => b._type)).toEqual(['heading', 'book', 'text', 'text'])
+    expect(next[2]._id).toEqual(expect.any(String))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 
-    it('expands block when clicked', async () => {
-      const user = userEvent.setup()
-
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'Hello' },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      const expandButton = screen.getByTitle('Expand')
-      await user.click(expandButton)
-
-      // Should now show collapse button
-      expect(screen.getByTitle('Collapse')).toBeInTheDocument()
-      // Field editor should be visible
-      expect(screen.getByTestId('string-editor')).toBeInTheDocument()
-    })
-
-    it('collapses block when clicked again', async () => {
-      const user = userEvent.setup()
-
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'Hello' },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      // Expand
-      await user.click(screen.getByTitle('Expand'))
-      // Collapse
-      await user.click(screen.getByTitle('Collapse'))
-
-      expect(screen.getByTitle('Expand')).toBeInTheDocument()
-      expect(screen.queryByTestId('string-editor')).not.toBeInTheDocument()
-    })
-
-    it('shows preview when collapsed', () => {
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'This is the preview text' },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      expect(screen.getByText(/This is the preview text/)).toBeInTheDocument()
-    })
-
-    it('truncates long preview text', () => {
-      const longText = 'A'.repeat(60)
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: longText },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      // Preview truncates at 50 chars + "...". Look for the truncated text (50 A's + ...)
-      const truncatedText = 'A'.repeat(50) + '...'
-      expect(screen.getByText(new RegExp(truncatedText))).toBeInTheDocument()
-    })
+    rerender(<BlocksEditor field={field} value={next} onChange={onChange} />)
+    const rows = screen.getAllByTestId('block-row')
+    expect(within(rows[2]).getByRole('button', { name: /text/i })).toHaveAttribute('aria-expanded', 'true')
   })
 
-  describe('editing blocks', () => {
-    it('updates block field when editor changes', async () => {
-      const user = userEvent.setup()
-
-      const existingBlocks = [
-        { _type: 'text', _id: 'block-1', content: 'Hello' },
-      ]
-
-      render(
-        <BlocksEditor field={defaultField} value={existingBlocks} onChange={mockOnChange} />
-      )
-
-      // Expand the block
-      await user.click(screen.getByTitle('Expand'))
-
-      // Find the editor and change value using fireEvent.change
-      // (user.clear/type doesn't work reliably with mocked inputs)
-      const editor = screen.getByTestId('string-editor')
-      fireEvent.change(editor, { target: { value: 'Updated' } })
-
-      expect(mockOnChange).toHaveBeenLastCalledWith([
-        expect.objectContaining({
-          _type: 'text',
-          _id: 'block-1',
-          content: 'Updated',
-        }),
-      ])
-    })
+  it('names the top insert point differently and closes the menu with ×', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    await user.click(screen.getAllByRole('button', { name: 'Insert a section here' })[0])
+    expect(screen.getByRole('menu', { name: 'Insert a section at the top' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  describe('handles null/undefined value', () => {
-    it('treats null as empty array', () => {
-      render(
-        <BlocksEditor field={defaultField} value={null} onChange={mockOnChange} />
-      )
+  it('initialises a new block with field defaults', async () => {
+    const user = userEvent.setup()
+    const withDefault = { name: 'quote', label: 'Quote', fields: [{ name: 'text', type: 'string', default: 'Say something' }] }
+    render(<BlocksEditor field={{ ...field, blocks: [heading, withDefault] }} value={[three[0]]} onChange={onChange} />)
+    await user.click(screen.getAllByRole('button', { name: 'Insert a section here' })[1])
+    await user.click(screen.getByRole('menuitem', { name: /quote/i }))
+    expect(onChange.mock.calls[0][0][1]).toEqual(expect.objectContaining({ _type: 'quote', text: 'Say something' }))
+  })
+})
 
-      expect(screen.getByText('No blocks added yet')).toBeInTheDocument()
-    })
+describe('BlocksEditor: remove', () => {
+  it('asks before removing, then removes', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={three} onChange={onChange} />)
+    await user.click(within(screen.getAllByTestId('block-row')[1]).getByRole('button', { name: /^book/i }))
+    await user.click(screen.getByRole('button', { name: 'Remove section' }))
+    expect(screen.getByText('Remove this book section?')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Keep it' }))
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByText('Remove this book section?')).not.toBeInTheDocument()
 
-    it('treats undefined as empty array', () => {
-      render(
-        <BlocksEditor field={defaultField} value={undefined} onChange={mockOnChange} />
-      )
+    await user.click(screen.getByRole('button', { name: 'Remove section' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, remove' }))
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([three[0], three[2]]))
+  })
+})
 
-      expect(screen.getByText('No blocks added yet')).toBeInTheDocument()
-    })
+describe('BlocksEditor: empty state', () => {
+  it('explains what sections are and offers one button per type', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={[]} onChange={onChange} />)
+    expect(screen.getByText('No sections yet')).toBeInTheDocument()
+    expect(screen.getByText(/Add them in any order/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Insert a section here' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add book' }))
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ _type: 'book' })])
+  })
+
+  it('treats null as empty', () => {
+    render(<BlocksEditor field={field} value={null} onChange={onChange} />)
+    expect(screen.getByText('No sections yet')).toBeInTheDocument()
+  })
+})
+
+describe('BlocksEditor with a single block type is a repeater', () => {
+  const article = { name: 'article', label: 'Article', fields: [{ name: 'title', type: 'string' }, { name: 'link', type: 'string' }] }
+  const list: FieldDefinition = { name: 'items', type: 'blocks', label: 'Articles', blocks: [article] }
+  const items = [
+    { _type: 'article', _id: 'a1', title: 'Mapping', link: '' },
+    { _type: 'article', _id: 'a2', title: 'Nuku Hiva', link: '' },
+  ]
+
+  it('numbers every item, shows its fields open, and adds to the end', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={list} value={items} onChange={onChange} />)
+    const rows = screen.getAllByTestId('repeater-item')
+    expect(rows).toHaveLength(2)
+    expect(within(rows[0]).getByText('1')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('2')).toBeInTheDocument()
+    expect(within(rows[0]).getByTestId('string-editor-title')).toHaveValue('Mapping')
+
+    await user.click(screen.getByRole('button', { name: 'Add an article to this list' }))
+    expect(onChange.mock.calls[0][0]).toHaveLength(3)
+    expect(onChange.mock.calls[0][0][2]).toEqual(expect.objectContaining({ _type: 'article' }))
+  })
+
+  it('removes an item', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={list} value={items} onChange={onChange} />)
+    await user.click(within(screen.getAllByTestId('repeater-item')[0]).getByRole('button', { name: /remove/i }))
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([items[1]]))
+  })
+
+  it('starts with a single add button when empty', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={list} value={[]} onChange={onChange} />)
+    await user.click(screen.getByRole('button', { name: 'Add an article to this list' }))
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ _type: 'article' })])
   })
 })

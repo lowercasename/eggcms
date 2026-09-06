@@ -1,90 +1,25 @@
 // src/admin/editors/BlockEditor.tsx
-// Editor for a single block field (not an array of blocks)
-import type { FieldDefinition, BlockDefinition } from '../types'
-import { getFieldLabel } from '../types'
-import { FormField, Card } from '../components/ui'
+// Editor for a single block field: one group of fields, not an array.
+import FieldList from '../components/FieldList'
+import type { EditorProps } from './types'
 
-// Import all editors for rendering block fields
-import StringEditor from './StringEditor'
-import TextEditor from './TextEditor'
-import NumberEditor from './NumberEditor'
-import BooleanEditor from './BooleanEditor'
-import RichtextEditor from './RichtextEditor'
-import DatetimeEditor from './DatetimeEditor'
-import SelectEditor from './SelectEditor'
-import SlugEditor from './SlugEditor'
-import ImageEditor from './ImageEditor'
-import LinkFieldEditor from './LinkFieldEditor'
-import FileEditor from './FileEditor'
+export default function BlockEditor({ field, value, onChange }: EditorProps) {
+  const blockValue = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+  const def = field.block
 
-interface Props {
-  field: FieldDefinition & { block?: BlockDefinition }
-  value: unknown
-  onChange: (v: unknown) => void
-}
-
-// Editor map - block added after to enable recursion
-const editorMap: Record<string, React.ComponentType<{ field: FieldDefinition; value: unknown; onChange: (v: unknown) => void; formData?: Record<string, unknown> }>> = {
-  string: StringEditor,
-  text: TextEditor,
-  slug: SlugEditor,
-  richtext: RichtextEditor,
-  number: NumberEditor,
-  boolean: BooleanEditor,
-  datetime: DatetimeEditor,
-  image: ImageEditor,
-  select: SelectEditor,
-  link: LinkFieldEditor,
-  file: FileEditor,
-}
-
-// Add block editor after declaration to enable recursion
-editorMap.block = BlockEditor as typeof editorMap.string
-
-export default function BlockEditor({ field, value, onChange }: Props) {
-  // Ensure value is an object (not a string from old data format)
-  const blockValue = (value && typeof value === 'object' && !Array.isArray(value))
-    ? (value as Record<string, unknown>)
-    : {}
-  const blockDef = field.block
-
-  if (!blockDef) {
-    return (
-      <div className="text-sm text-[#9C9C91] p-4 text-center border border-dashed border-[#E8E8E3] rounded-lg">
-        No block definition provided.
-      </div>
-    )
-  }
-
-  const updateField = (fieldName: string, fieldValue: unknown) => {
-    onChange({
-      ...blockValue,
-      [fieldName]: fieldValue,
-    })
+  if (!def) {
+    return <p className="m-0 p-4 text-center text-[15px] text-ink-2 border-[1.5px] border-dashed border-line-strong rounded-block">No block definition provided.</p>
   }
 
   return (
-    <Card className="p-4">
-      <div className="space-y-4">
-        {blockDef.fields.map((blockField) => {
-          const Editor = editorMap[blockField.type] || StringEditor
-
-          return (
-            <FormField
-              key={blockField.name}
-              label={getFieldLabel(blockField)}
-              required={blockField.required}
-            >
-              <Editor
-                field={blockField}
-                value={blockValue[blockField.name]}
-                onChange={(v) => updateField(blockField.name, v)}
-                formData={blockValue}
-              />
-            </FormField>
-          )
-        })}
-      </div>
-    </Card>
+    <div className="border-[1.5px] border-line-strong rounded-block bg-panel overflow-hidden">
+      <FieldList
+        fields={def.fields}
+        data={blockValue}
+        onChange={(next) => onChange(next)}
+        labelWidth={140}
+        className="!gap-0 [&>[data-testid=field-card]]:border-0 [&>[data-testid=field-card]]:rounded-none [&>[data-field=tall]]:px-4 [&>[data-field=tall]]:py-3.5"
+      />
+    </div>
   )
 }

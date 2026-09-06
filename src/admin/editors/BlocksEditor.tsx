@@ -1,318 +1,212 @@
 // src/admin/editors/BlocksEditor.tsx
-import { useState } from "react";
-import {
-	DragDropContext,
-	Droppable,
-	Draggable,
-	type DropResult,
-} from "@hello-pangea/dnd";
-import type { FieldDefinition } from "../types";
-import { getFieldLabel } from "../types";
-import { Button, Select, FormField, Card } from "../components/ui";
-import {
-	GripVertical,
-	Trash2,
-	LayoutGrid,
-	Plus,
-	ChevronDown,
-	ChevronRight,
-} from "lucide-react";
+import { useRef, useState, type DragEvent } from 'react'
+import { Layers } from 'lucide-react'
+import type { BlockDefinition } from '../types'
+import { getFieldLabel } from '../types'
+import { describeBlockType, iconForBlock, makeBlock, singularize, type BlockValue } from '../lib/blocks'
+import { useFlip } from '../components/motion/useFlip'
+import { pinElement } from '../components/motion/pin'
+import FieldActions from '../components/ui/FieldActions'
+import { Button, EmptyState, InsertDivider, TypeMenu } from '../components/ui'
+import BlockRow from './BlockRow'
+import RepeaterEditor from './RepeaterEditor'
+import type { EditorProps } from './types'
 
-// Import all editors for rendering block fields
-import StringEditor from "./StringEditor";
-import TextEditor from "./TextEditor";
-import NumberEditor from "./NumberEditor";
-import BooleanEditor from "./BooleanEditor";
-import RichtextEditor from "./RichtextEditor";
-import DatetimeEditor from "./DatetimeEditor";
-import SelectEditor from "./SelectEditor";
-import SlugEditor from "./SlugEditor";
-import ImageEditor from "./ImageEditor";
-import BlockEditor from "./BlockEditor";
-import LinkFieldEditor from "./LinkFieldEditor";
-import FileEditor from "./FileEditor";
-
-interface BlockDefinition {
-	name: string;
-	label: string;
-	fields: FieldDefinition[];
+/** "Heading, Text or Book" */
+function listTypes(defs: BlockDefinition[]): string {
+  const labels = defs.map((d) => d.label)
+  if (labels.length <= 1) return labels.join('')
+  return `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}`
 }
 
-interface Block {
-	_type: string;
-	_id: string;
-	[key: string]: unknown;
-}
+/**
+ * The page builder. Renders any block schema as an accordion of BlockRows with
+ * insert-between dividers, ↑/↓ and drag reordering, and an explaining empty
+ * state. A field with exactly one block type is a plain numbered list instead.
+ */
+export default function BlocksEditor({ field, value, onChange }: EditorProps) {
+  const blocks = (Array.isArray(value) ? value : []) as BlockValue[]
+  const defs = field.blocks ?? []
+  const label = getFieldLabel(field)
+  const noun = singularize(label).toLowerCase()
 
-interface Props {
-	field: FieldDefinition & { blocks?: BlockDefinition[] };
-	value: unknown;
-	onChange: (v: unknown) => void;
-}
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [insertAt, setInsertAt] = useState<number | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [justInserted, setJustInserted] = useState<string | null>(null)
+  const [flashId, setFlashId] = useState<string | null>(null)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [overIndex, setOverIndex] = useState<number | null>(null)
 
-// Editor map with self-reference for nested blocks
-const editorMap: Record<
-	string,
-	React.ComponentType<{
-		field: FieldDefinition;
-		value: unknown;
-		onChange: (v: unknown) => void;
-		formData?: Record<string, unknown>;
-	}>
-> = {
-	string: StringEditor,
-	text: TextEditor,
-	slug: SlugEditor,
-	richtext: RichtextEditor,
-	number: NumberEditor,
-	boolean: BooleanEditor,
-	datetime: DatetimeEditor,
-	image: ImageEditor,
-	select: SelectEditor,
-	link: LinkFieldEditor,
-	file: FileEditor,
-};
+  const listRef = useRef<HTMLDivElement>(null)
+  useFlip(listRef, blocks.map((b) => b._id).join(','))
 
-// Add blocks and block editors after declaration to enable recursion
-editorMap.blocks = BlocksEditor as typeof editorMap.string;
-editorMap.block = BlockEditor as typeof editorMap.string;
+  if (defs.length === 0) {
+    return <p className="m-0 p-4 text-center text-[15px] text-ink-2 border-[1.5px] border-dashed border-line-strong rounded-block">No block types defined for this field.</p>
+  }
 
-function generateId(): string {
-	return Math.random().toString(36).substring(2, 11);
-}
+  if (defs.length === 1) {
+    return <RepeaterEditor def={defs[0]} items={blocks} onChange={(items) => onChange(items)} />
+  }
 
-export default function BlocksEditor({ field, value, onChange }: Props) {
-	const [selectedBlockType, setSelectedBlockType] = useState("");
-	const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
-	const blocks = (value as Block[]) || [];
-	const blockDefinitions = field.blocks || [];
+  const defFor = (type: string) => defs.find((d) => d.name === type)
 
-	const toggleCollapse = (blockId: string) => {
-		setExpandedBlocks((prev) => {
-			const next = new Set(prev);
-			if (next.has(blockId)) {
-				next.delete(blockId);
-			} else {
-				next.add(blockId);
-			}
-			return next;
-		});
-	};
+  const toggle = (block: BlockValue, header: HTMLElement) => {
+    const opening = openId !== block._id
+    const openIndex = blocks.findIndex((b) => b._id === openId)
+    const thisIndex = blocks.findIndex((b) => b._id === block._id)
+    // A block above is about to close: keep the clicked header under the pointer.
+    if (opening && openIndex !== -1 && openIndex < thisIndex) pinElement(header)
+    setOpenId(opening ? block._id : null)
+    setConfirmId(null)
+    setInsertAt(null)
+  }
 
-	const getBlockPreview = (block: Block, blockDef: BlockDefinition): string => {
-		// Try to get a preview from the first string-like field
-		for (const f of blockDef.fields) {
-			if ((f.type === "string" || f.type === "text") && block[f.name]) {
-				const val = String(block[f.name]);
-				return val.length > 50 ? val.slice(0, 50) + "..." : val;
-			}
-		}
-		return "";
-	};
+  const insert = (type: string, at: number) => {
+    const def = defFor(type)
+    if (!def) return
+    const block = makeBlock(def)
+    const next = [...blocks]
+    next.splice(at, 0, block)
+    setJustInserted(block._id)
+    setOpenId(block._id)
+    setInsertAt(null)
+    onChange(next)
+  }
 
-	const handleDragEnd = (result: DropResult) => {
-		if (!result.destination) return;
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= blocks.length || from === to) return
+    const next = [...blocks]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    setFlashId(moved._id)
+    window.setTimeout(() => setFlashId((id) => (id === moved._id ? null : id)), 650)
+    onChange(next)
+  }
 
-		const items = Array.from(blocks);
-		const [reorderedItem] = items.splice(result.source.index, 1);
-		items.splice(result.destination.index, 0, reorderedItem);
+  const commitRemove = (id: string) => {
+    setRemovingId(null)
+    setConfirmId(null)
+    if (openId === id) setOpenId(null)
+    onChange(blocks.filter((b) => b._id !== id))
+  }
 
-		onChange(items);
-	};
+  const menuOptions = defs.map((d) => {
+    const Icon = iconForBlock(d)
+    return { value: d.name, label: d.label, description: describeBlockType(d), icon: <Icon aria-hidden /> }
+  })
 
-	const addBlockByType = (typeName: string) => {
-		const blockDef = blockDefinitions.find((b) => b.name === typeName);
-		if (!blockDef) return;
+  const menuHeading = (at: number) =>
+    at === 0 ? `Insert ${noun === 'section' ? 'a' : 'a'} ${noun} at the top` : `Insert a ${noun} after “${defFor(blocks[at - 1]._type)?.label ?? blocks[at - 1]._type}”`
 
-		const newBlock: Block = {
-			_type: typeName,
-			_id: generateId(),
-		};
+  const insertPoint = (at: number) => (
+    <div key={`insert-${at}`}>
+      <InsertDivider label={`Insert a ${noun} here`} active={insertAt === at} onClick={() => setInsertAt(insertAt === at ? null : at)} />
+      {insertAt === at && (
+        <div className="flex justify-center -mt-1 mb-2">
+          <TypeMenu heading={menuHeading(at)} options={menuOptions} onSelect={(type) => insert(type, at)} onClose={() => setInsertAt(null)} />
+        </div>
+      )}
+    </div>
+  )
 
-		// Initialize with defaults
-		for (const f of blockDef.fields) {
-			if (f.default !== undefined) {
-				newBlock[f.name] = f.default;
-			}
-		}
+  const dragStart = (block: BlockValue) => (e: DragEvent<HTMLDivElement>) => {
+    e.dataTransfer.effectAllowed = 'move'
+    try {
+      e.dataTransfer.setData('text/plain', block._id)
+    } catch {
+      /* jsdom */
+    }
+    setDragId(block._id)
+    setOpenId(null)
+    setInsertAt(null)
+  }
+  const dragOver = (index: number) => (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    if (overIndex !== index) setOverIndex(index)
+  }
+  const drop = (index: number) => (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const from = blocks.findIndex((b) => b._id === dragId)
+    if (from >= 0) move(from, index)
+    setDragId(null)
+    setOverIndex(null)
+  }
+  const dragEnd = () => {
+    setDragId(null)
+    setOverIndex(null)
+  }
 
-		onChange([...blocks, newBlock]);
-		setSelectedBlockType("");
-		// Auto-expand the newly added block
-		setExpandedBlocks((prev) => new Set(prev).add(newBlock._id));
-	};
+  if (blocks.length === 0) {
+    return (
+      <EmptyState
+        dashed="structure"
+        icon={<Layers />}
+        title={`No ${label.toLowerCase()} yet`}
+        description={`${label} are the pieces this is built from: ${listTypes(defs)}. Add them in any order and move them around later.`}
+        action={defs.map((d) => {
+          const Icon = iconForBlock(d)
+          return (
+            <Button key={d.name} variant="structure" icon={<Icon aria-hidden />} onClick={() => insert(d.name, 0)}>
+              Add {d.label.toLowerCase()}
+            </Button>
+          )
+        })}
+      />
+    )
+  }
 
-	const updateBlock = (
-		index: number,
-		fieldName: string,
-		fieldValue: unknown,
-	) => {
-		const updated = blocks.map((block, i) =>
-			i === index ? { ...block, [fieldName]: fieldValue } : block,
-		);
-		onChange(updated);
-	};
+  return (
+    <div ref={listRef} className="flex flex-col">
+      <FieldActions>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setOpenId(null)
+            setInsertAt(null)
+          }}
+        >
+          Collapse all
+        </Button>
+      </FieldActions>
 
-	const removeBlock = (index: number) => {
-		onChange(blocks.filter((_, i) => i !== index));
-	};
-
-	const getBlockDefinition = (typeName: string) =>
-		blockDefinitions.find((b) => b.name === typeName);
-
-	if (blockDefinitions.length === 0) {
-		return (
-			<div className="text-sm text-[#9C9C91] p-4 text-center border border-dashed border-[#E8E8E3] rounded-lg">
-				No block types defined for this field.
-			</div>
-		);
-	}
-
-	const blockOptions = blockDefinitions.map((b) => ({
-		value: b.name,
-		label: b.label,
-	}));
-
-	return (
-		<div className="space-y-2">
-			<DragDropContext onDragEnd={handleDragEnd}>
-				<Droppable droppableId="blocks">
-					{(provided) => (
-						<div
-							{...provided.droppableProps}
-							ref={provided.innerRef}
-							className="space-y-3"
-						>
-							{blocks.map((block, index) => {
-								const blockDef = getBlockDefinition(block._type);
-								if (!blockDef) return null;
-
-								const isCollapsed = !expandedBlocks.has(block._id);
-								const preview = isCollapsed
-									? getBlockPreview(block, blockDef)
-									: "";
-
-								return (
-									<Draggable
-										key={block._id}
-										draggableId={block._id}
-										index={index}
-									>
-										{(provided, snapshot) => (
-											<Card
-												ref={provided.innerRef}
-												{...provided.draggableProps}
-												className={`p-4 ${snapshot.isDragging ? "shadow-lg ring-2 ring-[#E5644E]" : ""}`}
-											>
-												<div
-													className={`flex items-center gap-3 ${isCollapsed ? "" : "mb-4 pb-3 border-b border-[#E8E8E3]"}`}
-												>
-													<div
-														{...provided.dragHandleProps}
-														className="cursor-grab text-[#9C9C91] hover:text-[#6B6B63] transition-colors"
-													>
-														<GripVertical className="w-4 h-4" />
-													</div>
-													<button
-														onClick={() => toggleCollapse(block._id)}
-														className="p-1 rounded-md text-[#9C9C91] hover:text-[#6B6B63] hover:bg-[#F5F5F3] transition-colors"
-														title={isCollapsed ? "Expand" : "Collapse"}
-													>
-														{isCollapsed ? (
-															<ChevronRight className="w-4 h-4" />
-														) : (
-															<ChevronDown className="w-4 h-4" />
-														)}
-													</button>
-													<span className="font-medium text-sm text-[#1A1A18] flex-1">
-														{blockDef.label}
-														{preview && (
-															<span className="font-normal text-[#9C9C91] ml-2">
-																— {preview}
-															</span>
-														)}
-													</span>
-													<button
-														onClick={() => removeBlock(index)}
-														className="p-1.5 rounded-md text-[#9C9C91] hover:text-[#DC4E42] hover:bg-[#FEF2F1] transition-colors"
-														title="Remove block"
-													>
-														<Trash2 className="w-4 h-4" />
-													</button>
-												</div>
-
-												{!isCollapsed && (
-													<div className="space-y-4">
-														{blockDef.fields.map((blockField) => {
-															const Editor =
-																editorMap[blockField.type] || StringEditor;
-
-															return (
-																<FormField
-																	key={blockField.name}
-																	label={getFieldLabel(blockField)}
-																	required={blockField.required}
-																>
-																	<Editor
-																		field={blockField}
-																		value={block[blockField.name]}
-																		onChange={(v) =>
-																			updateBlock(index, blockField.name, v)
-																		}
-																		formData={block}
-																	/>
-																</FormField>
-															);
-														})}
-													</div>
-												)}
-											</Card>
-										)}
-									</Draggable>
-								);
-							})}
-							{provided.placeholder}
-						</div>
-					)}
-				</Droppable>
-			</DragDropContext>
-
-			{blocks.length === 0 && (
-				<div className="py-8 text-center border-2 border-dashed border-[#E8E8E3] rounded-lg">
-					<div className="w-10 h-10 mx-auto mb-2 rounded-full bg-[#F5F5F3] flex items-center justify-center">
-						<LayoutGrid className="w-5 h-5 text-[#9C9C91]" />
-					</div>
-					<p className="text-sm text-[#9C9C91]">No blocks added yet</p>
-					<p className="text-xs text-[#9C9C91] mt-1">
-						Add your first block below
-					</p>
-				</div>
-			)}
-
-			<div className="flex gap-2">
-				{blockDefinitions.length === 1 ? (
-					<Button
-						variant="secondary"
-						onClick={() => addBlockByType(blockDefinitions[0].name)}
-					>
-						<Plus className="w-4 h-4 mr-1.5" />
-						Add {blockDefinitions[0].label}
-					</Button>
-				) : (
-					<Select
-						value={selectedBlockType}
-						onChange={(e) => {
-							const val = e.target.value;
-							if (val) {
-								addBlockByType(val);
-							}
-						}}
-						options={blockOptions}
-						placeholder="Add a block..."
-						className="flex-1"
-					/>
-				)}
-			</div>
-		</div>
-	);
+      {insertPoint(0)}
+      {blocks.map((block, i) => {
+        const def = defFor(block._type)
+        if (!def) return null
+        return (
+          <div key={block._id}>
+            <BlockRow
+              block={block}
+              def={def}
+              index={i}
+              total={blocks.length}
+              noun={noun}
+              open={openId === block._id}
+              onToggle={(header) => toggle(block, header)}
+              onMove={(delta) => move(i, i + delta)}
+              onChange={(next) => onChange(blocks.map((b) => (b._id === block._id ? next : b)))}
+              confirming={confirmId === block._id}
+              onAskRemove={() => setConfirmId(block._id)}
+              onCancelRemove={() => setConfirmId(null)}
+              onRemove={() => setRemovingId(block._id)}
+              removing={removingId === block._id}
+              onRemoved={() => commitRemove(block._id)}
+              appear={justInserted === block._id}
+              flash={flashId === block._id}
+              dragging={dragId === block._id}
+              dropTarget={overIndex === i && dragId !== null && dragId !== block._id}
+              onDragStart={dragStart(block)}
+              onDragOver={dragOver(i)}
+              onDrop={drop(i)}
+              onDragEnd={dragEnd}
+            />
+            {insertPoint(i + 1)}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
