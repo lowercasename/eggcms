@@ -36,6 +36,7 @@ describe("RichtextEditor", () => {
       expect(screen.getByTitle("Heading 3")).toBeInTheDocument();
       expect(screen.getByTitle("Bullet list")).toBeInTheDocument();
       expect(screen.getByTitle("Numbered list")).toBeInTheDocument();
+      expect(screen.getByTitle("Horizontal rule")).toBeInTheDocument();
       expect(screen.getByTitle("Add link")).toBeInTheDocument();
       expect(screen.getByTitle("Insert image")).toBeInTheDocument();
     });
@@ -287,6 +288,30 @@ describe("RichtextEditor", () => {
 
       // The button should now be active (has the active class)
       // Note: actual text formatting depends on selection
+    });
+
+    it("inserts a horizontal rule", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(
+        <RichtextEditor
+          field={defaultField}
+          value="<p>Test text</p>"
+          onChange={onChange}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTitle("Horizontal rule")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTitle("Horizontal rule"));
+
+      await waitFor(() => {
+        expect(onChange).toHaveBeenCalled();
+      });
+      const html = onChange.mock.calls.at(-1)?.[0] as string;
+      expect(html).toContain("<hr>");
     });
   });
 });

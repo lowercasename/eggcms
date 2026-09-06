@@ -19,6 +19,7 @@ import {
   Upload,
   FolderOpen,
   Loader2,
+  Minus,
   Quote,
   RemoveFormatting,
 } from "lucide-react";
@@ -123,6 +124,13 @@ export default function RichtextEditor({ value, onChange }: Props) {
           title="Blockquote"
         >
           <Quote className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          active={false}
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          title="Horizontal rule"
+        >
+          <Minus className="w-4 h-4" />
         </ToolbarButton>
         <div className="w-px bg-[#E8E8E3] mx-1" />
         <ToolbarButton
