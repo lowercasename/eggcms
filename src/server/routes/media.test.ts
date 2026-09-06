@@ -39,7 +39,39 @@ vi.mock('sharp', () => ({
 }))
 
 // Import after mocks
-import media from './media'
+import { createMediaRoutes } from './media'
+import type { SchemaDefinition } from '../../lib/schema'
+
+// A content schema whose table exists in the test database, so a test can
+// plant a reference to a media path.
+const PAGE_SCHEMA: SchemaDefinition = {
+  name: 'page',
+  label: 'Pages',
+  type: 'collection',
+  fields: [
+    { name: 'title', type: 'string' },
+    { name: 'body', type: 'richtext' },
+  ],
+}
+
+const media = createMediaRoutes([PAGE_SCHEMA])
+
+const CREATE_PAGE = `
+  CREATE TABLE page (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    body TEXT,
+    draft INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )
+`
+
+function addPage(title: string, body: string) {
+  db()
+    .prepare('INSERT INTO page (id, title, body, draft, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)')
+    .run(`page-${title}`, title, body, '2026-01-01', '2026-01-01')
+}
 
 const CREATE_MEDIA = `
   CREATE TABLE _media (
@@ -76,6 +108,8 @@ function db() {
 beforeEach(() => {
   db().exec('DROP TABLE IF EXISTS _media')
   db().exec(CREATE_MEDIA)
+  db().exec('DROP TABLE IF EXISTS page')
+  db().exec(CREATE_PAGE)
   savedFiles.length = 0
   deletedPaths.length = 0
   delete process.env.MAX_UPLOAD_MB
@@ -193,51 +227,76 @@ describe('media routes - upload dedupe by content hash', () => {
     expect(savedFiles).toHaveLength(2)
   })
 
-  it('un-hides a soft-deleted media when same bytes are re-uploaded', async () => {
+  it('un-hides a row hidden by an older soft delete when the same bytes are re-uploaded', async () => {
     const first = await uploadFile(makeFile('a.png', 'BYTES'))
     const id = first.data.data.id
-
-    const delRes = await media.request(`/${id}`, { method: 'DELETE' })
-    expect(delRes.status).toBe(200)
+    db().prepare('UPDATE _media SET hidden = 1 WHERE id = ?').run(id)
 
     const second = await uploadFile(makeFile('again.png', 'BYTES'))
     expect(second.data.data.id).toBe(id)
     expect(savedFiles).toHaveLength(1)
 
-    // It should now appear in the list again
     const listRes = await media.request('/')
     const list = await listRes.json()
     expect(list.data.map((m: { id: string }) => m.id)).toContain(id)
   })
+
+  it('uploads a deleted file afresh rather than reviving it', async () => {
+    const first = await uploadFile(makeFile('a.png', 'BYTES'))
+    await media.request(`/${first.data.data.id}`, { method: 'DELETE' })
+
+    const second = await uploadFile(makeFile('a.png', 'BYTES'))
+    expect(second.data.data.id).not.toBe(first.data.data.id)
+    expect(savedFiles).toHaveLength(2)
+  })
 })
 
-describe('media routes - soft delete', () => {
-  it('hides item from list but does not remove file from storage', async () => {
+describe('media routes - delete', () => {
+  it('removes the file and the record when nothing references it', async () => {
     const upload = await uploadFile(makeFile('a.png', 'BYTES'))
     const id = upload.data.data.id
+    const path = upload.data.data.path
 
     const delRes = await media.request(`/${id}`, { method: 'DELETE' })
     expect(delRes.status).toBe(200)
 
-    expect(deletedPaths).toHaveLength(0) // file not removed
+    expect(deletedPaths).toEqual([path])
+    const row = db().prepare('SELECT id FROM _media WHERE id = ?').get(id)
+    expect(row).toBeUndefined()
 
     const listRes = await media.request('/')
     const list = await listRes.json()
     expect(list.data.map((m: { id: string }) => m.id)).not.toContain(id)
   })
 
-  it('keeps the row in the database (soft delete)', async () => {
-    const upload = await uploadFile(makeFile('a.png', 'BYTES'))
+  it('refuses to delete a file that content still uses, and says where', async () => {
+    const upload = await uploadFile(makeFile('cover.png', 'BYTES'))
     const id = upload.data.data.id
+    const path = upload.data.data.path
+    addPage('Australia', `<p>Cover: <img src="${path}"></p>`)
 
-    await media.request(`/${id}`, { method: 'DELETE' })
+    const delRes = await media.request(`/${id}`, { method: 'DELETE' })
+    expect(delRes.status).toBe(409)
+    const body = await delRes.json()
+    expect(body.error.code).toBe('MEDIA_IN_USE')
+    expect(body.error.message).toBe('This file is used by Australia (page). Remove it there first.')
+    expect(body.error.references).toEqual([{ schema: 'page', id: 'page-Australia', label: 'Australia' }])
 
-    const row = db().prepare('SELECT id, hidden FROM _media WHERE id = ?').get(id) as {
-      id: string
-      hidden: number
-    } | undefined
-    expect(row).toBeDefined()
-    expect(row?.hidden).toBe(1)
+    expect(deletedPaths).toHaveLength(0)
+    expect(db().prepare('SELECT id FROM _media WHERE id = ?').get(id)).toBeDefined()
+  })
+
+  it('counts every item that uses the file', async () => {
+    const upload = await uploadFile(makeFile('cover.png', 'BYTES'))
+    const path = upload.data.data.path
+    addPage('Australia', `<img src="${path}">`)
+    addPage('Belarus', `<img src="${path}">`)
+    addPage('Family', `<img src="https://example.org${path}">`)
+
+    const delRes = await media.request(`/${upload.data.data.id}`, { method: 'DELETE' })
+    expect(delRes.status).toBe(409)
+    const body = await delRes.json()
+    expect(body.error.message).toBe('This file is used by Australia (page) and 2 others. Remove it there first.')
   })
 
   it('returns 404 for unknown id', async () => {

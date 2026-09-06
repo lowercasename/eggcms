@@ -105,7 +105,7 @@ export default function Media() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this file?')) return
+    if (!confirm('Delete this file? This cannot be undone.')) return
 
     try {
       await api.deleteMedia(id)

@@ -545,8 +545,13 @@ DELETE /api/content/:schema/:id   # Delete item
 
 GET    /api/media                 # List media
 POST   /api/media                 # Upload media (multipart/form-data)
-DELETE /api/media/:id             # Delete media
+DELETE /api/media/:id             # Delete media (409 if content still uses it)
 ```
+
+Deleting a media item removes the file and its record. If any content item
+still references the file, in an image or file field or inside rich text, the
+request is refused with a `MEDIA_IN_USE` error that names where it is used,
+so pages never lose an image out from under them.
 
 ### Response Format
 

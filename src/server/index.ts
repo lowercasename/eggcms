@@ -8,7 +8,7 @@ import { loadSchemas } from './lib/schemaLoader'
 import auth from './routes/auth'
 import { createContentRoutes } from './routes/content'
 import { createSchemasRoute } from './routes/schemas'
-import media from './routes/media'
+import { createMediaRoutes } from './routes/media'
 
 const app = new Hono()
 
@@ -26,7 +26,6 @@ app.get('/health', (c) => c.json({ status: 'ok' }))
 
 // Routes (initialized after schema loading)
 app.route('/api/auth', auth)
-app.route('/api/media', media)
 
 // Content routes are added dynamically after schema loading
 let contentRoutesInitialized = false
@@ -35,9 +34,11 @@ let contentRoutesInitialized = false
 async function initialize() {
   const schemas = await loadSchemas()
 
-  // Add content routes with loaded schemas
+  // Add content routes with loaded schemas. Media needs them too, to see
+  // whether a file is still referenced before deleting it.
   app.route('/api', createSchemasRoute(schemas))
   app.route('/api/content', createContentRoutes(schemas))
+  app.route('/api/media', createMediaRoutes(schemas))
   contentRoutesInitialized = true
 
   // Run migrations
