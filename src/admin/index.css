@@ -1,8 +1,9 @@
 /* src/admin/index.css */
 
-/* Satoshi for interface text, IBM Plex Mono for slugs, counts and URLs. */
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
+/* Manrope for interface text: one family covering Latin and Cyrillic at the
+   same weights, so Russian never looks bolder than English beside it.
+   IBM Plex Mono for slugs, counts and URLs. */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @import "tailwindcss";
 
@@ -13,7 +14,7 @@
  * as var(--…) in plain CSS; nothing in src/admin should carry a literal hex.
  */
 @theme {
-  --font-sans: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Surfaces */
@@ -134,10 +135,6 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
   }
-}
-
-* {
-  font-feature-settings: 'ss01' on, 'ss02' on;
 }
 
 body {
