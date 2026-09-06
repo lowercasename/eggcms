@@ -32,6 +32,12 @@ Schemas define content types using TypeScript:
 Collections support these options:
 - `labelField` - Field to display in admin item list (defaults to 'title'). Use this when your schema doesn't have a `title` field (e.g., `labelField: 'firstName'` for a Person schema).
 
+Blocks support two optional presentation hints, used only by the admin:
+- `icon` - a Lucide icon name (e.g. `book-open`) shown on the block's row and in the insert menu. Without it the admin guesses from the block's field types.
+- `description` - one sentence shown in the insert menu. Without it the admin lists the block's field labels.
+
+Rich text fields accept `toolbar: 'minimal'` to show only Bold, Italic and Link (for single-paragraph fields such as publication details).
+
 **Important:** When adding new schema properties, you must update THREE places:
 1. `src/lib/schema.ts` - Add to `SchemaDefinition` interface
 2. `src/admin/types/index.ts` - Add to `Schema` interface
@@ -131,6 +137,30 @@ Files modified when adding `link`:
 - `src/admin/editors/LinkFieldEditor.tsx` - Created editor component (reuses LinkModal)
 - `src/admin/pages/ItemEdit.tsx` - Added to editorMap
 - `src/admin/editors/BlocksEditor.tsx` + `BlockEditor.tsx` - Added to editorMaps for nesting
+
+## Admin design system
+
+The admin follows the design handoff in `docs/plans/2026-09-06-admin-redesign.md`. The rules that matter when adding UI:
+
+- **Tokens, never hex.** Colours, radii, shadows, fonts and motion live in `@theme` in `src/admin/index.css` and are used as Tailwind utilities (`bg-page`, `text-ink-2`, `border-line-input`, `rounded-panel`, `shadow-menu`). No literal hex in `src/admin/**/*.tsx`.
+- **Layout by field type.** `FormField` (`src/admin/components/ui/FormField.tsx`) renders scalar fields as a `FieldRow` (label in a fixed 180px column, 140px inside blocks) and tall fields (`richtext`, `text`, `blocks`, `block`, `image`, `file`) as a `FieldBlock` (label above, type chip, actions on the right). `FieldList` groups consecutive scalar rows into one card. A new field type needs no layout code: register its editor in `src/admin/editors/index.ts` and, if it is tall, add it to `TALL_TYPES`.
+- **Editors wire themselves to the label.** Read `useFieldControl()` for the control `id` / hint id. Editors that need buttons in the label row (Full screen, Collapse all) render them inside `<FieldActions>`.
+- **Primitives** in `src/admin/components/ui/`: `Button` (primary / secondary / destructive / destructive-solid / dark / structure / ghost / icon), `Chip` (published / edited / draft / type), `SegmentedControl`, `SearchInput`, `NoticeBar` (unsaved / info / selection / published / error), `EmptyState`, `Stepper`, `Toggle`, `InsertDivider`, `TypeMenu`, `OverflowMenu`. Status is always icon + word, never colour alone.
+- **Blocks.** `BlocksEditor` renders any block schema: accordion (`openId`), insert-between dividers with a `TypeMenu`, ↑/↓ plus HTML5 drag, inline confirm-remove, and an explaining empty state. Row previews come from `getBlockPreview()` in `src/admin/lib/blocks.ts` (first non-empty text-like field). A blocks field with exactly one block type renders as a numbered `RepeaterEditor`.
+- **Media.** `MediaBrowser` (`mode: 'manage' | 'pick'`) is the one way media is browsed; the Media page and every "Choose from library" dialog use it. `GET /api/media` returns `references` for each file so cards can say "Used on 2 pages".
+- **Motion** lives in `src/admin/components/motion/` (`Collapse`, `useFlip`, `pinElement`) and honours `prefers-reduced-motion`.
+
+## Storybook
+
+Every primitive, editor, media view and the handoff screens have stories (`*.stories.tsx` next to the component; screens in `src/admin/stories/`). Stories run against an in-memory API (`src/admin/lib/api.mock.ts`, aliased in `.storybook/main.ts`) seeded from `src/admin/lib/sample.ts`.
+
+```bash
+bun run storybook        # dev server on :6006
+bun run build-storybook  # static build
+bun run test:stories     # render every story in headless Chromium with axe a11y checks
+```
+
+`bun run test` runs the unit project only; `bunx vitest run` runs both. The story project needs Playwright's Chromium (`bunx playwright install chromium`).
 
 ## API Response Structure
 
@@ -238,11 +268,13 @@ This applies to:
 ## Commands
 
 ```bash
-bun install       # Install deps
+bun install       # Install deps (bunfig.toml pins the hoisted linker)
 bun run dev       # Dev server
 bun run build     # Production build
 bun run start     # Run production
-bun run test      # Run tests
+bun run test      # Unit tests (jsdom + server)
+bun run test:stories  # Storybook stories in Chromium
+bun run storybook # Component workbench
 ```
 
 ## Git Usage

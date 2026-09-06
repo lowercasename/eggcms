@@ -7,3 +7,6 @@ uploads/
 .DS_Store
 schemas.js
 schemas.yaml
+
+# Storybook build output
+storybook-static

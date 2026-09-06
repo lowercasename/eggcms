@@ -1,0 +1,5 @@
+# bunfig.toml
+[install]
+# Keep node_modules flat. The isolated (pnpm-style) layout breaks cheerio's
+# parse5 → entities resolution in tests and duplicates React under Vite.
+linker = "hoisted"
