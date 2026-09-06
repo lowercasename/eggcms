@@ -1,53 +1,139 @@
 /* src/admin/index.css */
 
-/* Import fonts - Satoshi for a modern, geometric feel */
+/* Satoshi for interface text, IBM Plex Mono for slugs, counts and URLs. */
 @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
 
-:root {
-  /* Warm, inviting palette */
-  --color-bg: #FAFAF8;
-  --color-bg-subtle: #F5F5F3;
-  --color-bg-muted: #EEEEE9;
-  --color-surface: #FFFFFF;
-  --color-border: #E8E8E3;
-  --color-border-subtle: #F0F0EB;
+/*
+ * Design tokens. These are the single source of truth for colour, type, shape
+ * and motion in the admin. Components consume them as Tailwind utilities
+ * (bg-page, text-ink-2, border-line-strong, rounded-panel, shadow-menu …) or
+ * as var(--…) in plain CSS; nothing in src/admin should carry a literal hex.
+ */
+@theme {
+  --font-sans: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Text hierarchy */
-  --color-text: #1A1A18;
-  --color-text-secondary: #6B6B63;
-  --color-text-muted: #9C9C91;
+  /* Surfaces */
+  --color-page: #F4F2ED;
+  --color-panel: #FFFFFF;
+  --color-stripe: #FBFAF7;
+  --color-disabled: #EFEDE6;
 
-  /* Accent - warm coral */
-  --color-accent: #E5644E;
-  --color-accent-hover: #D45A45;
-  --color-accent-subtle: #FEF2F0;
+  /* Text. ink-2 clears 7:1 on white, so it is the floor for body copy;
+     ink-3 is for icons and dividers only. */
+  --color-ink: #1F1E1B;
+  --color-ink-2: #4A4740;
+  --color-ink-3: #6E6B60;
+  --color-ink-nav: #33312C;
 
-  /* Success/Error states */
-  --color-success: #3D9A5D;
-  --color-success-subtle: #F0F9F3;
-  --color-error: #DC4E42;
-  --color-error-subtle: #FEF2F1;
-  --color-warning: #E09D3D;
-  --color-warning-subtle: #FEF8EC;
+  /* Borders */
+  --color-line-strong: #B9B5A9;
+  --color-line-input: #8C8878;
+  --color-line-hair: #DCD9CF;
+  --color-line-soft: #C9C5B8;
 
-  /* Shadows - soft and layered */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
-  --shadow-focus: 0 0 0 3px rgba(229, 100, 78, 0.15);
+  /* Action (terracotta): primary buttons, focus rings, required marks. */
+  --color-action: #A6432B;
+  --color-action-text: #8A3620;
+  --color-action-tint: #FBF6F3;
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-  --transition-slow: 300ms ease;
+  /* Structure (slate blue): blocks, repeaters, insertion. Never buttons
+     unrelated to structure. */
+  --color-structure: #2A507F;
+  --color-structure-border: #93A9CB;
+  --color-structure-tint: #E4EAF4;
 
-  /* Border radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Published (green) */
+  --color-published: #1C5533;
+  --color-published-icon: #23663F;
+  --color-published-tint: #E3EEE7;
+  --color-published-border: #9BC0A9;
+
+  /* Draft / unsaved (amber) */
+  --color-draft: #4A3609;
+  --color-draft-2: #7A5A16;
+  --color-draft-tint: #FAF0D8;
+  --color-draft-border: #C4A659;
+
+  /* Destructive */
+  --color-danger: #8A2B1F;
+  --color-danger-text: #7A2418;
+
+  /* Selected / active nav */
+  --color-selected: #1F1E1B;
+
+  /* Shape */
+  --radius-panel: 12px;
+  --radius-block: 10px;
+  --radius-menu: 11px;
+  --radius-button: 9px;
+  --radius-control: 8px;
+  --radius-chip: 7px;
+  --radius-tile: 7px;
+
+  /* Elevation */
+  --shadow-open: 0 10px 24px rgba(27, 26, 23, 0.08);
+  --shadow-menu: 0 16px 32px rgba(27, 26, 23, 0.16);
+  --shadow-bar: 0 4px 14px rgba(27, 26, 23, 0.08);
+  --shadow-screen: 0 18px 40px rgba(27, 26, 23, 0.10);
+
+  /* Motion. Appearing things ease out, moving things ease in and out. */
+  --ease-appear: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-move: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+
+  --animate-slide-down: slide-down var(--duration-base) var(--ease-appear) both;
+  --animate-slide-up: slide-up var(--duration-base) var(--ease-move) both;
+  --animate-menu-in: menu-in var(--duration-fast) var(--ease-appear) both;
+  --animate-overlay-in: overlay-in var(--duration-base) var(--ease-appear) both;
+  --animate-card-in: card-in var(--duration-base) var(--ease-appear) both;
+  --animate-fade-in: fade-in var(--duration-fast) var(--ease-appear) both;
+  --animate-outline-flash: outline-flash 600ms ease-out both;
+
+  @keyframes slide-down {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(-100%); opacity: 0; }
+  }
+  @keyframes menu-in {
+    from { transform: scale(0.96); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes card-in {
+    from { transform: scale(0.98); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes outline-flash {
+    from { box-shadow: 0 0 0 2px var(--color-structure); }
+    to { box-shadow: 0 0 0 2px transparent; }
+  }
+}
+
+/* Honest motion: anyone who asked for less gets none. transitionend still
+   fires, so components that wait for it keep working. */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 * {
@@ -55,98 +141,148 @@
 }
 
 body {
-  font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-size: 14px;
-  line-height: 1.6;
+  font-family: var(--font-sans);
+  background-color: var(--color-page);
+  color: var(--color-ink);
+  font-size: 15px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+button, input, select, textarea {
+  font-family: inherit;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+button {
+  cursor: pointer;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 4px;
+button:disabled {
+  cursor: not-allowed;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-3); }
 
-/* Focus styles */
+/* Focus ring: 2.5px terracotta, outside the box so sizes stay constant. */
 :focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
+  outline: 2.5px solid var(--color-action);
+  outline-offset: 1px;
 }
 
-/* Selection */
 ::selection {
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
+  background: var(--color-action-tint);
+  color: var(--color-action-text);
 }
 
-/* ProseMirror should not get the global focus ring */
+/*
+ * Inputs. The border is 1.5px at rest and reads as 2.5px when focused, but the
+ * extra pixel is drawn with a box-shadow so the box never changes size.
+ */
+.control {
+  border: 1.5px solid var(--color-line-input);
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+  color: var(--color-ink);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.control:focus, .control:focus-within, .control:focus-visible {
+  outline: none;
+  border-color: var(--color-action);
+  box-shadow: 0 0 0 1px var(--color-action);
+}
+.control:disabled, .control[readonly], .control[aria-readonly="true"] {
+  background: var(--color-page);
+  color: var(--color-ink-2);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Rich text                                                              */
+/* ---------------------------------------------------------------------- */
+
+.richtext-editor .ProseMirror {
+  outline: none;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--color-ink);
+  max-width: 68ch;
+}
 .richtext-editor .ProseMirror:focus-visible {
+  outline: none;
   box-shadow: none;
 }
-
-/* Prose overrides for rich text */
-.prose {
-  --tw-prose-body: var(--color-text);
-  --tw-prose-headings: var(--color-text);
-  --tw-prose-links: var(--color-accent);
-  font-size: 15px;
+.richtext-editor[data-variant="fullscreen"] .ProseMirror {
+  font-size: 21px;
 }
-
-.prose :where(a):hover {
-  color: var(--color-accent-hover);
+.richtext-editor .ProseMirror > * + * {
+  margin-top: 0.75em;
 }
-
-/* Internal links indicator */
-.richtext-editor .ProseMirror a[data-content-ref] {
-  color: var(--color-accent);
+.richtext-editor .ProseMirror h2 {
+  font-size: 1.35em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 1.2em;
+}
+.richtext-editor .ProseMirror h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 1em;
+}
+.richtext-editor .ProseMirror ul,
+.richtext-editor .ProseMirror ol {
+  padding-left: 1.5em;
+}
+.richtext-editor .ProseMirror ul { list-style: disc; }
+.richtext-editor .ProseMirror ol { list-style: decimal; }
+.richtext-editor .ProseMirror li + li { margin-top: 0.25em; }
+.richtext-editor .ProseMirror hr {
+  border: 0;
+  border-top: 2px solid var(--color-line-hair);
+  margin: 1.5em 0;
+}
+.richtext-editor .ProseMirror a {
+  color: var(--color-action);
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.richtext-editor .ProseMirror a[data-content-ref] {
   text-decoration-style: dashed;
 }
-
-/* Blockquote styling */
 .richtext-editor .ProseMirror blockquote {
-  border-left: 3px solid var(--color-accent);
+  border-left: 3px solid var(--color-line-strong);
   padding-left: 1rem;
   margin-left: 0;
-  color: var(--color-text-secondary);
+  color: var(--color-ink-2);
   font-style: italic;
 }
+.richtext-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-ink-3);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
 
-/* Image figure wrapper (NodeView) - InDesign-style frame */
+/* Image figure wrapper (NodeView) */
 .richtext-editor .image-figure {
   position: relative;
   margin: 1rem 0;
 }
-
-/* Keep existing alignment styles */
 .richtext-editor .image-figure[data-alignment="left"] {
   float: left;
   margin-right: 1.5rem;
   clear: left;
 }
-
 .richtext-editor .image-figure[data-alignment="right"] {
   float: right;
   margin-left: 1.5rem;
   clear: right;
 }
-
 .richtext-editor .image-figure[data-alignment="center"] {
   display: block;
   margin-left: auto;
@@ -155,40 +291,31 @@ body {
   float: none;
   clear: both;
 }
-
 .richtext-editor .image-figure .image-container {
   display: block;
   position: relative;
-  border: 1.5px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1.5px dashed var(--color-line-strong);
+  border-radius: var(--radius-control);
   padding: 4px;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--duration-fast);
 }
-
 .richtext-editor .image-figure .image-container:hover {
-  border-color: var(--color-text-muted);
+  border-color: var(--color-ink-3);
 }
-
-/* Selected state - solid accent border */
 .richtext-editor .image-figure .image-container.selected {
-  border-color: var(--color-accent);
+  border-color: var(--color-action);
   border-style: solid;
 }
-
 .richtext-editor .image-figure img {
   width: 100%;
   height: auto;
-  border-radius: calc(var(--radius-md) - 2px);
+  border-radius: calc(var(--radius-control) - 2px);
   display: block;
 }
-
-/* Remove old selected style on img - now handled by container */
 .richtext-editor .image-figure img.selected {
   outline: none;
   outline-offset: 0;
 }
-
-/* Size/alignment badge */
 .richtext-editor .image-figure .image-badge {
   position: absolute;
   bottom: 8px;
@@ -196,24 +323,20 @@ body {
   display: flex;
   gap: 4px;
   align-items: center;
-  padding: 2px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-ink);
+  background: var(--color-panel);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 6px;
   pointer-events: none;
-  backdrop-filter: blur(4px);
 }
-
-/* Image caption */
 .richtext-editor .image-figure figcaption {
   display: block;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
+  font-size: 15px;
+  color: var(--color-ink-2);
   margin-top: 0.5rem;
   font-style: italic;
   text-align: center;
@@ -221,10 +344,10 @@ body {
 
 /* Image popover */
 .image-popover {
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  background: var(--color-panel);
+  border: 1.5px solid var(--color-ink);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-menu);
   padding: 4px;
   display: flex;
   align-items: center;
@@ -232,71 +355,61 @@ body {
   z-index: 50;
   white-space: nowrap;
 }
-
-.popover-group {
-  display: flex;
-  gap: 2px;
-}
-
+.popover-group { display: flex; gap: 2px; }
 .popover-divider {
-  width: 1px;
+  width: 1.5px;
   height: 24px;
-  background: var(--color-border);
+  background: var(--color-line-soft);
   margin: 0 4px;
 }
-
 .popover-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 8px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink-nav);
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: background var(--duration-fast), color var(--duration-fast);
 }
-
 .popover-btn:hover {
-  background: var(--color-bg-subtle);
-  color: var(--color-text);
+  background: var(--color-page);
+  color: var(--color-ink);
 }
-
 .popover-btn.active {
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
+  background: var(--color-selected);
+  color: var(--color-panel);
 }
-
 .popover-btn-danger:hover {
-  background: var(--color-error-subtle);
-  color: var(--color-error);
+  background: var(--color-action-tint);
+  color: var(--color-danger-text);
 }
 
-/* Clear floats after paragraphs following floated images */
 .richtext-editor .ProseMirror p::after {
   content: "";
   display: table;
   clear: both;
 }
 
-/* Legacy image styles (for backwards compatibility with old content) */
+/* Legacy image styles (old content) */
 .richtext-editor .ProseMirror img.image-left {
   float: left;
   margin-right: 1.5rem;
   margin-bottom: 0.5rem;
   max-width: 50%;
 }
-
 .richtext-editor .ProseMirror img.image-right {
   float: right;
   margin-left: 1.5rem;
   margin-bottom: 0.5rem;
   max-width: 50%;
 }
-
 .richtext-editor .ProseMirror img.image-center {
   display: block;
   margin-left: auto;

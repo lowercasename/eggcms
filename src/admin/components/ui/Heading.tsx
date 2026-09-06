@@ -10,18 +10,13 @@ interface HeadingProps {
 }
 
 const styles: Record<Level, string> = {
-  1: 'text-2xl font-bold tracking-tight',
-  2: 'text-xl font-semibold tracking-tight',
-  3: 'text-lg font-semibold',
-  4: 'text-base font-medium',
+  1: 'text-[24px] font-bold tracking-tight',
+  2: 'text-[19px] font-bold',
+  3: 'text-[16px] font-bold',
+  4: 'text-[15px] font-bold',
 }
 
 export default function Heading({ level = 2, children, className = '' }: HeadingProps) {
   const Tag = `h${level}` as const
-
-  return (
-    <Tag className={`${styles[level]} text-[#1A1A18] ${className}`}>
-      {children}
-    </Tag>
-  )
+  return <Tag className={`${styles[level]} text-ink m-0 leading-tight ${className}`}>{children}</Tag>
 }

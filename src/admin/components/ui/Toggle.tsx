@@ -4,28 +4,39 @@ interface ToggleProps {
   checked: boolean
   onChange: (checked: boolean) => void
   disabled?: boolean
+  /** The words shown beside the switch for off and on. */
+  words?: [string, string]
+  'aria-label'?: string
 }
 
-export default function Toggle({ checked, onChange, disabled }: ToggleProps) {
+/** A 52×28 switch followed by the word for its state, so it never relies on colour. */
+export default function Toggle({ checked, onChange, disabled, words = ['No', 'Yes'], ...props }: ToggleProps) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`
-        relative w-11 h-6 rounded-full
-        transition-colors duration-200 ease-out
-        disabled:opacity-50 disabled:cursor-not-allowed
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#E5644E]
-        ${checked ? 'bg-[#E5644E]' : 'bg-[#E8E8E3]'}
-      `}
-    >
-      <span
-        className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-200 ease-out"
-        style={{ left: checked ? '22px' : '2px' }}
-      />
-    </button>
+    <div className="inline-flex items-center gap-[11px]">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={props['aria-label']}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={[
+          'relative w-[52px] h-[28px] rounded-full border-2 transition-colors duration-150',
+          'disabled:opacity-50',
+          checked ? 'bg-action border-action' : 'bg-panel border-ink-3',
+        ].join(' ')}
+      >
+        <span
+          aria-hidden
+          className={[
+            'absolute top-[3px] w-[18px] h-[18px] rounded-full transition-[left,background-color] duration-150',
+            checked ? 'left-[27px] bg-white' : 'left-[3px] bg-ink-3',
+          ].join(' ')}
+        />
+      </button>
+      <span className="text-[15px] font-semibold text-ink-nav" aria-hidden>
+        {checked ? words[1] : words[0]}
+      </span>
+    </div>
   )
 }

@@ -76,11 +76,11 @@ export default function Dropzone({
       {dragging && (
         <div
           data-testid="dropzone-overlay"
-          className="absolute inset-0 z-40 flex items-center justify-center rounded-xl border-2 border-dashed border-[#E5644E] bg-[#FEF2F0]/90 pointer-events-none"
+          className="absolute inset-0 z-40 flex items-center justify-center rounded-panel border-[2.5px] border-dashed border-action bg-action-tint/90 pointer-events-none animate-fade-in"
         >
-          <div className="flex flex-col items-center gap-2 text-[#E5644E]">
-            <Upload className="w-8 h-8" strokeWidth={1.5} />
-            <p className="text-sm font-medium">{label}</p>
+          <div className="flex flex-col items-center gap-2 text-action-text">
+            <Upload className="w-8 h-8" aria-hidden />
+            <p className="m-0 text-[16px] font-bold">{label}</p>
           </div>
         </div>
       )}
