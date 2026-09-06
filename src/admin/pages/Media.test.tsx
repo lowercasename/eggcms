@@ -142,7 +142,7 @@ describe("Media library", () => {
     vi.mocked(api.getMedia).mockResolvedValue({ data: [] } as never);
     render(<Media />);
 
-    expect(await screen.findByText(/no media files yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no files yet/i)).toBeInTheDocument();
     expect(screen.getByText(/drag/i)).toBeInTheDocument();
   });
 });

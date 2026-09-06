@@ -31,7 +31,7 @@ describe('ImageEditor', () => {
           path: '/uploads/d10d840e-9e0b-400d-80af-dbccb23ec375.jpg',
         },
       ],
-    })
+    } as never)
 
     render(
       <ImageEditor
@@ -58,7 +58,7 @@ describe('ImageEditor', () => {
           path: 'https://cms.example.com/uploads/uuid.png',
         },
       ],
-    })
+    } as never)
 
     render(
       <ImageEditor
