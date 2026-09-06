@@ -148,10 +148,10 @@ export default function ItemList({ items, schemaName, schemaLabel, labelField = 
             action={
               <NavLink
                 href={`/collections/${schemaName}/new`}
-                className="inline-flex items-center gap-2 px-4 py-[11px] rounded-button bg-action text-white text-[15px] font-bold hover:bg-action-text"
+                className="inline-flex items-center gap-2 px-4 py-[11px] rounded-button bg-action text-white text-[15px] font-bold whitespace-nowrap hover:bg-action-text"
               >
                 <Plus className="w-[17px] h-[17px]" aria-hidden />
-                Make the first {noun}
+                New
               </NavLink>
             }
           />

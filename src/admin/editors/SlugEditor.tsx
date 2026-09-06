@@ -51,7 +51,7 @@ export default function SlugEditor({ field, value, onChange, formData }: EditorP
             onChange={(e) => onChange(e.target.value)}
             aria-required={required || undefined}
             aria-describedby={isNew ? helpId : undefined}
-            className="flex-1 min-w-0 py-[11px] font-mono text-[16px] bg-transparent outline-none text-ink read-only:text-ink-2 placeholder:text-ink-2"
+            className="flex-1 min-w-0 py-[11px] pl-0.5 font-mono text-[16px] bg-transparent outline-none focus-visible:outline-none text-ink read-only:text-ink-2 placeholder:text-ink-2"
           />
         </div>
         {!isNew && field.from && (

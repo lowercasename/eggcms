@@ -3,9 +3,10 @@
 
 const IRREGULAR: Record<string, string> = { people: 'person', children: 'child', men: 'man', women: 'woman' }
 
-/** "Sections" → "Section", "People" → "Person"; leaves "Address" and multi-word labels alone. */
+/** "Sections" → "Section", "People" → "Person", "Blog Posts" → "Blog Post"; leaves "Address" alone. */
 export function singularize(label: string): string {
-  if (label.includes(' ')) return label
+  const space = label.lastIndexOf(' ')
+  if (space !== -1) return label.slice(0, space + 1) + singularize(label.slice(space + 1))
   const irregular = IRREGULAR[label.toLowerCase()]
   if (irregular) return label[0] === label[0].toUpperCase() ? irregular[0].toUpperCase() + irregular.slice(1) : irregular
   if (/ss$/i.test(label) || !/s$/i.test(label)) return label

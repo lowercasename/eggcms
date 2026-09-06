@@ -12,7 +12,7 @@ interface InsertDividerProps {
 export default function InsertDivider({ onClick, label, active }: InsertDividerProps) {
   const line = active ? 'bg-structure' : 'bg-line-hair'
   return (
-    <div className="flex items-center gap-2.5 h-[30px]">
+    <div className="flex items-center gap-2.5 h-[30px] my-1.5">
       <div className={`flex-1 h-[2px] transition-colors duration-150 ${line}`} />
       <button
         type="button"

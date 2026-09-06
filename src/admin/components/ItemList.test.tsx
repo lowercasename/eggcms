@@ -35,6 +35,13 @@ describe('ItemList', () => {
     expect(screen.getByRole('link', { name: 'New page' })).toHaveAttribute('href', '/collections/page/new')
   })
 
+  it('names one entry of a multi-word collection correctly', () => {
+    render(<ItemList {...base} items={[]} schemaName="post" schemaLabel="Blog Posts" />)
+    expect(screen.getByRole('link', { name: 'New blog post' })).toBeInTheDocument()
+    expect(screen.getByText('No blog posts yet')).toBeInTheDocument()
+    expect(screen.getByText('Every blog post on the website starts here.')).toBeInTheDocument()
+  })
+
   it('shows every entry with its status as an icon and word, and marks the selected one', () => {
     render(<ItemList {...base} />)
     const rows = screen.getAllByRole('link', { name: /Published|Draft/ })
@@ -75,7 +82,8 @@ describe('ItemList', () => {
     render(<ItemList {...base} items={[]} />)
     expect(screen.getByText('No pages yet')).toBeInTheDocument()
     expect(screen.getByText('Every page on the website starts here.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Make the first page' })).toHaveAttribute('href', '/collections/page/new')
+    // Short, so it never wraps in the 250px column.
+    expect(screen.getByRole('link', { name: 'New' })).toHaveAttribute('href', '/collections/page/new')
   })
 
   it('can be hidden from its header button', async () => {

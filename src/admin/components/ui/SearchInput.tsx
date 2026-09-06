@@ -19,7 +19,7 @@ export default function SearchInput({ value, onChange, placeholder, className = 
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="flex-1 min-w-0 py-[10px] text-[15px] bg-transparent outline-none placeholder:text-ink-2 [&::-webkit-search-cancel-button]:hidden"
+        className="flex-1 min-w-0 py-[10px] text-[15px] bg-transparent outline-none focus-visible:outline-none placeholder:text-ink-2 [&::-webkit-search-cancel-button]:hidden"
         {...props}
       />
       {value && (

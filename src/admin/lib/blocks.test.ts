@@ -82,6 +82,7 @@ describe('words', () => {
     expect(singularize('Sections')).toBe('Section')
     expect(singularize('Address')).toBe('Address')
     expect(singularize('Article list')).toBe('Article list')
+    expect(singularize('Page sections')).toBe('Page section')
   })
   it('picks a or an', () => {
     expect(indefinite('article')).toBe('an article')
