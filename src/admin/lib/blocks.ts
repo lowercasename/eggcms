@@ -76,6 +76,15 @@ export function getBlockPreview(block: BlockValue, def: BlockDefinition): string
   return '(empty)'
 }
 
+/** The first image field with a value, to show as the row's thumbnail. */
+export function getBlockThumbnail(block: BlockValue, def: BlockDefinition): string | null {
+  for (const f of def.fields) {
+    const value = block[f.name]
+    if (f.type === 'image' && typeof value === 'string' && value.trim()) return value
+  }
+  return null
+}
+
 /** The schema's description, or the field labels joined: "Title, Cover and Details". */
 export function describeBlockType(def: BlockDefinition): string {
   if (def.description) return def.description

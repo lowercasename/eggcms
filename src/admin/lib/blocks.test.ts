@@ -1,6 +1,6 @@
 // src/admin/lib/blocks.test.ts
 import { describe, it, expect } from 'vitest'
-import { getBlockPreview, describeBlockType, makeBlock, iconForBlock, singularize, indefinite } from './blocks'
+import { getBlockPreview, getBlockThumbnail, describeBlockType, makeBlock, iconForBlock, singularize, indefinite } from './blocks'
 import type { BlockDefinition } from '../types'
 
 const heading: BlockDefinition = { name: 'heading', label: 'Heading', fields: [{ name: 'text', type: 'string' }] }
@@ -40,6 +40,14 @@ describe('getBlockPreview: first non-empty text-like field, in schema order', ()
   it('falls back to (empty)', () => {
     expect(getBlockPreview({ _type: 'book', _id: '1' }, book)).toBe('(empty)')
     expect(getBlockPreview({ _type: 'articles', _id: '1', items: [] }, articles)).toBe('(empty)')
+  })
+})
+
+describe('getBlockThumbnail', () => {
+  it('uses the first image field that has a value', () => {
+    expect(getBlockThumbnail({ _type: 'book', _id: '1', cover: '/uploads/hood.png' }, book)).toBe('/uploads/hood.png')
+    expect(getBlockThumbnail({ _type: 'book', _id: '1', cover: '' }, book)).toBeNull()
+    expect(getBlockThumbnail({ _type: 'heading', _id: '1', text: 'x' }, heading)).toBeNull()
   })
 })
 

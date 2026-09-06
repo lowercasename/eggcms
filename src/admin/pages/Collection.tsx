@@ -1,12 +1,12 @@
 // src/admin/pages/Collection.tsx
 import { useState, useEffect } from 'react'
 import { useParams } from 'wouter'
-import { AlertCircle, FileText } from 'lucide-react'
+import { AlertCircle, FileText, PanelLeftOpen } from 'lucide-react'
 import { api } from '../lib/api'
 import ItemList from '../components/ItemList'
 import ItemEdit from './ItemEdit'
 import { useSchemas } from '../App'
-import { EmptyState } from '../components/ui'
+import { Button, EmptyState } from '../components/ui'
 import { entryNoun } from '../lib/words'
 import type { Schema } from '../types'
 
@@ -58,28 +58,38 @@ export default function Collection() {
 
   return (
     <div className="flex-1 min-w-0 flex h-screen">
-      {listOpen &&
-        (loading ? (
-          <div className="w-[250px] shrink-0 bg-panel border-r border-line-strong flex items-center justify-center text-[15px] text-ink-2">Loading…</div>
+      {/* The list slides between its full width and a narrow rail that reopens it. */}
+      <div
+        className="shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-[var(--ease-move)]"
+        style={{ width: listOpen ? 250 : 48 }}
+      >
+        {listOpen ? (
+          loading ? (
+            <div className="w-[250px] h-screen bg-panel border-r border-line-strong flex items-center justify-center text-[15px] text-ink-2">Loading…</div>
+          ) : (
+            <ItemList
+              items={items}
+              schemaName={schema.name}
+              schemaLabel={schema.label}
+              labelField={labelField}
+              onHide={() => setListOpen(false)}
+              creating={params.id === 'new'}
+            />
+          )
         ) : (
-          <ItemList
-            items={items}
-            schemaName={schema.name}
-            schemaLabel={schema.label}
-            labelField={labelField}
-            onHide={() => setListOpen(false)}
-            creating={params.id === 'new'}
-          />
-        ))}
+          <div className="w-12 h-screen bg-panel border-r border-line-strong flex flex-col items-center pt-3.5 animate-fade-in">
+            <Button variant="icon" size="sm" aria-label="Show the list" title={`Show the ${schema.label.toLowerCase()} list`} onClick={() => setListOpen(true)}>
+              <PanelLeftOpen aria-hidden />
+            </Button>
+            <span className="mt-4 text-[13px] font-semibold text-ink-2 [writing-mode:vertical-rl] rotate-180" aria-hidden>
+              {schema.label}
+            </span>
+          </div>
+        )}
+      </div>
       <div className="flex-1 min-w-0 flex flex-col">
         {params.id ? (
-          <ItemEdit
-            key={params.id}
-            schema={schema}
-            itemId={params.id}
-            refreshList={refreshList}
-            onShowList={listOpen ? undefined : () => setListOpen(true)}
-          />
+          <ItemEdit key={params.id} schema={schema} itemId={params.id} refreshList={refreshList} />
         ) : (
           <div className="flex-1 flex items-center justify-center p-8">
             <EmptyState

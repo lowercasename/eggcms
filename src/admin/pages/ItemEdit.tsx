@@ -144,6 +144,26 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       ]
 
   const bar = (() => {
+    if (confirmingDelete) {
+      return (
+        <NoticeBar
+          variant="error"
+          sticky
+          actions={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
+                Keep it
+              </Button>
+              <Button variant="destructive-solid" onClick={remove}>
+                Yes, delete
+              </Button>
+            </>
+          }
+        >
+          {`Delete “${hasTitle ? title : `Untitled ${noun}`}”? This cannot be undone.`}
+        </NoticeBar>
+      )
+    }
     if (justSaved) {
       return (
         <NoticeBar variant="published" sticky>
@@ -253,24 +273,6 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {bar}
-
-          {confirmingDelete && (
-            <NoticeBar
-              variant="error"
-              actions={
-                <>
-                  <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
-                    Keep it
-                  </Button>
-                  <Button variant="destructive-solid" onClick={remove}>
-                    Yes, delete
-                  </Button>
-                </>
-              }
-            >
-              {`Delete “${hasTitle ? title : `Untitled ${noun}`}”? This cannot be undone.`}
-            </NoticeBar>
-          )}
 
           {error && <NoticeBar variant="error">{error}</NoticeBar>}
 

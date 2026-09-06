@@ -1,8 +1,9 @@
 // src/admin/editors/BlockRow.tsx
-import { useRef, type DragEvent } from 'react'
+import { useRef } from 'react'
+import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import { GripVertical, ArrowUp, ArrowDown, ChevronDown, Trash2 } from 'lucide-react'
 import type { BlockDefinition } from '../types'
-import { getBlockPreview, iconForBlock, type BlockValue } from '../lib/blocks'
+import { getBlockPreview, getBlockThumbnail, iconForBlock, type BlockValue } from '../lib/blocks'
 import { SectionProvider } from '../contexts/SectionContext'
 import Collapse from '../components/motion/Collapse'
 import FieldList from '../components/FieldList'
@@ -30,43 +31,33 @@ export interface BlockRowProps {
   appear: boolean
   /** Brief slate outline after being moved. */
   flash: boolean
-  dragging: boolean
-  dropTarget: boolean
-  onDragStart: (e: DragEvent<HTMLDivElement>) => void
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void
-  onDrop: (e: DragEvent<HTMLDivElement>) => void
-  onDragEnd: () => void
+  /** From the drag-and-drop library: goes on the grip handle. */
+  dragHandleProps?: DraggableProvidedDragHandleProps | null
+  isDragging?: boolean
 }
 
 /**
  * One block in a blocks field: a 52px header that toggles it open, ↑/↓ to
  * reorder, the block's own fields when open, and an inline confirm to remove.
- * Everything here is generic; the header preview and icon come from rules in
- * lib/blocks, never from the block's type.
+ * Everything here is generic; the header preview, thumbnail and icon come
+ * from rules in lib/blocks, never from the block's type.
  */
 export default function BlockRow(props: BlockRowProps) {
-  const { block, def, index, total, noun, open, confirming, removing, appear, flash, dragging, dropTarget } = props
+  const { block, def, index, total, noun, open, confirming, removing, appear, flash, isDragging } = props
   const headerRef = useRef<HTMLDivElement>(null)
   const Icon = iconForBlock(def)
   const preview = getBlockPreview(block, def)
+  const thumbnail = getBlockThumbnail(block, def)
   const typeLower = def.label.toLowerCase()
 
-  const border = dropTarget
-    ? 'border-[2.5px] border-dashed border-structure'
-    : open
-      ? 'border-2 border-ink shadow-open'
-      : 'border-[1.5px] border-line-strong'
+  const border = isDragging ? 'border-2 border-structure shadow-menu' : open ? 'border-2 border-ink shadow-open' : 'border-[1.5px] border-line-strong'
 
   return (
     <Collapse open={!removing} appear={appear} onClosed={props.onRemoved}>
       <div
         data-testid="block-row"
         data-flip-key={block._id}
-        data-drop-target={dropTarget || undefined}
-        onDragOver={props.onDragOver}
-        onDrop={props.onDrop}
-        onDragEnd={props.onDragEnd}
-        className={`bg-panel rounded-block overflow-hidden transition-[opacity,box-shadow] duration-150 ${border} ${dragging ? 'opacity-60' : ''} ${flash ? 'animate-outline-flash' : ''}`}
+        className={`bg-panel rounded-block overflow-hidden transition-[box-shadow] duration-150 ${border} ${flash ? 'animate-outline-flash' : ''}`}
       >
         <div
           ref={headerRef}
@@ -75,17 +66,16 @@ export default function BlockRow(props: BlockRowProps) {
         >
           {/* Only the handle is draggable: a draggable row would swallow the
               mouse-downs that place the caret in the block's rich text. */}
-          <span
-            role="img"
+          <button
+            type="button"
             aria-label="Drag to move"
             title="Drag to move"
-            draggable
-            onDragStart={props.onDragStart}
             onClick={(e) => e.stopPropagation()}
-            className="shrink-0 flex cursor-grab active:cursor-grabbing text-ink-3"
+            {...props.dragHandleProps}
+            className="shrink-0 flex items-center justify-center w-[30px] h-[34px] -ml-1.5 rounded-[6px] cursor-grab active:cursor-grabbing text-ink-3 hover:bg-line-hair/60 hover:text-ink-nav"
           >
             <GripVertical className="w-[18px] h-[18px]" aria-hidden />
-          </span>
+          </button>
           <button
             type="button"
             aria-expanded={open}
@@ -95,14 +85,23 @@ export default function BlockRow(props: BlockRowProps) {
             }}
             className="flex-1 min-w-0 flex items-center gap-3 text-left focus-visible:outline-offset-2 rounded-[4px]"
           >
-            <span
-              className={`w-[30px] h-[30px] shrink-0 rounded-tile border flex items-center justify-center transition-colors ${
-                open ? 'bg-structure border-structure text-white' : 'bg-structure-tint border-structure-border text-structure'
-              }`}
-              aria-hidden
-            >
-              <Icon className="w-[17px] h-[17px]" />
-            </span>
+            {thumbnail ? (
+              <img
+                src={thumbnail}
+                alt=""
+                role="presentation"
+                className={`w-[30px] h-[30px] shrink-0 rounded-tile object-cover border ${open ? 'border-structure ring-1 ring-structure' : 'border-structure-border'}`}
+              />
+            ) : (
+              <span
+                className={`w-[30px] h-[30px] shrink-0 rounded-tile border flex items-center justify-center transition-colors ${
+                  open ? 'bg-structure border-structure text-white' : 'bg-structure-tint border-structure-border text-structure'
+                }`}
+                aria-hidden
+              >
+                <Icon className="w-[17px] h-[17px]" />
+              </span>
+            )}
             <span className="text-[15px] font-bold text-ink shrink-0">{def.label}</span>
             <span className="flex-1 min-w-0 text-[15px] text-ink-2 truncate">{preview}</span>
             {open && (
@@ -137,10 +136,7 @@ export default function BlockRow(props: BlockRowProps) {
           >
             <ArrowDown aria-hidden />
           </Button>
-          <ChevronDown
-            className={`w-5 h-5 text-ink-nav shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-            aria-hidden
-          />
+          <ChevronDown className={`w-5 h-5 text-ink-nav shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden />
         </div>
 
         <Collapse open={open}>

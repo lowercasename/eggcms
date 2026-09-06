@@ -121,20 +121,22 @@ describe('BlocksEditor: reorder', () => {
     expect(onChange).toHaveBeenCalledWith([three[0], three[2], three[1]])
   })
 
-  it('reorders by dragging a row by its handle onto another', () => {
+  it('drags by the grip handle only, through the drag-and-drop library', () => {
     render(<BlocksEditor field={field} value={three} onChange={onChange} />)
     const rows = screen.getAllByTestId('block-row')
     // Only the handle is draggable: a draggable row would stop the caret being
     // placed inside the block's rich text.
     expect(rows[2]).not.toHaveAttribute('draggable', 'true')
-    const handle = within(rows[2]).getByRole('img', { name: 'Drag to move' })
-    expect(handle).toHaveAttribute('draggable', 'true')
-    const dataTransfer = { effectAllowed: '', setData: vi.fn(), getData: vi.fn() }
-    fireEvent.dragStart(handle, { dataTransfer })
-    fireEvent.dragOver(rows[0], { dataTransfer })
-    expect(rows[0]).toHaveAttribute('data-drop-target', 'true')
-    fireEvent.drop(rows[0], { dataTransfer })
-    expect(onChange).toHaveBeenCalledWith([three[2], three[0], three[1]])
+    const handle = within(rows[2]).getByRole('button', { name: 'Drag to move' })
+    expect(handle).toHaveAttribute('data-rfd-drag-handle-draggable-id', 't1')
+  })
+
+  it('shows the first image field as the row thumbnail', () => {
+    const photo = { name: 'photo', label: 'Photo', fields: [{ name: 'src', type: 'image' }, { name: 'caption', type: 'string' }] }
+    render(<BlocksEditor field={{ ...field, blocks: [heading, photo] }} value={[{ _type: 'photo', _id: 'ph1', src: '/uploads/rocket.png', caption: 'Hello there' }]} onChange={onChange} />)
+    const row = screen.getByTestId('block-row')
+    expect(within(row).getByRole('presentation')).toHaveAttribute('src', '/uploads/rocket.png')
+    expect(within(row).getByText('Hello there')).toBeInTheDocument()
   })
 })
 
@@ -239,6 +241,19 @@ describe('BlocksEditor with a single block type is a repeater', () => {
     await user.click(screen.getByRole('button', { name: 'Add an article to this list' }))
     expect(onChange.mock.calls[0][0]).toHaveLength(3)
     expect(onChange.mock.calls[0][0][2]).toEqual(expect.objectContaining({ _type: 'article' }))
+  })
+
+  it('moves items up and down', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={list} value={items} onChange={onChange} />)
+    const rows = screen.getAllByTestId('repeater-item')
+    expect(within(rows[0]).getByRole('button', { name: 'Drag to move' })).toHaveAttribute('data-rfd-drag-handle-draggable-id', 'a1')
+    expect(within(rows[0]).getByRole('button', { name: 'Move up' })).toBeDisabled()
+    expect(within(rows[1]).getByRole('button', { name: 'Move down' })).toBeDisabled()
+    await user.click(within(rows[0]).getByRole('button', { name: 'Move down' }))
+    expect(onChange).toHaveBeenCalledWith([items[1], items[0]])
+    await user.click(within(rows[1]).getByRole('button', { name: 'Move up' }))
+    expect(onChange).toHaveBeenLastCalledWith([items[1], items[0]])
   })
 
   it('removes an item', async () => {
