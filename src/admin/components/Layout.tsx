@@ -10,11 +10,9 @@ interface LayoutProps {
 
 export default function Layout({ schemas, children }: LayoutProps) {
   return (
-    <div className="flex min-h-screen bg-[#FAFAF8]">
+    <div className="flex h-screen bg-page overflow-hidden">
       <Sidebar schemas={schemas} />
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1 min-w-0 flex">{children}</main>
     </div>
   )
 }

@@ -18,7 +18,7 @@ interface SchemasContextValue {
   siteName: string
 }
 
-const SchemasContext = createContext<SchemasContextValue>({ schemas: [], siteName: 'EggCMS' })
+export const SchemasContext = createContext<SchemasContextValue>({ schemas: [], siteName: 'EggCMS' })
 
 export function useSchemas() {
   return useContext(SchemasContext)
@@ -46,10 +46,10 @@ function AppRoutes() {
 
   if (authLoading || (user && schemasLoading)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8]">
-        <div className="flex items-center gap-2 text-[#9C9C91]">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-page">
+        <div className="flex items-center gap-2.5 text-ink-2">
+          <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+          <span className="text-[15px]">Loading…</span>
         </div>
       </div>
     )

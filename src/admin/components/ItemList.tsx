@@ -1,124 +1,181 @@
 // src/admin/components/ItemList.tsx
+import { useMemo, useState } from 'react'
 import { useLocation } from 'wouter'
+import { Plus, PanelLeftClose, Check, CircleDot, CircleDashed, FilePlus, SearchX } from 'lucide-react'
 import NavLink from './NavLink'
-import { Plus, Archive, CircleDot } from 'lucide-react'
 import { useDirtyItems } from '../contexts/DirtyStateContext'
+import { entryNoun, plural } from '../lib/words'
+import { Button, EmptyState, SearchInput, SegmentedControl } from './ui'
 
 interface Item {
   id: string
-  title?: string
-  name?: string
-  _meta?: {
-    draft?: boolean
-    createdAt?: string
-    updatedAt?: string
-  }
+  _meta?: { draft?: boolean; createdAt?: string; updatedAt?: string }
+  [key: string]: unknown
 }
 
 interface ItemListProps {
   items: Item[]
   schemaName: string
+  schemaLabel: string
   labelField?: string | string[]
+  /** Hide the list (the editor can show it again). */
+  onHide?: () => void
+  /** A new entry is being written: show it at the top as an untitled draft. */
+  creating?: boolean
 }
 
-function getItemLabel(item: Item, labelField: string | string[]): string {
-  if (Array.isArray(labelField)) {
-    const parts = labelField
-      .map(f => (item as Record<string, unknown>)[f])
-      .filter((v): v is string => typeof v === 'string' && v.length > 0)
-    return parts.join(' ') || 'Untitled'
-  }
-  return (item as Record<string, unknown>)[labelField] as string || 'Untitled'
+type Filter = 'all' | 'live' | 'draft'
+
+export function getItemLabel(item: Item, labelField: string | string[]): string {
+  const fields = Array.isArray(labelField) ? labelField : [labelField]
+  return fields
+    .map((f) => item[f])
+    .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+    .join(' ')
 }
 
-export default function ItemList({ items, schemaName, labelField = 'title' }: ItemListProps) {
+type Status = 'published' | 'draft' | 'edited'
+
+const STATUS: Record<Status, { Icon: typeof Check; word: string; color: string }> = {
+  published: { Icon: Check, word: 'Published', color: 'text-published-icon' },
+  draft: { Icon: CircleDashed, word: 'Draft', color: 'text-draft-2' },
+  edited: { Icon: CircleDot, word: 'Edited', color: 'text-draft-2' },
+}
+
+/**
+ * The entry list beside the editor: count, New, search, All/Live/Draft, and
+ * one 48px row per entry with its status shown as icon and word.
+ */
+export default function ItemList({ items, schemaName, schemaLabel, labelField = 'title', onHide, creating }: ItemListProps) {
   const [location] = useLocation()
   const { dirtyItems } = useDirtyItems()
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const noun = entryNoun(schemaLabel)
+  const nouns = plural(noun, 2)
+  const untitled = `Untitled ${noun}`
+
+  const counts = useMemo(
+    () => ({
+      all: items.length,
+      live: items.filter((i) => !i._meta?.draft).length,
+      draft: items.filter((i) => !!i._meta?.draft).length,
+    }),
+    [items]
+  )
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter((item) => {
+      if (filter === 'live' && item._meta?.draft) return false
+      if (filter === 'draft' && !item._meta?.draft) return false
+      if (!q) return true
+      return (getItemLabel(item, labelField) || untitled).toLowerCase().includes(q)
+    })
+  }, [items, filter, query, labelField, untitled])
+
+  const row = (key: string, href: string, label: string, status: Status, active: boolean) => {
+    const { Icon, word, color } = STATUS[status]
+    const isUntitled = !label
+    return (
+      <NavLink
+        key={key}
+        href={href}
+        aria-current={active ? 'page' : undefined}
+        className={[
+          'flex items-center gap-[9px] px-2.5 py-3 min-h-[48px] rounded-control text-[15px] transition-colors duration-100',
+          active ? 'bg-page border-2 border-ink font-bold' : 'border border-transparent hover:bg-page',
+        ].join(' ')}
+      >
+        <span role="img" aria-label={word} className={`shrink-0 flex ${color}`}>
+          <Icon className="w-4 h-4" aria-hidden />
+        </span>{' '}
+        <span className={`flex-1 min-w-0 truncate ${isUntitled ? 'italic text-ink-2' : 'text-ink'}`}>{label || untitled}</span>
+      </NavLink>
+    )
   }
 
   return (
-    <div className="w-72 border-r border-[#E8E8E3] bg-[#FAFAF8] h-screen overflow-y-auto">
-      {/* Header with New button */}
-      <div className="p-4 border-b border-[#E8E8E3] bg-white sticky top-0 z-10">
+    <div className="w-[250px] shrink-0 bg-panel border-r border-line-strong h-screen flex flex-col">
+      <div className="p-3.5 border-b border-line-hair flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <h2 className="flex-1 m-0 text-[16px] font-bold text-ink">
+            {schemaLabel}{' '}
+            <span className="font-medium text-ink-2 font-mono text-[15px]">{items.length}</span>
+          </h2>
+          {onHide && (
+            <Button variant="icon" size="sm" aria-label="Hide this list" title="Hide this list" onClick={onHide}>
+              <PanelLeftClose aria-hidden />
+            </Button>
+          )}
+        </div>
         <NavLink
           href={`/collections/${schemaName}/new`}
-          className="
-            flex items-center justify-center gap-2 w-full
-            px-4 py-2.5 rounded-lg text-sm font-medium
-            bg-[#E5644E] text-white
-            hover:bg-[#D45A45]
-            transition-colors duration-200
-          "
+          className="flex items-center justify-center gap-2 py-3 rounded-button bg-action text-white text-[15px] font-semibold hover:bg-action-text transition-colors"
         >
-          <Plus className="w-4 h-4" strokeWidth={2.5} />
-          New entry
+          <Plus className="w-[18px] h-[18px]" aria-hidden />
+          New {noun}
         </NavLink>
+        <SearchInput value={query} onChange={setQuery} placeholder={`Search ${nouns}`} />
+        <SegmentedControl
+          aria-label="Show"
+          fullWidth
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: 'All', count: counts.all },
+            { value: 'live', label: 'Live', count: counts.live },
+            { value: 'draft', label: 'Draft', count: counts.draft },
+          ]}
+        />
       </div>
 
-      {/* Items list */}
-      <div className="py-2">
-        {items.map((item) => {
-          const href = `/collections/${schemaName}/${item.id}`
-          const isActive = location === href
-          const label = getItemLabel(item, labelField)
-          const isItemDirty = dirtyItems.has(item.id)
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5">
+        {creating && row('new', `/collections/${schemaName}/new`, '', 'draft', true)}
 
-          return (
-            <NavLink
-              key={item.id}
-              href={href}
-              className={`
-                block mx-2 px-3 py-3 rounded-lg
-                transition-all duration-150
-                ${isActive
-                  ? 'bg-white shadow-sm border border-[#E8E8E3]'
-                  : 'hover:bg-white/60'
-                }
-              `}
-            >
-              <div className={`text-sm truncate ${isActive ? 'font-medium text-[#1A1A18]' : 'text-[#1A1A18]'}`}>
-                {label}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                {isItemDirty ? (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-[#FEF8EC] text-[#B8862B]">
-                    <CircleDot className="w-3 h-3" />
-                    Unsaved
-                  </span>
-                ) : (
-                  <span className={`
-                    inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
-                    ${item._meta?.draft
-                      ? 'bg-[#FEF8EC] text-[#B8862B]'
-                      : 'bg-[#F0F9F3] text-[#3D9A5D]'
-                    }
-                  `}>
-                    {item._meta?.draft ? 'Draft' : 'Published'}
-                  </span>
-                )}
-                {item._meta?.updatedAt && (
-                  <span className="text-[11px] text-[#9C9C91]">
-                    {formatDate(item._meta.updatedAt)}
-                  </span>
-                )}
-              </div>
-            </NavLink>
-          )
+        {visible.map((item) => {
+          const href = `/collections/${schemaName}/${item.id}`
+          const status: Status = dirtyItems.has(item.id) ? 'edited' : item._meta?.draft ? 'draft' : 'published'
+          return row(item.id, href, getItemLabel(item, labelField), status, location === href)
         })}
 
-        {items.length === 0 && (
-          <div className="px-4 py-12 text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#F5F5F3] flex items-center justify-center">
-              <Archive className="w-6 h-6 text-[#9C9C91]" strokeWidth={1.5} />
-            </div>
-            <p className="text-sm text-[#9C9C91]">No entries yet</p>
-            <p className="text-xs text-[#9C9C91] mt-1">Create your first one above</p>
-          </div>
+        {items.length === 0 && !creating && (
+          <EmptyState
+            icon={<FilePlus />}
+            title={`No ${nouns} yet`}
+            description={`Every ${noun} on the website starts here.`}
+            action={
+              <NavLink
+                href={`/collections/${schemaName}/new`}
+                className="inline-flex items-center gap-2 px-4 py-[11px] rounded-button bg-action text-white text-[15px] font-bold hover:bg-action-text"
+              >
+                <Plus className="w-[17px] h-[17px]" aria-hidden />
+                Make the first {noun}
+              </NavLink>
+            }
+          />
+        )}
+
+        {items.length > 0 && visible.length === 0 && (
+          <EmptyState
+            icon={<SearchX />}
+            title={query ? `No ${nouns} match “${query.trim()}”` : `No ${filter === 'live' ? 'live' : 'draft'} ${nouns}`}
+            description={
+              query ? `Try fewer words, or clear the search to see all ${items.length} ${plural(noun, items.length)}.` : `Choose All to see every ${noun}.`
+            }
+            action={
+              query ? (
+                <Button variant="secondary" onClick={() => setQuery('')}>
+                  Clear search
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={() => setFilter('all')}>
+                  Show all
+                </Button>
+              )
+            }
+          />
         )}
       </div>
     </div>

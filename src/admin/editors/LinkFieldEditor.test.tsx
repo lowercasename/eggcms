@@ -57,9 +57,7 @@ describe('LinkFieldEditor', () => {
     const value = { type: 'external', url: 'https://example.com' }
     render(<LinkFieldEditor field={linkField} value={value} onChange={onChange} />)
 
-    // The X button is the one with the X icon - find by role
-    const clearButton = screen.getByText('Edit').parentElement!.querySelector('button:last-child')!
-    fireEvent.click(clearButton)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove link' }))
 
     expect(onChange).toHaveBeenCalledWith(null)
   })

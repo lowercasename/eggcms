@@ -1,478 +1,219 @@
 // src/admin/pages/ItemEdit.test.tsx
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import ItemEdit from "./ItemEdit";
-import type { Schema } from "../types";
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import ItemEdit from './ItemEdit'
+import type { Schema } from '../types'
 
-// Hoist mocks to avoid initialization order issues
 const { mockNavigate, mockApi } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
-  mockApi: {
-    getItem: vi.fn(),
-    createItem: vi.fn(),
-    updateItem: vi.fn(),
-    deleteItem: vi.fn(),
-  },
-}));
+  mockApi: { getItem: vi.fn(), createItem: vi.fn(), updateItem: vi.fn(), deleteItem: vi.fn() },
+}))
 
-// Mock wouter
-vi.mock("wouter", () => ({
-  useLocation: () => ["/", mockNavigate],
-}));
+vi.mock('wouter', () => ({ useLocation: () => ['/', mockNavigate] }))
+vi.mock('../lib/api', () => ({ api: mockApi }))
 
-// Mock api
-vi.mock("../lib/api", () => ({
-  api: mockApi,
-}));
-
-// Mock editors using actual component files
-vi.mock("../editors/StringEditor", async () => {
-  const React = await import("react");
+vi.mock('../editors/StringEditor', async () => {
+  const React = await import('react')
   return {
-    default: ({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) =>
-      React.createElement("input", {
-        "data-testid": "string-editor",
-        value: (value as string) || "",
+    default: ({ field, value, onChange, autoFocus }: { field: { name: string }; value: unknown; onChange: (v: unknown) => void; autoFocus?: boolean }) =>
+      React.createElement('input', {
+        'data-testid': `string-editor-${field.name}`,
+        value: (value as string) || '',
+        autoFocus,
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
       }),
-  };
-});
-
-vi.mock("../editors/ImageEditor", async () => {
-  const React = await import("react");
+  }
+})
+vi.mock('../editors/ImageEditor', async () => {
+  const React = await import('react')
   return {
     default: ({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) =>
-      React.createElement("div", { "data-testid": "image-editor" }, [
-        React.createElement("span", { key: "val", "data-testid": "image-value" }, String(value || "none")),
-        React.createElement(
-          "button",
-          {
-            key: "btn",
-            type: "button",
-            "data-testid": "select-image-btn",
-            onClick: () => onChange("/uploads/new-image.jpg"),
-          },
-          "Select Image"
-        ),
-      ]),
-  };
-});
+      React.createElement('button', { type: 'button', 'data-testid': 'select-image-btn', onClick: () => onChange('/uploads/new-image.jpg') }, String(value || 'none')),
+  }
+})
+vi.mock('../editors/RichtextEditor', async () => {
+  const React = await import('react')
+  return { default: () => React.createElement('div', { 'data-testid': 'richtext-editor' }) }
+})
+vi.mock('../editors/BlocksEditor', async () => {
+  const React = await import('react')
+  return { default: () => React.createElement('div', { 'data-testid': 'blocks-editor' }) }
+})
 
-vi.mock("../editors/TextEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "text-editor" }) };
-});
+import { DirtyStateProvider } from '../contexts/DirtyStateContext'
 
-vi.mock("../editors/RichtextEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "richtext-editor" }) };
-});
-
-vi.mock("../editors/NumberEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "number-editor" }) };
-});
-
-vi.mock("../editors/BooleanEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "boolean-editor" }) };
-});
-
-vi.mock("../editors/DatetimeEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "datetime-editor" }) };
-});
-
-vi.mock("../editors/SelectEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "select-editor" }) };
-});
-
-vi.mock("../editors/SlugEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "slug-editor" }) };
-});
-
-vi.mock("../editors/BlocksEditor", async () => {
-  const React = await import("react");
-  return { default: () => React.createElement("div", { "data-testid": "blocks-editor" }) };
-});
-
-// Import the provider for wrapping tests
-import { DirtyStateProvider } from "../contexts/DirtyStateContext";
-
-// Helper to render with provider
-function renderWithProvider(ui: React.ReactElement) {
-  return render(<DirtyStateProvider>{ui}</DirtyStateProvider>);
+function renderEdit(ui: React.ReactElement) {
+  return render(<DirtyStateProvider>{ui}</DirtyStateProvider>)
 }
 
-describe("ItemEdit", () => {
-  const mockSchema: Schema = {
-    name: "posts",
-    label: "Posts",
-    type: "collection",
-    fields: [
-      { name: "title", type: "string", required: true },
-    ],
-  };
+const schema: Schema = {
+  name: 'page',
+  label: 'Pages',
+  type: 'collection',
+  fields: [
+    { name: 'title', type: 'string', required: true },
+    { name: 'subtitle', type: 'string' },
+  ],
+}
 
-  const mockRefreshList = vi.fn();
+const refreshList = vi.fn()
+const loaded = () => waitFor(() => expect(screen.queryByText('Loading…')).not.toBeInTheDocument())
 
+beforeEach(() => {
+  vi.clearAllMocks()
+  // The server keeps `draft` in _meta, not as a field.
+  mockApi.updateItem.mockImplementation((_s: string, _id: string, data: Record<string, unknown>) => {
+    const { draft, ...fields } = data
+    return Promise.resolve({ data: { id: '123', ...fields, _meta: { draft: Boolean(draft) } } })
+  })
+})
+
+describe('ItemEdit header', () => {
+  it('shows the entry title and a Published chip, and nothing to save', async () => {
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'South Pacific', _meta: { draft: false } } })
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+    expect(screen.getByRole('heading', { name: 'South Pacific' })).toBeInTheDocument()
+    expect(screen.getByText('Published')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /publish/i })).not.toBeInTheDocument()
+  })
+
+  it('offers Unpublish and Delete in an overflow menu', async () => {
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'South Pacific', _meta: { draft: false } } })
+    mockApi.deleteItem.mockResolvedValue({ data: { success: true } })
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }))
+    expect(screen.getByRole('menuitem', { name: 'Take off the website' })).toBeInTheDocument()
+    await user.click(screen.getByRole('menuitem', { name: 'Delete page' }))
+    // Deleting asks first.
+    expect(screen.getByText('Delete “South Pacific”? This cannot be undone.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
+    await waitFor(() => expect(mockApi.deleteItem).toHaveBeenCalledWith('page', '123'))
+    expect(mockNavigate).toHaveBeenCalledWith('/collections/page')
+  })
+
+  it('unpublishes from the overflow menu', async () => {
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'South Pacific', _meta: { draft: false } } })
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+    await user.click(screen.getByRole('button', { name: 'More actions' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Take off the website' }))
+    await waitFor(() => expect(mockApi.updateItem).toHaveBeenCalledWith('page', '123', expect.objectContaining({ draft: 1 })))
+    await waitFor(() => expect(screen.getByText('Draft')).toBeInTheDocument())
+  })
+})
+
+describe('ItemEdit unsaved changes', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe("button labels", () => {
-    describe("new item", () => {
-      it("shows 'Publish' and 'Save as Draft' buttons", async () => {
-        renderWithProvider(
-          <ItemEdit schema={mockSchema} itemId="new" refreshList={mockRefreshList} />
-        );
-
-        await waitFor(() => {
-          expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-        });
-
-        expect(screen.getByRole("button", { name: "Publish" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Save as Draft" })).toBeInTheDocument();
-      });
-    });
-
-    describe("existing draft item", () => {
-      beforeEach(() => {
-        mockApi.getItem.mockResolvedValue({
-          data: { id: "123", title: "Test Post", _meta: { draft: true } },
-        });
-      });
-
-      it("shows 'Save & Publish' and 'Save Draft' buttons", async () => {
-        renderWithProvider(
-          <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-        );
-
-        await waitFor(() => {
-          expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-        });
-
-        expect(screen.getByRole("button", { name: "Save & Publish" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Save Draft" })).toBeInTheDocument();
-      });
-    });
-
-    describe("existing published item", () => {
-      beforeEach(() => {
-        mockApi.getItem.mockResolvedValue({
-          data: { id: "123", title: "Test Post", _meta: { draft: false } },
-        });
-      });
-
-      it("shows 'Save' and 'Revert to Draft' buttons", async () => {
-        renderWithProvider(
-          <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-        );
-
-        await waitFor(() => {
-          expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-        });
-
-        expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Revert to Draft" })).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("save actions", () => {
-    beforeEach(() => {
-      mockApi.getItem.mockResolvedValue({
-        data: { id: "123", title: "Test Post", _meta: { draft: true } },
-      });
-      // Mock updateItem to return the correct _meta based on what was saved
-      mockApi.updateItem.mockImplementation((_schema, _id, data) =>
-        Promise.resolve({
-          data: { id: "123", title: "Test Post", _meta: { draft: Boolean(data.draft) } }
-        })
-      );
-    });
-
-    it("saves as published when clicking primary button", async () => {
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Save & Publish" }));
-
-      await waitFor(() => {
-        expect(mockApi.updateItem).toHaveBeenCalledWith(
-          "posts",
-          "123",
-          expect.objectContaining({ draft: 0 })
-        );
-      });
-    });
-
-    it("saves as draft when clicking secondary button", async () => {
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Save Draft" }));
-
-      await waitFor(() => {
-        expect(mockApi.updateItem).toHaveBeenCalledWith(
-          "posts",
-          "123",
-          expect.objectContaining({ draft: 1 })
-        );
-      });
-    });
-
-    it("updates button labels after publishing a draft", async () => {
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      // Initially shows draft buttons
-      expect(screen.getByRole("button", { name: "Save & Publish" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Save Draft" })).toBeInTheDocument();
-
-      // Click publish
-      await user.click(screen.getByRole("button", { name: "Save & Publish" }));
-
-      // After save, buttons should update to published state
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Revert to Draft" })).toBeInTheDocument();
-      });
-    });
-
-    it("updates button labels after reverting to draft", async () => {
-      mockApi.getItem.mockResolvedValue({
-        data: { id: "123", title: "Test Post", _meta: { draft: false } },
-      });
-
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      // Initially shows published buttons
-      expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Revert to Draft" })).toBeInTheDocument();
-
-      // Click revert to draft
-      await user.click(screen.getByRole("button", { name: "Revert to Draft" }));
-
-      // After save, buttons should update to draft state
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Save & Publish" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Save Draft" })).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("dirty state indicator", () => {
-    beforeEach(() => {
-      mockApi.getItem.mockResolvedValue({
-        data: { id: "123", title: "Test Post", _meta: { draft: true } },
-      });
-    });
-
-    it("shows Draft badge when not dirty", async () => {
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByText("Draft")).toBeInTheDocument();
-      expect(screen.queryByText("Unsaved")).not.toBeInTheDocument();
-    });
-
-    it("shows Unsaved badge when dirty", async () => {
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      // Make a change to trigger dirty state
-      const input = screen.getByTestId("string-editor");
-      await user.clear(input);
-      await user.type(input, "Modified Title");
-
-      expect(screen.getByText("Unsaved")).toBeInTheDocument();
-      expect(screen.queryByText("Draft")).not.toBeInTheDocument();
-    });
-
-    it("shows Published badge for published items when not dirty", async () => {
-      mockApi.getItem.mockResolvedValue({
-        data: { id: "123", title: "Test Post", _meta: { draft: false } },
-      });
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByText("Published")).toBeInTheDocument();
-    });
-
-    it("clears Unsaved badge after saving", async () => {
-      mockApi.getItem.mockResolvedValue({
-        data: { id: "123", title: "Test Post", _meta: { draft: true, updatedAt: "2026-01-01T00:00:00Z" } },
-      });
-      mockApi.updateItem.mockResolvedValue({
-        data: { id: "123", title: "Modified Title", _meta: { draft: true, updatedAt: "2026-01-02T00:00:00Z" } },
-      });
-
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      // Make a change
-      const input = screen.getByTestId("string-editor");
-      await user.clear(input);
-      await user.type(input, "Modified Title");
-
-      // Should show Unsaved
-      expect(screen.getByText("Unsaved")).toBeInTheDocument();
-
-      // Save
-      await user.click(screen.getByRole("button", { name: "Save Draft" }));
-
-      // Should clear Unsaved and show Draft badge
-      await waitFor(() => {
-        expect(screen.queryByText("Unsaved")).not.toBeInTheDocument();
-        expect(screen.getByText("Draft")).toBeInTheDocument();
-      });
-    });
-
-    it("shows Unsaved badge when image field changes", async () => {
-      const schemaWithImage: Schema = {
-        name: "posts",
-        label: "Posts",
-        type: "collection",
-        fields: [
-          { name: "title", type: "string", required: true },
-          { name: "image", type: "image", required: false },
-        ],
-      };
-
-      mockApi.getItem.mockResolvedValue({
-        data: { id: "123", title: "Test Post", image: null, _meta: { draft: true } },
-      });
-
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={schemaWithImage} itemId="123" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      // Initially shows Draft badge
-      expect(screen.getByText("Draft")).toBeInTheDocument();
-      expect(screen.queryByText("Unsaved")).not.toBeInTheDocument();
-
-      // Select an image
-      await user.click(screen.getByTestId("select-image-btn"));
-
-      // Should now show Unsaved badge
-      expect(screen.getByText("Unsaved")).toBeInTheDocument();
-      expect(screen.queryByText("Draft")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("create new item", () => {
-    beforeEach(() => {
-      mockApi.createItem.mockResolvedValue({
-        data: { id: "new-123" },
-      });
-    });
-
-    it("creates item as published when clicking Publish", async () => {
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="new" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Publish" }));
-
-      await waitFor(() => {
-        expect(mockApi.createItem).toHaveBeenCalledWith(
-          "posts",
-          expect.objectContaining({ draft: 0 })
-        );
-      });
-
-      expect(mockNavigate).toHaveBeenCalledWith("/collections/posts/new-123", { replace: true });
-    });
-
-    it("creates item as draft when clicking Save as Draft", async () => {
-      const user = userEvent.setup();
-
-      renderWithProvider(
-        <ItemEdit schema={mockSchema} itemId="new" refreshList={mockRefreshList} />
-      );
-
-      await waitFor(() => {
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Save as Draft" }));
-
-      await waitFor(() => {
-        expect(mockApi.createItem).toHaveBeenCalledWith(
-          "posts",
-          expect.objectContaining({ draft: 1 })
-        );
-      });
-    });
-  });
-});
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'South Pacific', subtitle: '', _meta: { draft: false } } })
+  })
+
+  it('shows an unsaved bar counting changed fields, with Discard and Publish changes', async () => {
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+
+    await user.type(screen.getByTestId('string-editor-title'), '!')
+    const bar = screen.getByRole('status')
+    expect(bar).toHaveTextContent('1 unsaved change.')
+    expect(bar).toHaveTextContent('The website still shows the last published version.')
+    expect(screen.getByText('Edited')).toBeInTheDocument()
+
+    await user.type(screen.getByTestId('string-editor-subtitle'), 'x')
+    expect(screen.getByRole('status')).toHaveTextContent('2 unsaved changes.')
+
+    await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Discard' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByTestId('string-editor-title')).toHaveValue('South Pacific')
+  })
+
+  it('publishes the changes, says so for a moment, then goes quiet', async () => {
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+    await user.type(screen.getByTestId('string-editor-title'), '!')
+    await user.click(screen.getByRole('button', { name: 'Publish changes' }))
+
+    await waitFor(() => expect(mockApi.updateItem).toHaveBeenCalledWith('page', '123', expect.objectContaining({ title: 'South Pacific!', draft: 0 })))
+    expect(await screen.findByText(/Published just now/)).toBeInTheDocument()
+    expect(refreshList).toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), { timeout: 3000 })
+    expect(screen.getByText('Published')).toBeInTheDocument()
+  })
+
+  it('marks the entry dirty when an image field changes', async () => {
+    const withImage: Schema = { ...schema, fields: [...schema.fields, { name: 'image', type: 'image' }] }
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'South Pacific', image: null, _meta: { draft: false } } })
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={withImage} itemId="123" refreshList={refreshList} />)
+    await loaded()
+    await user.click(screen.getByTestId('select-image-btn'))
+    expect(screen.getByRole('status')).toHaveTextContent('1 unsaved change.')
+  })
+})
+
+describe('ItemEdit for a saved draft', () => {
+  it('explains it is not live and offers Save draft and Publish', async () => {
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'Talks', _meta: { draft: true } } })
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+    expect(screen.getByText('Draft')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Not on the website yet')
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Publish' }))
+    await waitFor(() => expect(mockApi.updateItem).toHaveBeenCalledWith('page', '123', expect.objectContaining({ draft: 0 })))
+    await waitFor(() => expect(screen.getByText('Published')).toBeInTheDocument())
+  })
+
+  it('saves edits as a draft without publishing', async () => {
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'Talks', _meta: { draft: true } } })
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+    await user.type(screen.getByTestId('string-editor-title'), '!')
+    await user.click(screen.getByRole('button', { name: 'Save draft' }))
+    await waitFor(() => expect(mockApi.updateItem).toHaveBeenCalledWith('page', '123', expect.objectContaining({ title: 'Talks!', draft: 1 })))
+  })
+})
+
+describe('ItemEdit for a brand-new entry', () => {
+  beforeEach(() => {
+    mockApi.createItem.mockResolvedValue({ data: { id: 'new-123' } })
+  })
+
+  it('is titled Untitled, focuses the title with a hint, and keeps Publish off until there is a title', async () => {
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="new" refreshList={refreshList} />)
+    await loaded()
+    expect(screen.getByRole('heading', { name: 'Untitled page' })).toBeInTheDocument()
+    expect(screen.getByText('Draft')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Not on the website yet — give it a title, then publish.')
+    expect(screen.getByTestId('string-editor-title')).toHaveFocus()
+    expect(screen.getByText(/Start here/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+
+    await user.type(screen.getByTestId('string-editor-title'), 'New page')
+    expect(screen.getByRole('heading', { name: 'New page' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Publish' }))
+    await waitFor(() => expect(mockApi.createItem).toHaveBeenCalledWith('page', expect.objectContaining({ title: 'New page', draft: 0 })))
+    expect(mockNavigate).toHaveBeenCalledWith('/collections/page/new-123', { replace: true })
+  })
+
+  it('saves a draft', async () => {
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="new" refreshList={refreshList} />)
+    await loaded()
+    await user.type(screen.getByTestId('string-editor-title'), 'Draft page')
+    await user.click(screen.getByRole('button', { name: 'Save draft' }))
+    await waitFor(() => expect(mockApi.createItem).toHaveBeenCalledWith('page', expect.objectContaining({ draft: 1 })))
+  })
+})

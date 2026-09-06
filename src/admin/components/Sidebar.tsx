@@ -1,129 +1,65 @@
 // src/admin/components/Sidebar.tsx
-import { useLocation } from "wouter";
-import NavLink from "./NavLink";
-import { useAuth } from "../context/AuthContext";
-import { useSchemas } from "../App";
-import type { Schema } from "../types";
-import { Image, LogOut, Egg, FileText, Folder } from "lucide-react";
+import { useLocation } from 'wouter'
+import { Egg, Settings2, Folder, Image, LogOut } from 'lucide-react'
+import NavLink from './NavLink'
+import { useAuth } from '../context/AuthContext'
+import { useSchemas } from '../App'
+import type { Schema } from '../types'
 
 interface SidebarProps {
-  schemas: Schema[];
+  schemas: Schema[]
 }
 
+const itemClass = (active: boolean) =>
+  [
+    'flex items-center gap-2.5 px-2.5 py-[11px] rounded-control text-[15px] leading-tight transition-colors duration-150',
+    '[&_svg]:w-[18px] [&_svg]:h-[18px] [&_svg]:shrink-0',
+    active ? 'bg-selected text-white font-semibold [&_svg]:text-white' : 'text-ink-nav hover:bg-page [&_svg]:text-ink-2',
+  ].join(' ')
+
+/** 196px of navigation: the site, its content types, the media library, sign out. */
 export default function Sidebar({ schemas }: SidebarProps) {
-  const { logout } = useAuth();
-  const { siteName } = useSchemas();
-  const [location] = useLocation();
+  const { logout } = useAuth()
+  const { siteName } = useSchemas()
+  const [location] = useLocation()
 
-  const singletons = schemas.filter((s) => s.type === "singleton");
-  const collections = schemas.filter((s) => s.type === "collection");
-
-  const isActive = (href: string) =>
-    location === href || location.startsWith(href + "/");
+  const singletons = schemas.filter((s) => s.type === 'singleton')
+  const collections = schemas.filter((s) => s.type === 'collection')
+  const isActive = (href: string) => location === href || location.startsWith(href + '/')
 
   return (
-    <aside className="w-60 bg-white border-r border-[#E8E8E3] h-screen flex flex-col">
-      {/* Logo */}
-      <div className="px-5 py-4 border-b border-[#E8E8E3]">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#E5644E] flex items-center justify-center">
-            <Egg className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-lg font-semibold text-[#1A1A18]">{siteName}</span>
+    <aside className="w-[196px] shrink-0 bg-panel border-r border-line-strong h-screen flex flex-col px-2.5 py-3.5">
+      <div className="flex items-center gap-[9px] px-1.5 pb-3.5 mb-3 border-b border-line-hair">
+        <div className="w-8 h-8 rounded-button bg-action flex items-center justify-center shrink-0" aria-hidden>
+          <Egg className="w-[19px] h-[19px] text-white" />
         </div>
+        <span className="text-[16px] font-bold text-ink truncate">{siteName}</span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
-        {singletons.length > 0 && (
-          <div>
-            <h2 className="px-2 mb-2 text-[11px] font-semibold text-[#9C9C91] uppercase tracking-wider">
-              Singletons
-            </h2>
-            <div className="space-y-0.5">
-              {singletons.map((s) => (
-                <NavLink
-                  key={s.name}
-                  href={`/singletons/${s.name}`}
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-                    transition-colors duration-150
-                    ${
-                      isActive(`/singletons/${s.name}`)
-                        ? "bg-[#F5F5F3] text-[#1A1A18] font-medium"
-                        : "text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]"
-                    }
-                  `}
-                >
-                  <FileText className="w-4 h-4 opacity-60" />
-                  {s.label}
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {collections.length > 0 && (
-          <div>
-            <h2 className="px-2 mb-2 text-[11px] font-semibold text-[#9C9C91] uppercase tracking-wider">
-              Collections
-            </h2>
-            <div className="space-y-0.5">
-              {collections.map((s) => (
-                <NavLink
-                  key={s.name}
-                  href={`/collections/${s.name}`}
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-                    transition-colors duration-150
-                    ${
-                      isActive(`/collections/${s.name}`)
-                        ? "bg-[#F5F5F3] text-[#1A1A18] font-medium"
-                        : "text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]"
-                    }
-                  `}
-                >
-                  <Folder className="w-4 h-4 opacity-60" />
-                  {s.label}
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="pt-2">
-          <NavLink
-            href="/media"
-            className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg text-sm
-              transition-colors duration-150
-              ${
-                isActive("/media")
-                  ? "bg-[#F5F5F3] text-[#1A1A18] font-medium"
-                  : "text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]"
-              }
-            `}
-          >
-            <Image className="w-4 h-4 opacity-60" />
-            Media
+      <nav aria-label="Content" className="flex-1 flex flex-col gap-0.5 overflow-y-auto">
+        {singletons.map((s) => (
+          <NavLink key={s.name} href={`/singletons/${s.name}`} className={itemClass(isActive(`/singletons/${s.name}`))}>
+            <Settings2 aria-hidden />
+            {s.label}
           </NavLink>
-        </div>
+        ))}
+        {collections.map((s) => (
+          <NavLink key={s.name} href={`/collections/${s.name}`} className={itemClass(isActive(`/collections/${s.name}`))}>
+            <Folder aria-hidden />
+            {s.label}
+          </NavLink>
+        ))}
+        <NavLink href="/media" className={itemClass(isActive('/media'))}>
+          <Image aria-hidden />
+          Media
+        </NavLink>
       </nav>
 
-      {/* User section */}
-      <div className="px-3 py-3 border-t border-[#E8E8E3]">
-        <button
-          onClick={() => logout()}
-          className="
-            flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm
-            text-[#6B6B63] hover:bg-[#F5F5F3] hover:text-[#1A1A18]
-            transition-colors duration-150
-          "
-        >
-          <LogOut className="w-4 h-4 opacity-60" />
-          Sign out
-        </button>
-      </div>
+      <div className="h-px bg-line-hair -mx-2.5 my-2" />
+      <button type="button" onClick={() => logout()} className={`${itemClass(false)} w-full text-left`}>
+        <LogOut aria-hidden />
+        Sign out
+      </button>
     </aside>
-  );
+  )
 }

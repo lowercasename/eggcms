@@ -1,8 +1,9 @@
+// src/admin/pages/Login.tsx
 import { useState } from 'react'
 import { useLocation } from 'wouter'
+import { Egg } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { Card, Heading, Alert, Input, Label, Button } from '../components/ui'
-import { Layers } from 'lucide-react'
+import { Card, Alert, Input, Label, Button } from '../components/ui'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -16,68 +17,50 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       await login(email, password)
       navigate('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : 'Sign in failed')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8]">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#E5644E] flex items-center justify-center shadow-sm">
-              <Layers className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-[#1A1A18]">EggCMS</span>
+    <div className="min-h-screen flex items-center justify-center bg-page p-6">
+      <div className="w-full max-w-[420px]">
+        <div className="flex justify-center items-center gap-3 mb-7">
+          <div className="w-10 h-10 rounded-button bg-action flex items-center justify-center" aria-hidden>
+            <Egg className="w-6 h-6 text-white" />
           </div>
+          <span className="text-[24px] font-bold text-ink">EggCMS</span>
         </div>
 
-        <Card className="p-8">
-          <h2 className="text-lg font-semibold text-[#1A1A18] mb-1">Welcome back</h2>
-          <p className="text-sm text-[#9C9C91] mb-6">Sign in to your account to continue</p>
+        <Card className="p-7">
+          <h1 className="m-0 mb-1 text-[19px] font-bold text-ink">Sign in</h1>
+          <p className="m-0 mb-6 text-[15px] text-ink-2">Use the email and password you were given.</p>
 
-          {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+          {error && (
+            <Alert variant="error" className="mb-5">
+              {error}
+            </Alert>
+          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-              />
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="login-email">Email</Label>
+              <Input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
             </div>
-
-            <div>
-              <Label>Password</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="login-password">Password</Label>
+              <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
             </div>
-
-            <Button type="submit" loading={loading} className="w-full">
+            <Button type="submit" loading={loading} fullWidth>
               Sign in
             </Button>
           </form>
         </Card>
-
-        <p className="text-center text-xs text-[#9C9C91] mt-6">
-          Lightweight, schema-driven content management
-        </p>
       </div>
     </div>
   )
