@@ -15,7 +15,7 @@ import {
   type MediaKind,
 } from '../lib/mediaTypes'
 import { sqlite } from '../db'
-import { describeReferences, findMediaReferences } from '../lib/mediaReferences'
+import { describeReferences, findAllMediaReferences, findMediaReferences, type MediaReference } from '../lib/mediaReferences'
 import type { SchemaDefinition } from '../../lib/schema'
 
 interface MediaItem {
@@ -31,10 +31,10 @@ interface MediaItem {
   created_at: string
 }
 
-type MediaItemResponse = MediaItem & { kind: MediaKind | null }
+type MediaItemResponse = MediaItem & { kind: MediaKind | null; references?: MediaReference[] }
 
-function present(item: MediaItem): MediaItemResponse {
-  return { ...item, path: toPublicUrl(item.path), kind: kindForMimeType(item.mimetype) }
+function present(item: MediaItem, references?: MediaReference[]): MediaItemResponse {
+  return { ...item, path: toPublicUrl(item.path), kind: kindForMimeType(item.mimetype), references }
 }
 
 export function createMediaRoutes(schemas: SchemaDefinition[]) {
@@ -64,7 +64,13 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
             .prepare('SELECT * FROM _media WHERE hidden = 0 ORDER BY created_at DESC')
             .all() as MediaItem[])
 
-    return c.json({ data: items.map(present), meta: { total: items.length } })
+    // Each item says where it is used, so deleting is safe and the library
+    // can show "Used on 2 pages" without a second request.
+    const references = findAllMediaReferences(schemas, items.map((i) => i.path))
+    return c.json({
+      data: items.map((item) => present(item, references.get(item.path) ?? [])),
+      meta: { total: items.length },
+    })
   })
 
   // POST /api/media - Upload file (with content-hash dedupe)

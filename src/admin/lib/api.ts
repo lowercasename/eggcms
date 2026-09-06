@@ -42,7 +42,7 @@ export const api = {
 
   // Schemas
   getSchemas: () =>
-    request<{ data: Array<{ name: string; label: string; type: string; fields: Array<{ name: string; type: string; label?: string; required?: boolean; default?: unknown; placeholder?: string; options?: string[]; from?: string }> }> }>('/schemas'),
+    request<{ data: Array<{ name: string; label: string; type: string; labelField?: string; fields: Array<{ name: string; type: string; label?: string; required?: boolean; default?: unknown; placeholder?: string; options?: string[]; from?: string }> }>; siteName?: string }>('/schemas'),
 
   // Content
   getContent: <T>(schema: string, drafts = true) =>
@@ -81,7 +81,7 @@ export const api = {
 
   // Media
   getMedia: () =>
-    request<{ data: Array<{ id: string; filename: string; path: string }> }>('/media'),
+    request<{ data: Array<{ id: string; filename: string; path: string; mimetype: string; kind: string | null; size: number; created_at: string; references?: unknown[] }> }>('/media'),
 
   uploadMedia: async (file: File) => {
     const formData = new FormData()

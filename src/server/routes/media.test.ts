@@ -280,7 +280,7 @@ describe('media routes - delete', () => {
     const body = await delRes.json()
     expect(body.error.code).toBe('MEDIA_IN_USE')
     expect(body.error.message).toBe('This file is used by Australia (page). Remove it there first.')
-    expect(body.error.references).toEqual([{ schema: 'page', id: 'page-Australia', label: 'Australia' }])
+    expect(body.error.references).toEqual([{ schema: 'page', schemaLabel: 'Pages', id: 'page-Australia', label: 'Australia' }])
 
     expect(deletedPaths).toHaveLength(0)
     expect(db().prepare('SELECT id FROM _media WHERE id = ?').get(id)).toBeDefined()
@@ -302,5 +302,24 @@ describe('media routes - delete', () => {
   it('returns 404 for unknown id', async () => {
     const res = await media.request('/nonexistent-id', { method: 'DELETE' })
     expect(res.status).toBe(404)
+  })
+})
+
+describe('media routes - listing says where each file is used', () => {
+  it('lists the content items that reference each file', async () => {
+    const cover = await uploadFile(makeFile('cover.png', 'COVER'))
+    const map = await uploadFile(makeFile('map.png', 'MAP'))
+    addPage('Australia', `<img src="${cover.data.data.path}">`)
+    addPage('Belarus', `<img src="https://example.org${cover.data.data.path}">`)
+
+    const res = await media.request('/')
+    const list = await res.json()
+    const byId = Object.fromEntries(list.data.map((m: any) => [m.id, m]))
+
+    expect(byId[cover.data.data.id].references).toEqual([
+      { schema: 'page', schemaLabel: 'Pages', id: 'page-Australia', label: 'Australia' },
+      { schema: 'page', schemaLabel: 'Pages', id: 'page-Belarus', label: 'Belarus' },
+    ])
+    expect(byId[map.data.data.id].references).toEqual([])
   })
 })

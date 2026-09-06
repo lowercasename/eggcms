@@ -72,6 +72,7 @@ export interface FieldDefinition {
   block?: BlockDefinition  // For single block field
   collections?: string[]  // For link fields - restrict to specific collections
   kinds?: string[]  // For file fields - which media kinds may be attached (default: document)
+  toolbar?: 'full' | 'minimal'  // For richtext fields - 'minimal' shows only bold, italic and link
 }
 
 /**
@@ -101,6 +102,8 @@ export interface SchemaDefinition {
   fields: FieldDefinition[]
   drafts?: boolean
   labelField?: string  // Field to use as display label in lists (defaults to 'title')
+  icon?: string  // Blocks only: a Lucide icon name (e.g. 'book-open') shown in the admin
+  description?: string  // Blocks only: one sentence shown when choosing a block type
 }
 
 export type BlockDefinition = SchemaDefinition & { type: 'block' }

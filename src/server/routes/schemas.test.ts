@@ -148,3 +148,67 @@ describe('schemas route', () => {
     })
   })
 })
+
+describe('GET /schemas - admin presentation hints', () => {
+  it('passes a block type\'s icon and description through to the admin', async () => {
+    const schemas: SchemaDefinition[] = [
+      {
+        name: 'page',
+        label: 'Pages',
+        type: 'collection',
+        fields: [
+          {
+            name: 'sections',
+            type: 'blocks',
+            blocks: [
+              {
+                name: 'book',
+                label: 'Book',
+                type: 'block',
+                icon: 'book-open',
+                description: 'Title, cover image and publication details',
+                fields: [{ name: 'title', type: 'string' }],
+              },
+            ],
+          },
+          {
+            name: 'featured',
+            type: 'block',
+            block: {
+              name: 'book',
+              label: 'Book',
+              type: 'block',
+              icon: 'book-open',
+              fields: [{ name: 'title', type: 'string' }],
+            },
+          },
+        ],
+      },
+    ]
+    const app = createSchemasRoute(schemas)
+    const res = await app.request('/schemas')
+    const json = await res.json()
+
+    expect(json.data[0].fields[0].blocks[0].icon).toBe('book-open')
+    expect(json.data[0].fields[0].blocks[0].description).toBe(
+      'Title, cover image and publication details'
+    )
+    expect(json.data[0].fields[1].block.icon).toBe('book-open')
+  })
+
+  it('passes a rich text field\'s toolbar option through to the admin', async () => {
+    const schemas: SchemaDefinition[] = [
+      {
+        name: 'book',
+        label: 'Books',
+        type: 'collection',
+        fields: [{ name: 'details', type: 'richtext', toolbar: 'minimal' }],
+      },
+    ]
+    const app = createSchemasRoute(schemas)
+    const res = await app.request('/schemas')
+    const json = await res.json()
+
+    expect(json.data[0].fields[0].toolbar).toBe('minimal')
+  })
+})

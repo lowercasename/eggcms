@@ -17,21 +17,23 @@ export function createSchemasRoute(schemas: SchemaDefinition[]) {
       options: f.options,
       from: f.from,
       // Include block definitions for blocks fields (array)
-      blocks: f.blocks?.map((b) => ({
-        name: b.name,
-        label: b.label,
-        fields: b.fields.map(mapField),
-      })),
+      blocks: f.blocks?.map(mapBlock),
       // Include block definition for single block field
-      block: f.block ? {
-        name: f.block.name,
-        label: f.block.label,
-        fields: f.block.fields.map(mapField),
-      } : undefined,
+      block: f.block ? mapBlock(f.block) : undefined,
       // Include collections restriction for link fields
       collections: f.collections,
       // Include accepted media kinds for file fields
       kinds: f.kinds,
+      // Include toolbar option for richtext fields
+      toolbar: f.toolbar,
+    })
+
+    const mapBlock = (b: NonNullable<typeof schemas[0]['fields'][0]['blocks']>[0]) => ({
+      name: b.name,
+      label: b.label,
+      icon: b.icon,
+      description: b.description,
+      fields: b.fields.map(mapField),
     })
 
     const publicSchemas = schemas
