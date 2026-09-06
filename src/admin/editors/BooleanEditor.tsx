@@ -1,18 +1,8 @@
 // src/admin/editors/BooleanEditor.tsx
-import type { FieldDefinition } from '../types'
 import { Toggle } from '../components/ui'
+import { getFieldLabel } from '../types'
+import type { EditorProps } from './types'
 
-interface Props {
-  field: FieldDefinition
-  value: unknown
-  onChange: (v: unknown) => void
-}
-
-export default function BooleanEditor({ value, onChange }: Props) {
-  return (
-    <Toggle
-      checked={!!value}
-      onChange={(checked) => onChange(checked)}
-    />
-  )
+export default function BooleanEditor({ field, value, onChange }: EditorProps) {
+  return <Toggle aria-label={getFieldLabel(field)} checked={!!value} onChange={(checked) => onChange(checked)} />
 }

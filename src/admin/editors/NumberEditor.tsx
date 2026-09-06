@@ -1,19 +1,14 @@
 // src/admin/editors/NumberEditor.tsx
-import type { FieldDefinition } from '../types'
-import { Input } from '../components/ui'
+import { Stepper } from '../components/ui'
+import { getFieldLabel } from '../types'
+import type { EditorProps } from './types'
 
-interface Props {
-  field: FieldDefinition
-  value: unknown
-  onChange: (v: unknown) => void
-}
-
-export default function NumberEditor({ field, value, onChange }: Props) {
+export default function NumberEditor({ field, value, onChange }: EditorProps) {
   return (
-    <Input
-      type="number"
-      value={(value as number) ?? ''}
-      onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : null)}
+    <Stepper
+      aria-label={getFieldLabel(field)}
+      value={typeof value === 'number' ? value : null}
+      onChange={(n) => onChange(n)}
       placeholder={field.placeholder}
     />
   )

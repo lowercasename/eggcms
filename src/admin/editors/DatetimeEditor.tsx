@@ -1,29 +1,27 @@
 // src/admin/editors/DatetimeEditor.tsx
-import type { FieldDefinition } from '../types'
 import { Input } from '../components/ui'
+import { useFieldControl } from '../components/ui/FieldContext'
+import type { EditorProps } from './types'
 
-interface Props {
-  field: FieldDefinition
-  value: unknown
-  onChange: (v: unknown) => void
+/** ISO string → the local value a datetime-local input wants. */
+function toLocalDatetime(iso: string | null | undefined) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 16)
 }
 
-export default function DatetimeEditor({ value, onChange }: Props) {
-  // Convert ISO string to datetime-local format
-  const toLocalDatetime = (iso: string | null | undefined) => {
-    if (!iso) return ''
-    const date = new Date(iso)
-    return date.toISOString().slice(0, 16)
-  }
-
+export default function DatetimeEditor({ field, value, onChange }: EditorProps) {
+  const { id, hintId } = useFieldControl()
   return (
     <Input
+      id={id}
       type="datetime-local"
       value={toLocalDatetime(value as string)}
-      onChange={(e) => {
-        const date = e.target.value ? new Date(e.target.value).toISOString() : null
-        onChange(date)
-      }}
+      onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
+      aria-required={field.required || undefined}
+      aria-describedby={hintId}
+      className="max-w-[360px]"
     />
   )
 }

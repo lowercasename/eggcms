@@ -1,25 +1,21 @@
 // src/admin/editors/SelectEditor.tsx
-import type { FieldDefinition } from '../types'
 import { Select } from '../components/ui'
+import { useFieldControl } from '../components/ui/FieldContext'
+import type { EditorProps } from './types'
 
-interface Props {
-  field: FieldDefinition
-  value: unknown
-  onChange: (v: unknown) => void
-}
-
-export default function SelectEditor({ field, value, onChange }: Props) {
-  const options = (field.options || []).map((opt) => ({
-    value: opt,
-    label: opt,
-  }))
-
+export default function SelectEditor({ field, value, onChange }: EditorProps) {
+  const { id, hintId } = useFieldControl()
+  const options = (field.options || []).map((opt) => ({ value: opt, label: opt }))
   return (
     <Select
+      id={id}
       value={(value as string) || ''}
       onChange={(e) => onChange(e.target.value || null)}
       options={options}
-      placeholder="Select..."
+      placeholder="Choose…"
+      aria-required={field.required || undefined}
+      aria-describedby={hintId}
+      className="max-w-[360px]"
     />
   )
 }

@@ -15,7 +15,12 @@ export function useDirtyState<T>(
   resetKey?: string,
 ): {
   isDirty: boolean;
-  markClean: () => void;
+  /** Treat the current data (or the data just saved) as the clean baseline. */
+  markClean: (next?: T) => void;
+  /** The data as last loaded or saved, for Discard. */
+  savedData: T | null;
+  /** How many top-level fields differ from the saved data. */
+  changedCount: number;
 } {
   const [savedData, setSavedData] = useState<T | null>(null);
   const initialLoadRef = useRef(true);
@@ -41,9 +46,14 @@ export function useDirtyState<T>(
     JSON.stringify(currentData) !== JSON.stringify(savedData);
 
   // Mark current state as clean (after save)
-  const markClean = useCallback(() => {
-    setSavedData(currentData);
-  }, [currentData]);
+  const markClean = useCallback(
+    (next?: T) => {
+      setSavedData(next === undefined ? currentData : next);
+    },
+    [currentData],
+  );
+
+  const changedCount = isDirty ? countChangedFields(currentData, savedData) : 0;
 
   // Warn on browser close/refresh
   useEffect(() => {
@@ -60,7 +70,26 @@ export function useDirtyState<T>(
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  return { isDirty, markClean };
+  return { isDirty, markClean, savedData, changedCount };
+}
+
+/** Top-level keys whose values differ between two records (1 for non-objects). */
+export function countChangedFields<T>(a: T, b: T | null): number {
+  if (b === null) return 0;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") {
+    return JSON.stringify(a) === JSON.stringify(b) ? 0 : 1;
+  }
+  const keys = new Set([...Object.keys(a as object), ...Object.keys(b as object)]);
+  let n = 0;
+  for (const key of keys) {
+    const x = (a as Record<string, unknown>)[key];
+    const y = (b as Record<string, unknown>)[key];
+    const emptyX = x === undefined || x === null || x === "";
+    const emptyY = y === undefined || y === null || y === "";
+    if (emptyX && emptyY) continue;
+    if (JSON.stringify(x) !== JSON.stringify(y)) n += 1;
+  }
+  return n;
 }
 
 /**
