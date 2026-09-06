@@ -168,10 +168,13 @@ button:disabled {
 ::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-ink-3); }
 
-/* Focus ring: 2.5px terracotta, outside the box so sizes stay constant. */
-:focus-visible {
-  outline: 2.5px solid var(--color-action);
-  outline-offset: 1px;
+/* Focus ring: 2.5px terracotta, outside the box so sizes stay constant.
+   In the base layer so a utility (focus-visible:outline-none) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2.5px solid var(--color-action);
+    outline-offset: 1px;
+  }
 }
 
 ::selection {
@@ -183,21 +186,23 @@ button:disabled {
  * Inputs. The border is 1.5px at rest and reads as 2.5px when focused, but the
  * extra pixel is drawn with a box-shadow so the box never changes size.
  */
-.control {
-  border: 1.5px solid var(--color-line-input);
-  border-radius: var(--radius-control);
-  background: var(--color-panel);
-  color: var(--color-ink);
-  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
-}
-.control:focus, .control:focus-within, .control:focus-visible {
-  outline: none;
-  border-color: var(--color-action);
-  box-shadow: 0 0 0 1px var(--color-action);
-}
-.control:disabled, .control[readonly], .control[aria-readonly="true"] {
-  background: var(--color-page);
-  color: var(--color-ink-2);
+@layer components {
+  .control {
+    border: 1.5px solid var(--color-line-input);
+    border-radius: var(--radius-control);
+    background-color: var(--color-panel);
+    color: var(--color-ink);
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  }
+  .control:focus, .control:focus-within, .control:focus-visible {
+    outline: none;
+    border-color: var(--color-action);
+    box-shadow: 0 0 0 1px var(--color-action);
+  }
+  .control:disabled, .control[readonly], .control[aria-readonly="true"] {
+    background-color: var(--color-page);
+    color: var(--color-ink-2);
+  }
 }
 
 /* ---------------------------------------------------------------------- */

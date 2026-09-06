@@ -9,12 +9,12 @@ import { SectionProvider } from '../contexts/SectionContext'
 const field = { name: 'details', label: 'Publication details', type: 'richtext' as const }
 
 describe('RichtextEditor toolbar presets', () => {
-  it('shows worded heading buttons in the full toolbar', async () => {
+  it('shows compact heading buttons in the full toolbar', async () => {
     render(<RichtextEditor field={field} value="" onChange={vi.fn()} />)
     await waitFor(() => expect(screen.getByTitle('Bold')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Heading' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sub-heading' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Normal' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Normal text' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Image' })).toBeInTheDocument()
   })

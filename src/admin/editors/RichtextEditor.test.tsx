@@ -32,8 +32,8 @@ describe("RichtextEditor", () => {
       });
 
       expect(screen.getByTitle("Italic")).toBeInTheDocument();
-      expect(screen.getByTitle("Heading 2")).toBeInTheDocument();
-      expect(screen.getByTitle("Heading 3")).toBeInTheDocument();
+      expect(screen.getByTitle("Heading")).toBeInTheDocument();
+      expect(screen.getByTitle("Sub-heading")).toBeInTheDocument();
       expect(screen.getByTitle("Normal text")).toBeInTheDocument();
       expect(screen.getByTitle("Bullet list")).toBeInTheDocument();
       expect(screen.getByTitle("Numbered list")).toBeInTheDocument();

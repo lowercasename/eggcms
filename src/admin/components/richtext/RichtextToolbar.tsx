@@ -11,6 +11,9 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   RemoveFormatting,
+  Heading1,
+  Heading2,
+  Pilcrow,
 } from 'lucide-react'
 
 export type ToolbarPreset = 'full' | 'minimal'
@@ -82,14 +85,14 @@ export default function RichtextToolbar({ editor, preset = 'full', size = 'md', 
       {!isMinimal && (
         <>
           {divider}
-          <Tool worded active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
-            Heading
+          <Tool active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading">
+            <Heading1 aria-hidden />
           </Tool>
-          <Tool worded active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">
-            Sub-heading
+          <Tool active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Sub-heading">
+            <Heading2 aria-hidden />
           </Tool>
-          <Tool worded active={editor.isActive('paragraph')} onClick={() => editor.chain().focus().setParagraph().run()} title="Normal text">
-            Normal
+          <Tool active={editor.isActive('paragraph')} onClick={() => editor.chain().focus().setParagraph().run()} title="Normal text">
+            <Pilcrow aria-hidden />
           </Tool>
           {divider}
           <Tool active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list">

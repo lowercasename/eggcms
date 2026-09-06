@@ -39,7 +39,7 @@ type Tab = "external" | "internal" | "file";
 
 const TABS: Array<{ value: Tab; label: string; Icon: typeof ExternalLink }> = [
   { value: "external", label: "Web address", Icon: ExternalLink },
-  { value: "internal", label: "A page on this site", Icon: FileText },
+  { value: "internal", label: "Page on this site", Icon: FileText },
   { value: "file", label: "File", Icon: Paperclip },
 ];
 
@@ -192,8 +192,8 @@ export default function LinkModal({
     (tab === "external" && url.trim()) || (tab === "internal" && selectedSchema && selectedItem) || (tab === "file" && selectedFile);
 
   return (
-    <Modal title={hasExistingLink ? "Edit link" : "Add a link"} onClose={onClose} maxWidth="lg">
-      <div role="tablist" aria-label="Link to" className="flex gap-1.5 px-6 pt-4">
+    <Modal title={hasExistingLink ? "Edit link" : "Add a link"} onClose={onClose} maxWidth="xl">
+      <div role="tablist" aria-label="Link to" className="flex border-b border-line-strong bg-page">
         {TABS.map(({ value, label, Icon }) => {
           const active = tab === value;
           return (
@@ -203,8 +203,10 @@ export default function LinkModal({
               role="tab"
               aria-selected={active}
               onClick={() => setTab(value)}
-              className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-control border-[1.5px] text-[15px] font-semibold transition-colors ${
-                active ? "bg-selected text-white border-selected" : "bg-panel text-ink-nav border-line-input hover:bg-page"
+              className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-3.5 min-h-[52px] -mb-px text-[15px] whitespace-nowrap transition-colors focus-visible:outline-offset-[-3px] ${
+                active
+                  ? "bg-panel text-ink font-bold border-b-[2.5px] border-ink"
+                  : "text-ink-nav font-semibold border-b-[2.5px] border-transparent hover:bg-panel hover:text-ink"
               }`}
             >
               <Icon className="w-4 h-4" aria-hidden />
