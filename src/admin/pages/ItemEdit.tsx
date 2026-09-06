@@ -34,6 +34,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const [justSaved, showJustSaved] = useJustSaved()
 
   const isNew = itemId === 'new'
@@ -111,7 +112,10 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
 
   const discard = () => {
     if (savedData) setData((current) => ({ ...savedData, _meta: current._meta }))
+    setConfirmingDiscard(false)
   }
+
+  const changes = `${changedCount} unsaved change${changedCount === 1 ? '' : 's'}`
 
   const remove = async () => {
     try {
@@ -167,6 +171,26 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
         </NoticeBar>
       )
     }
+    if (isDirty && confirmingDiscard) {
+      return (
+        <NoticeBar
+          variant="unsaved"
+          sticky
+          actions={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmingDiscard(false)}>
+                Keep editing
+              </Button>
+              <Button variant="destructive-solid" onClick={discard}>
+                Yes, discard
+              </Button>
+            </>
+          }
+        >
+          <b>Throw away {changes}?</b> The {noun} goes back to how it was last saved.
+        </NoticeBar>
+      )
+    }
     if (isDirty) {
       return (
         <NoticeBar
@@ -175,7 +199,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
           animate
           actions={
             <>
-              <Button variant="secondary" className="!border-draft-2 !text-draft" onClick={discard}>
+              <Button variant="secondary" className="!border-draft-2 !text-draft" onClick={() => setConfirmingDiscard(true)}>
                 Discard
               </Button>
               {isDraft && (
@@ -189,10 +213,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
             </>
           }
         >
-          <b>
-            {changedCount} unsaved change{changedCount === 1 ? '' : 's'}.
-          </b>{' '}
-          {isDraft ? `The website doesn't show this ${noun} yet.` : 'The website still shows the last published version.'}
+          <b>{changes}.</b> {isDraft ? `The website doesn't show this ${noun} yet.` : 'The website still shows the last published version.'}
         </NoticeBar>
       )
     }

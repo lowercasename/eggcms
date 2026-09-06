@@ -55,4 +55,20 @@ describe('Singleton', () => {
     await waitFor(() => expect(mockApi.updateSingleton).toHaveBeenCalledWith('settings', { siteName: 'Elena Govor!' }))
     expect(await screen.findByText(/Saved just now/)).toBeInTheDocument()
   })
+
+  it('asks before discarding changes', async () => {
+    const user = userEvent.setup()
+    render(
+      <DirtyStateProvider>
+        <Singleton />
+      </DirtyStateProvider>
+    )
+    await screen.findByTestId('string-editor-siteName')
+    await user.type(screen.getByTestId('string-editor-siteName'), '!')
+    await user.click(screen.getByRole('button', { name: 'Discard' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Throw away 1 unsaved change?')
+    await user.click(screen.getByRole('button', { name: 'Yes, discard' }))
+    expect(screen.getByTestId('string-editor-siteName')).toHaveValue('Elena Govor')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
 })

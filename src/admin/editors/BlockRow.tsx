@@ -63,8 +63,6 @@ export default function BlockRow(props: BlockRowProps) {
         data-testid="block-row"
         data-flip-key={block._id}
         data-drop-target={dropTarget || undefined}
-        draggable
-        onDragStart={props.onDragStart}
         onDragOver={props.onDragOver}
         onDrop={props.onDrop}
         onDragEnd={props.onDragEnd}
@@ -75,7 +73,19 @@ export default function BlockRow(props: BlockRowProps) {
           onClick={() => headerRef.current && props.onToggle(headerRef.current)}
           className={`flex items-center gap-3 px-3.5 py-2.5 min-h-[52px] cursor-pointer ${open ? 'bg-page border-b border-line-strong' : ''}`}
         >
-          <GripVertical className="w-[18px] h-[18px] text-ink-3 shrink-0 cursor-grab" aria-hidden />
+          {/* Only the handle is draggable: a draggable row would swallow the
+              mouse-downs that place the caret in the block's rich text. */}
+          <span
+            role="img"
+            aria-label="Drag to move"
+            title="Drag to move"
+            draggable
+            onDragStart={props.onDragStart}
+            onClick={(e) => e.stopPropagation()}
+            className="shrink-0 flex cursor-grab active:cursor-grabbing text-ink-3"
+          >
+            <GripVertical className="w-[18px] h-[18px]" aria-hidden />
+          </span>
           <button
             type="button"
             aria-expanded={open}

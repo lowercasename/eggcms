@@ -121,11 +121,16 @@ describe('BlocksEditor: reorder', () => {
     expect(onChange).toHaveBeenCalledWith([three[0], three[2], three[1]])
   })
 
-  it('reorders by dragging a row onto another', () => {
+  it('reorders by dragging a row by its handle onto another', () => {
     render(<BlocksEditor field={field} value={three} onChange={onChange} />)
     const rows = screen.getAllByTestId('block-row')
+    // Only the handle is draggable: a draggable row would stop the caret being
+    // placed inside the block's rich text.
+    expect(rows[2]).not.toHaveAttribute('draggable', 'true')
+    const handle = within(rows[2]).getByRole('img', { name: 'Drag to move' })
+    expect(handle).toHaveAttribute('draggable', 'true')
     const dataTransfer = { effectAllowed: '', setData: vi.fn(), getData: vi.fn() }
-    fireEvent.dragStart(rows[2], { dataTransfer })
+    fireEvent.dragStart(handle, { dataTransfer })
     fireEvent.dragOver(rows[0], { dataTransfer })
     expect(rows[0]).toHaveAttribute('data-drop-target', 'true')
     fireEvent.drop(rows[0], { dataTransfer })

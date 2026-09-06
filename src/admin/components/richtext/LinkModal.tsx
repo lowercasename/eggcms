@@ -206,7 +206,7 @@ export default function LinkModal({
               className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-3.5 min-h-[52px] -mb-px text-[15px] whitespace-nowrap transition-colors focus-visible:outline-offset-[-3px] ${
                 active
                   ? "bg-panel text-ink font-bold border-b-[2.5px] border-ink"
-                  : "text-ink-nav font-semibold border-b-[2.5px] border-transparent hover:bg-panel hover:text-ink"
+                  : "text-ink-nav font-semibold border-b-[2.5px] border-transparent hover:border-line-strong hover:text-ink"
               }`}
             >
               <Icon className="w-4 h-4" aria-hidden />

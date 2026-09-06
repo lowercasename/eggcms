@@ -128,7 +128,14 @@ describe('ItemEdit unsaved changes', () => {
     await user.type(screen.getByTestId('string-editor-subtitle'), 'x')
     expect(screen.getByRole('status')).toHaveTextContent('2 unsaved changes.')
 
+    // Discard asks first, and can be backed out of.
     await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Discard' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Throw away 2 unsaved changes?')
+    await user.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByTestId('string-editor-title')).toHaveValue('South Pacific!')
+
+    await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Discard' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, discard' }))
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.getByTestId('string-editor-title')).toHaveValue('South Pacific')
   })

@@ -20,6 +20,7 @@ export default function Singleton() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [justSaved, showJustSaved] = useJustSaved()
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
 
   const schema = schemas.find((s) => s.name === params.schema && s.type === 'singleton')
 
@@ -80,6 +81,32 @@ export default function Singleton() {
           <NoticeBar variant="published" sticky>
             <b>{justSaved}</b>
           </NoticeBar>
+        ) : isDirty && confirmingDiscard ? (
+          <NoticeBar
+            variant="unsaved"
+            sticky
+            actions={
+              <>
+                <Button variant="secondary" onClick={() => setConfirmingDiscard(false)}>
+                  Keep editing
+                </Button>
+                <Button
+                  variant="destructive-solid"
+                  onClick={() => {
+                    if (savedData) setData(savedData)
+                    setConfirmingDiscard(false)
+                  }}
+                >
+                  Yes, discard
+                </Button>
+              </>
+            }
+          >
+            <b>
+              Throw away {changedCount} unsaved change{changedCount === 1 ? '' : 's'}?
+            </b>{' '}
+            Everything goes back to how it was last saved.
+          </NoticeBar>
         ) : isDirty ? (
           <NoticeBar
             variant="unsaved"
@@ -87,7 +114,7 @@ export default function Singleton() {
             animate
             actions={
               <>
-                <Button variant="secondary" className="!border-draft-2 !text-draft" onClick={() => savedData && setData(savedData)}>
+                <Button variant="secondary" className="!border-draft-2 !text-draft" onClick={() => setConfirmingDiscard(true)}>
                   Discard
                 </Button>
                 <Button onClick={save} loading={saving}>
