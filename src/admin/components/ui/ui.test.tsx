@@ -14,7 +14,34 @@ import {
   Toggle,
   InsertDivider,
   TypeMenu,
+  Input,
+  Textarea,
 } from './index'
+
+describe('placeholders', () => {
+  // A placeholder must not read as a value: quieter ink than text, and italic.
+  it('are muted and italic in inputs', () => {
+    render(<Input placeholder="https://…" aria-label="Link" />)
+    const input = screen.getByRole('textbox', { name: 'Link' })
+    expect(input.className).toMatch(/placeholder:text-ink-3/)
+    expect(input.className).toMatch(/placeholder:italic/)
+    expect(input.className).not.toMatch(/placeholder:text-ink-2/)
+  })
+
+  it('are muted and italic in textareas', () => {
+    render(<Textarea placeholder="Notes" aria-label="Notes" />)
+    const area = screen.getByRole('textbox', { name: 'Notes' })
+    expect(area.className).toMatch(/placeholder:text-ink-3/)
+    expect(area.className).toMatch(/placeholder:italic/)
+  })
+
+  it('are muted and italic in the search box', () => {
+    render(<SearchInput value="" onChange={() => {}} placeholder="Search pages" />)
+    const box = screen.getByRole('searchbox', { name: 'Search pages' })
+    expect(box.className).toMatch(/placeholder:text-ink-3/)
+    expect(box.className).toMatch(/placeholder:italic/)
+  })
+})
 
 describe('Button', () => {
   it('renders its label and fires onClick', async () => {

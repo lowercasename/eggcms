@@ -10,7 +10,7 @@ export default function Input({ className = '', mono, ...props }: InputProps) {
   return (
     <input
       className={[
-        'control w-full px-3 py-[11px] leading-tight placeholder:text-ink-2',
+        'control w-full px-3 py-[11px] leading-tight placeholder:text-ink-3 placeholder:italic',
         mono ? 'font-mono text-[16px]' : 'text-[17px]',
         className,
       ].join(' ')}

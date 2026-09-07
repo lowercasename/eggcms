@@ -64,7 +64,7 @@ export default function Stepper({ value, onChange, min, max, step = 1, id, place
           const n = Number(trimmed)
           if (!Number.isNaN(n)) onChange(n)
         }}
-        className="w-[76px] text-center font-mono text-[17px] text-ink bg-transparent outline-none py-[10px] focus-visible:outline-none"
+        className="w-[76px] text-center font-mono text-[17px] text-ink bg-transparent outline-none py-[10px] focus-visible:outline-none placeholder:text-ink-3 placeholder:italic"
       />
       <button
         type="button"

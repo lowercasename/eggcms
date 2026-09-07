@@ -134,7 +134,14 @@ export function iconByName(name: string | undefined): LucideIcon | null {
   return (icons as Record<string, LucideIcon>)[pascal] ?? null
 }
 
-/** The schema's icon, or a guess by priority: a nested list, then an image, a file, prose, a link, then a heading if every field is text. */
+/** Field types that only qualify a line of text (its size, say) and so don't change what a block is. */
+const SETTING_TYPES = new Set(['select', 'boolean', 'number', 'date'])
+
+/**
+ * The schema's icon, or a guess by priority: a nested list, then an image, a
+ * file, prose, a link, then a heading if the block is a line of text with at
+ * most a few settings beside it. The square is the last resort.
+ */
 export function iconForBlock(def: BlockDefinition): LucideIcon {
   const named = iconByName(def.icon)
   if (named) return named
@@ -144,6 +151,7 @@ export function iconForBlock(def: BlockDefinition): LucideIcon {
   if (types.includes('file')) return Paperclip
   if (types.includes('richtext') || types.includes('text')) return AlignLeft
   if (types.includes('link')) return Link
-  if (types.length > 0 && types.every((t) => t === 'string' || t === 'slug')) return Heading2
+  const isText = (t: string) => t === 'string' || t === 'slug'
+  if (types.some(isText) && types.every((t) => isText(t) || SETTING_TYPES.has(t))) return Heading2
   return Square
 }

@@ -88,6 +88,22 @@ describe('iconForBlock', () => {
     const img: BlockDefinition = { name: 'i', label: 'Image', fields: [{ name: 'src', type: 'image' }] }
     expect((iconForBlock(img).displayName ?? iconForBlock(img).name)).toMatch(/Image/)
   })
+  it('still guesses a heading when the text comes with a select, toggle or number', () => {
+    const sized: BlockDefinition = {
+      name: 'h',
+      label: 'Heading',
+      fields: [
+        { name: 'content', type: 'string' },
+        { name: 'size', type: 'select', options: ['large', 'small'] },
+        { name: 'anchor', type: 'boolean' },
+      ],
+    }
+    expect((iconForBlock(sized).displayName ?? iconForBlock(sized).name)).toMatch(/Heading2/)
+  })
+  it('falls back to a square only when there is no text to head', () => {
+    const bare: BlockDefinition = { name: 'b', label: 'Bare', fields: [{ name: 'on', type: 'boolean' }] }
+    expect((iconForBlock(bare).displayName ?? iconForBlock(bare).name)).toMatch(/Square/)
+  })
 })
 
 describe('makeBlock', () => {

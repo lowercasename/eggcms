@@ -7,7 +7,7 @@ export default function Textarea({ className = '', rows = 5, ...props }: Textare
   return (
     <textarea
       rows={rows}
-      className={`control w-full px-3 py-[11px] text-[17px] leading-relaxed placeholder:text-ink-2 resize-y min-h-[120px] ${className}`}
+      className={`control w-full px-3 py-[11px] text-[17px] leading-relaxed placeholder:text-ink-3 placeholder:italic resize-y min-h-[120px] ${className}`}
       {...props}
     />
   )
