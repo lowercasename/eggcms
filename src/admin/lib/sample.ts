@@ -147,7 +147,7 @@ export const sampleSettings = {
   footer: '<p>© Elena Govor</p>',
 }
 
-const ref = (id: string, label: string) => ({ schema: 'page', schemaLabel: 'Pages', id, label })
+const ref = (id: string, label: string) => ({ schema: 'page', schemaLabel: 'Pages', schemaType: 'collection' as const, id, label })
 
 
 export const sampleMedia: MediaItem[] = [
@@ -156,7 +156,7 @@ export const sampleMedia: MediaItem[] = [
   { id: 'm3', filename: 'Shabashev_01.png', path: '/uploads/shabashev-01.png', mimetype: 'image/png', kind: 'image', size: 23800, created_at: '2026-08-08T10:00:00.000Z', references: [ref('p3', 'Russian Anzacs')] },
   { id: 'm4', filename: 'Russian sailors in Australia.png', path: '/uploads/russian-sailors-in-australia.png', mimetype: 'image/png', kind: 'image', size: 5500, created_at: '2026-08-07T10:00:00.000Z', references: [ref('p4', 'Australia'), ref('p1', 'Belarus Ukraine Russia'), ref('p6', 'My family')] },
   { id: 'm5', filename: 'hood-bay-documents.pdf', path: '/uploads/hood-bay-documents.pdf', mimetype: 'application/pdf', kind: 'document', size: 4.1 * 1024 * 1024, created_at: '2026-08-06T10:00:00.000Z', references: [ref('p5', 'South Pacific')] },
-  { id: 'm6', filename: 'background.png', path: '/uploads/background.png', mimetype: 'image/png', kind: 'image', size: 73800, created_at: '2026-08-05T10:00:00.000Z', references: [{ schema: 'settings', schemaLabel: 'Site Settings', id: 'settings', label: 'Site Settings' }] },
+  { id: 'm6', filename: 'background.png', path: '/uploads/background.png', mimetype: 'image/png', kind: 'image', size: 73800, created_at: '2026-08-05T10:00:00.000Z', references: [{ schema: 'settings', schemaLabel: 'Site Settings', schemaType: 'singleton' as const, id: 'settings', label: 'Site Settings' }] },
   { id: 'm7', filename: 'nuku-hiva-interview.mp3', path: '/uploads/nuku-hiva-interview.mp3', mimetype: 'audio/mpeg', kind: 'audio', size: 18.6 * 1024 * 1024, created_at: '2026-08-04T10:00:00.000Z', references: [] },
   { id: 'm8', filename: 'maclay-coast.pdf', path: '/uploads/maclay-coast.pdf', mimetype: 'application/pdf', kind: 'document', size: 2.3 * 1024 * 1024, created_at: '2026-08-03T10:00:00.000Z', references: [ref('p5', 'South Pacific'), ref('p2', 'Genealogy')] },
   { id: 'm9', filename: 'genealogy-chart.png', path: '/uploads/genealogy-chart.png', mimetype: 'image/png', kind: 'image', size: 412 * 1024, created_at: '2026-08-02T10:00:00.000Z', references: [ref('p2', 'Genealogy')] },

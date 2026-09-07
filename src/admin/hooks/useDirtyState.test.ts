@@ -111,3 +111,35 @@ describe('useDirtyState', () => {
     })
   })
 })
+
+describe('useDirtyState change counting', () => {
+  it('agrees with itself: dirty exactly when at least one field changed', async () => {
+    const { result, rerender } = renderHook(
+      ({ data, loading }) => useDirtyState(data, loading),
+      { initialProps: { data: { title: 'A' } as Record<string, unknown>, loading: false } }
+    )
+    await waitFor(() => expect(result.current.savedData).not.toBeNull())
+
+    // A field that was absent and is now an empty string is not a change.
+    rerender({ data: { title: 'A', subtitle: '' }, loading: false })
+    expect(result.current.isDirty).toBe(false)
+    expect(result.current.changedCount).toBe(0)
+
+    rerender({ data: { title: 'B', subtitle: '' }, loading: false })
+    expect(result.current.isDirty).toBe(true)
+    expect(result.current.changedCount).toBe(1)
+  })
+
+  it('markClean(next) makes the given data the new baseline', async () => {
+    const { result, rerender } = renderHook(
+      ({ data, loading }) => useDirtyState(data, loading),
+      { initialProps: { data: { title: 'A' } as Record<string, unknown>, loading: false } }
+    )
+    await waitFor(() => expect(result.current.savedData).not.toBeNull())
+    rerender({ data: { title: 'B' }, loading: false })
+    act(() => result.current.markClean({ title: 'B', extra: 'from server' }))
+    await waitFor(() => expect(result.current.savedData).toEqual({ title: 'B', extra: 'from server' }))
+    rerender({ data: { title: 'B', extra: 'from server' }, loading: false })
+    expect(result.current.isDirty).toBe(false)
+  })
+})

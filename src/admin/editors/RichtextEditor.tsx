@@ -1,5 +1,5 @@
 // src/admin/editors/RichtextEditor.tsx
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Maximize2, AlignLeft } from 'lucide-react'
@@ -28,6 +28,9 @@ export default function RichtextEditor({ field, value, onChange }: EditorProps) 
   const { id } = useFieldControl()
   const section = useSection()
   const preset = field.toolbar === 'minimal' ? 'minimal' : 'full'
+  // The HTML this editor last handed out (or was last given), so a value that
+  // changes from outside, such as after Discard, can be told from our own echo.
+  const lastValue = useRef<string>((value as string) || '')
 
   const editor = useEditor({
     extensions: [
@@ -38,8 +41,24 @@ export default function RichtextEditor({ field, value, onChange }: EditorProps) 
     content: (value as string) || '',
     // The editable element is the field's control: give it the label's id and a name.
     editorProps: { attributes: { ...(id ? { id } : {}), role: 'textbox', 'aria-multiline': 'true', 'aria-label': getFieldLabel(field) } },
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    // Re-render on selection changes too, so Bold lights up on a collapsed
+    // cursor and the Link dialog sees the link the caret is in.
+    shouldRerenderOnTransaction: true,
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML()
+      lastValue.current = html
+      onChange(html)
+    },
   })
+
+  // Follow the value when it changes from outside (Discard, a reload).
+  useEffect(() => {
+    if (!editor) return
+    const next = (value as string) || ''
+    if (next === lastValue.current) return
+    lastValue.current = next
+    editor.commands.setContent(next, { emitUpdate: false })
+  }, [editor, value])
 
   // Disable the editor while a modal is open so keystrokes go to the modal.
   // emitUpdate=false keeps the form from going dirty just from toggling.

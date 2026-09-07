@@ -77,7 +77,7 @@ export default function Singleton() {
       <EntryHeader title={schema.label} status={isDirty ? 'edited' : null} />
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {justSaved ? (
+        {justSaved && !isDirty ? (
           <NoticeBar variant="published" sticky>
             <b>{justSaved}</b>
           </NoticeBar>

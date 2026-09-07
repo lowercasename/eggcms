@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Hoisted state shared with mocks. Use better-sqlite3 (already a dep, drives
 // drizzle-kit) — bun:sqlite is unavailable in the vitest/jsdom test runner.
 const { state, savedFiles, deletedPaths } = vi.hoisted(() => ({
-  state: { sqlite: null as null | import('better-sqlite3').Database },
+  state: { sqlite: null as null | import('better-sqlite3').Database, user: { email: 'admin@example.org' } as { email: string } | null },
   savedFiles: [] as Array<{ name: string; path: string }>,
   deletedPaths: [] as string[],
 }))
@@ -18,6 +18,10 @@ vi.mock('../db', async () => {
 
 vi.mock('../middleware/auth', () => ({
   requireAuth: vi.fn((_c, next) => next()),
+  optionalAuth: vi.fn((c, next) => {
+    if (state.user) c.set('user', state.user)
+    return next()
+  }),
 }))
 
 vi.mock('../lib/storage', () => ({
@@ -112,6 +116,7 @@ beforeEach(() => {
   db().exec(CREATE_PAGE)
   savedFiles.length = 0
   deletedPaths.length = 0
+  state.user = { email: 'admin@example.org' }
   delete process.env.MAX_UPLOAD_MB
 })
 
@@ -279,8 +284,8 @@ describe('media routes - delete', () => {
     expect(delRes.status).toBe(409)
     const body = await delRes.json()
     expect(body.error.code).toBe('MEDIA_IN_USE')
-    expect(body.error.message).toBe('This file is used by Australia (page). Remove it there first.')
-    expect(body.error.references).toEqual([{ schema: 'page', schemaLabel: 'Pages', id: 'page-Australia', label: 'Australia' }])
+    expect(body.error.message).toBe('This file is used by the page “Australia”. Remove it there first.')
+    expect(body.error.references).toEqual([{ schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'page-Australia', label: 'Australia' }])
 
     expect(deletedPaths).toHaveLength(0)
     expect(db().prepare('SELECT id FROM _media WHERE id = ?').get(id)).toBeDefined()
@@ -296,7 +301,7 @@ describe('media routes - delete', () => {
     const delRes = await media.request(`/${upload.data.data.id}`, { method: 'DELETE' })
     expect(delRes.status).toBe(409)
     const body = await delRes.json()
-    expect(body.error.message).toBe('This file is used by Australia (page) and 2 others. Remove it there first.')
+    expect(body.error.message).toBe('This file is used by the page “Australia” and 2 others. Remove it there first.')
   })
 
   it('returns 404 for unknown id', async () => {
@@ -317,9 +322,20 @@ describe('media routes - listing says where each file is used', () => {
     const byId = Object.fromEntries(list.data.map((m: any) => [m.id, m]))
 
     expect(byId[cover.data.data.id].references).toEqual([
-      { schema: 'page', schemaLabel: 'Pages', id: 'page-Australia', label: 'Australia' },
-      { schema: 'page', schemaLabel: 'Pages', id: 'page-Belarus', label: 'Belarus' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'page-Australia', label: 'Australia' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'page-Belarus', label: 'Belarus' },
     ])
     expect(byId[map.data.data.id].references).toEqual([])
+  })
+
+  it('leaves references out for visitors who are not signed in, so draft titles do not leak', async () => {
+    const cover = await uploadFile(makeFile('cover.png', 'COVER'))
+    addPage('Secret draft', `<img src="${cover.data.data.path}">`)
+    state.user = null
+
+    const res = await media.request('/')
+    const list = await res.json()
+    expect(list.data[0]).not.toHaveProperty('references')
+    expect(JSON.stringify(list)).not.toContain('Secret draft')
   })
 })

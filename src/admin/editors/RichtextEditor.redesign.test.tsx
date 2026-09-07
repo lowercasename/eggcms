@@ -70,3 +70,31 @@ describe('RichtextEditor full screen', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 })
+
+describe('RichtextEditor follows its value', () => {
+  it('shows a new value from outside, such as after Discard, without reporting a change', async () => {
+    const onChange = vi.fn()
+    const { rerender } = render(<RichtextEditor field={field} value="<p>Edited text</p>" onChange={onChange} />)
+    await waitFor(() => expect(screen.getByText('Edited text')).toBeInTheDocument())
+
+    rerender(<RichtextEditor field={field} value="<p>Saved text</p>" onChange={onChange} />)
+    await waitFor(() => expect(screen.getByText('Saved text')).toBeInTheDocument())
+    expect(screen.queryByText('Edited text')).not.toBeInTheDocument()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('Escape with a dialog open in full screen', () => {
+  it('closes only the link dialog, not the writing room', async () => {
+    const user = userEvent.setup()
+    render(<RichtextEditor field={field} value="<p>Hi</p>" onChange={vi.fn()} />)
+    await waitFor(() => expect(screen.getByTitle('Bold')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Full screen' }))
+    // The full-screen toolbar is the last one rendered.
+    await user.click(screen.getAllByRole('button', { name: 'Link' }).at(-1)!)
+    expect(screen.getByRole('dialog', { name: 'Add a link' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add a link' })).not.toBeInTheDocument())
+    expect(screen.getByRole('dialog', { name: /publication details/i })).toBeInTheDocument()
+  })
+})

@@ -22,7 +22,7 @@ interface RepeaterEditorProps {
  * block or at the top level.
  */
 export default function RepeaterEditor({ def, items, onChange }: RepeaterEditorProps) {
-  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<Set<string>>(new Set())
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const noun = def.label.toLowerCase()
   const listRef = useRef<HTMLDivElement>(null)
@@ -60,7 +60,7 @@ export default function RepeaterEditor({ def, items, onChange }: RepeaterEditorP
                   {(draggable, snapshot) => (
                     <div ref={draggable.innerRef} {...draggable.draggableProps}>
                       <Collapse
-                        open={removingId !== item._id}
+                        open={!removing.has(item._id)}
                         appear={justAdded === item._id}
                         onClosed={() => onChange(items.filter((x) => x._id !== item._id))}
                       >
@@ -115,7 +115,7 @@ export default function RepeaterEditor({ def, items, onChange }: RepeaterEditorP
                                 variant="destructive"
                                 size="sm"
                                 icon={<Trash2 aria-hidden />}
-                                onClick={() => setRemovingId(item._id)}
+                                onClick={() => setRemoving((prev) => new Set(prev).add(item._id))}
                                 className="!border-line-strong ml-2"
                                 aria-label={`Remove this ${noun}`}
                               >

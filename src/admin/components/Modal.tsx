@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ArrowLeft } from 'lucide-react'
+import { pushDialog } from './ui/dialogStack'
 
 interface ModalProps {
   children: React.ReactNode
@@ -22,13 +23,8 @@ const maxWidthClasses = {
 }
 
 export default function Modal({ children, onClose, title, maxWidth = 'md', onBack }: ModalProps) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  // Escape closes this dialog only while it is the top-most one.
+  useEffect(() => pushDialog(onClose), [onClose])
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-overlay-in">

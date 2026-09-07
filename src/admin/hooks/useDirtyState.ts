@@ -2,12 +2,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 /**
- * Hook to track dirty state and warn before navigation with unsaved changes.
+ * Tracks unsaved changes against the data as last loaded or saved, and warns
+ * before the tab is closed while there are any. A field is "changed" when its
+ * value differs from the baseline; empty string, null and absent count as the
+ * same, so blanking a field that was never set is not a change.
  *
  * @param currentData - Current form data
  * @param isLoading - Whether data is still loading (skip comparison while loading)
  * @param resetKey - Optional key that triggers a reset when it changes (e.g., itemId)
- * @returns Object with isDirty flag and markClean function
  */
 export function useDirtyState<T>(
   currentData: T,
@@ -33,17 +35,20 @@ export function useDirtyState<T>(
     }
   }, [currentData, isLoading]);
 
-  // Reset when resetKey changes (e.g., navigating to different item)
+  // Reset when resetKey changes (e.g., navigating to different item). Not on
+  // mount: that would wipe the baseline the first effect just recorded.
+  const lastKey = useRef(resetKey);
   useEffect(() => {
+    if (lastKey.current === resetKey) return;
+    lastKey.current = resetKey;
     initialLoadRef.current = true;
     setSavedData(null);
   }, [resetKey]);
 
-  // Compare current data with saved data
-  const isDirty =
-    !isLoading &&
-    savedData !== null &&
-    JSON.stringify(currentData) !== JSON.stringify(savedData);
+  // One comparison rule for both the flag and the count, so the unsaved bar
+  // can never read "0 unsaved changes".
+  const changedCount = !isLoading && savedData !== null ? countChangedFields(currentData, savedData) : 0;
+  const isDirty = changedCount > 0;
 
   // Mark current state as clean (after save)
   const markClean = useCallback(
@@ -52,8 +57,6 @@ export function useDirtyState<T>(
     },
     [currentData],
   );
-
-  const changedCount = isDirty ? countChangedFields(currentData, savedData) : 0;
 
   // Warn on browser close/refresh
   useEffect(() => {

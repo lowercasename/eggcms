@@ -1,4 +1,5 @@
 // src/admin/components/ui/Stepper.tsx
+import { useEffect, useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
 
 interface StepperProps {
@@ -15,6 +16,12 @@ interface StepperProps {
 /** A number control with big − and + buttons and a typeable mono value. */
 export default function Stepper({ value, onChange, min, max, step = 1, placeholder, disabled, ...props }: StepperProps) {
   const current = typeof value === 'number' && !Number.isNaN(value) ? value : null
+  // What is in the box while typing: "2." and "-" are on the way to a number
+  // and must not be corrected under the person's fingers.
+  const [text, setText] = useState(current === null ? '' : String(current))
+  useEffect(() => {
+    setText((t) => (Number(t) === current || (t.trim() === '' && current === null) || t === '-' ? t : current === null ? '' : String(current)))
+  }, [current])
   const clamp = (n: number) => {
     if (min !== undefined && n < min) return min
     if (max !== undefined && n > max) return max
@@ -39,13 +46,16 @@ export default function Stepper({ value, onChange, min, max, step = 1, placehold
         type="text"
         inputMode="decimal"
         aria-label={props['aria-label']}
-        value={current ?? ''}
+        value={text}
         placeholder={placeholder}
         disabled={disabled}
         onChange={(e) => {
-          const raw = e.target.value.trim()
-          if (raw === '' || raw === '-') return onChange(null)
-          const n = Number(raw)
+          const raw = e.target.value
+          if (!/^-?\d*[.,]?\d*$/.test(raw)) return
+          setText(raw)
+          const trimmed = raw.trim().replace(',', '.')
+          if (trimmed === '' || trimmed === '-' || trimmed === '.' || trimmed === '-.') return onChange(null)
+          const n = Number(trimmed)
           if (!Number.isNaN(n)) onChange(n)
         }}
         className="w-[76px] text-center font-mono text-[17px] text-ink bg-transparent outline-none py-[10px] focus-visible:outline-none"

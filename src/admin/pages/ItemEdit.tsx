@@ -82,11 +82,11 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       .finally(() => setLoading(false))
   }, [itemId, schema.name, schema.fields, isNew])
 
-  const save = async (asDraft: boolean) => {
+  const save = async (asDraft: boolean, source: Record<string, unknown> = data) => {
     setSaving(true)
     setError('')
     try {
-      const { _meta, ...fields } = data
+      const { _meta, ...fields } = source
       const payload = { ...fields, draft: asDraft ? 1 : 0 }
       if (isNew) {
         const result = await api.createItem(schema.name, payload)
@@ -97,8 +97,13 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       } else {
         const result = await api.updateItem(schema.name, itemId, payload)
         const saved = result.data as Record<string, unknown>
-        setData(saved)
         const { _meta: _savedMeta, ...savedFields } = saved
+        if (source === data) {
+          setData(saved)
+        } else {
+          // Unpublishing writes the saved content, so unsaved edits stay unsaved.
+          setData((current) => ({ ...current, _meta: saved._meta }))
+        }
         markClean(savedFields)
         refreshList()
         showJustSaved(asDraft ? 'Draft saved just now.' : 'Published just now.')
@@ -139,7 +144,9 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
   const menu = isNew
     ? []
     : [
-        ...(!isDraft ? [{ label: 'Take off the website', icon: <EyeOff aria-hidden />, onSelect: () => save(true) }] : []),
+        ...(!isDraft
+          ? [{ label: 'Take off the website', icon: <EyeOff aria-hidden />, onSelect: () => save(true, savedData ? { ...savedData, _meta: data._meta } : data) }]
+          : []),
         { label: `Delete ${noun}`, icon: <Trash2 aria-hidden />, destructive: true, onSelect: () => setConfirmingDelete(true) },
       ]
 
@@ -164,7 +171,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
         </NoticeBar>
       )
     }
-    if (justSaved) {
+    if (justSaved && !isDirty) {
       return (
         <NoticeBar variant="published" sticky>
           <b>{justSaved}</b>
@@ -227,7 +234,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
                   Save draft
                 </Button>
               )}
-              <Button onClick={() => save(false)} loading={saving}>
+              <Button onClick={() => save(false)} loading={saving} disabled={!hasTitle}>
                 {isDraft ? 'Publish' : 'Publish changes'}
               </Button>
             </>

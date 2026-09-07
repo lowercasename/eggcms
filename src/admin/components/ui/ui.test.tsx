@@ -239,3 +239,22 @@ describe('TypeMenu', () => {
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('Stepper typing', () => {
+  it('lets a decimal and a negative number be typed in full', () => {
+    const onChange = vi.fn()
+    const { rerender } = render(<Stepper aria-label="Price" value={null} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Price' })
+    fireEvent.change(input, { target: { value: '2.' } })
+    expect(input).toHaveValue('2.')
+    fireEvent.change(input, { target: { value: '2.5' } })
+    expect(onChange).toHaveBeenLastCalledWith(2.5)
+    rerender(<Stepper aria-label="Price" value={2.5} onChange={onChange} />)
+    expect(input).toHaveValue('2.5')
+
+    fireEvent.change(input, { target: { value: '-' } })
+    expect(input).toHaveValue('-')
+    fireEvent.change(input, { target: { value: '-3' } })
+    expect(onChange).toHaveBeenLastCalledWith(-3)
+  })
+})

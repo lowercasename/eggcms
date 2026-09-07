@@ -3,6 +3,7 @@ import { useLocation } from 'wouter'
 import { Egg, Settings2, Folder, Image, LogOut } from 'lucide-react'
 import NavLink from './NavLink'
 import { useAuth } from '../context/AuthContext'
+import { useDirtyStateContext } from '../contexts/DirtyStateContext'
 import { useSchemas } from '../App'
 import type { Schema } from '../types'
 
@@ -20,6 +21,7 @@ const itemClass = (active: boolean) =>
 /** 196px of navigation: the site, its content types, the media library, sign out. */
 export default function Sidebar({ schemas }: SidebarProps) {
   const { logout } = useAuth()
+  const { confirmNavigation } = useDirtyStateContext()
   const { siteName } = useSchemas()
   const [location] = useLocation()
 
@@ -56,7 +58,7 @@ export default function Sidebar({ schemas }: SidebarProps) {
       </nav>
 
       <div className="h-px bg-line-hair -mx-2.5 my-2" />
-      <button type="button" onClick={() => logout()} className={`${itemClass(false)} w-full text-left`}>
+      <button type="button" onClick={() => confirmNavigation() && logout()} className={`${itemClass(false)} w-full text-left`}>
         <LogOut aria-hidden />
         Sign out
       </button>

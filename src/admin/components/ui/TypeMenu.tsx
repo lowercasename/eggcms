@@ -21,16 +21,20 @@ interface TypeMenuProps<T extends string> {
 export default function TypeMenu<T extends string>({ heading, options, onSelect, onClose, className = '' }: TypeMenuProps<T>) {
   const ref = useRef<HTMLDivElement>(null)
   const headingId = useId()
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
 
+  // Once, on mount: focus the first choice so keyboard users land inside the
+  // menu, and close on Escape. onClose is read through a ref so a parent
+  // re-render never re-steals focus.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') closeRef.current()
     }
     document.addEventListener('keydown', onKey)
-    // Focus the first choice so keyboard users land inside the menu.
     ref.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [])
 
   return (
     <div

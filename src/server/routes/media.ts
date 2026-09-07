@@ -2,7 +2,7 @@
 import { createHash, randomUUID } from 'crypto'
 import { Hono } from 'hono'
 import sharp from 'sharp'
-import { requireAuth } from '../middleware/auth'
+import { requireAuth, optionalAuth } from '../middleware/auth'
 import { createStorage } from '../lib/storage'
 import { toPublicUrl } from '../lib/url'
 import {
@@ -45,7 +45,7 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
   // GET /api/media - List all visible media (hidden items excluded).
   // Optional ?kind=image|document|audio|video narrows the list. An unrecognised
   // kind is ignored rather than returning an empty library.
-  media.get('/', (c) => {
+  media.get('/', optionalAuth, (c) => {
     const kind = c.req.query('kind')
     const types = Object.entries(ALLOWED_MIME_TYPES)
       .filter(([, k]) => k === kind)
@@ -64,8 +64,14 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
             .prepare('SELECT * FROM _media WHERE hidden = 0 ORDER BY created_at DESC')
             .all() as MediaItem[])
 
-    // Each item says where it is used, so deleting is safe and the library
-    // can show "Used on 2 pages" without a second request.
+    // For a signed-in editor each item says where it is used, so the library
+    // can show "Used on 2 pages" and warn before a delete without a second
+    // request (DELETE re-checks for itself). Visitors get no references: they
+    // would name unpublished drafts.
+    const user = c.get('user') as { email: string } | undefined
+    if (!user) {
+      return c.json({ data: items.map((item) => present(item)), meta: { total: items.length } })
+    }
     const references = findAllMediaReferences(schemas, items.map((i) => i.path))
     return c.json({
       data: items.map((item) => present(item, references.get(item.path) ?? [])),
@@ -139,8 +145,9 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
           const metadata = await sharp(buffer).metadata()
           width = metadata.width || null
           height = metadata.height || null
-        } catch {
-          // Non-fatal: continue without dimensions
+        } catch (err) {
+          // Non-fatal: continue without dimensions, but say so once in the log.
+          console.warn(`[media] Could not read the dimensions of ${file.name}:`, err instanceof Error ? err.message : err)
         }
       }
 
@@ -148,7 +155,8 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
       filePath = saved.path
       filename = saved.filename
     } catch (err) {
-      return c.json({ error: { code: 'STORAGE_ERROR', message: 'Failed to save file' } }, 500)
+      console.error(`[media] Could not store ${file.name}:`, err)
+      return c.json({ error: { code: 'STORAGE_ERROR', message: 'The server could not store the file. Check its storage settings.' } }, 500)
     }
 
     const now = new Date().toISOString()
@@ -195,7 +203,8 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
     try {
       await storage.delete(item.path)
     } catch (err) {
-      return c.json({ error: { code: 'STORAGE_ERROR', message: 'Failed to delete file' } }, 500)
+      console.error(`[media] Could not delete ${item.path}:`, err)
+      return c.json({ error: { code: 'STORAGE_ERROR', message: 'The server could not delete the file. Check its storage settings.' } }, 500)
     }
 
     sqlite.prepare('DELETE FROM _media WHERE id = ?').run(id)

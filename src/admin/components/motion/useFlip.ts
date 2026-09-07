@@ -5,7 +5,10 @@ import { prefersReducedMotion } from './useReducedMotion'
 /**
  * FLIP for a reorderable list. Children carry `data-flip-key`; whenever `order`
  * changes, each child that moved is slid from its old position to its new one
- * over 200ms, so both rows visibly swap instead of jumping.
+ * over `duration` ms (200 by default), so both rows visibly swap instead of
+ * jumping. Set `enabled.current = false` before a change something else
+ * already animates (a drop from the drag library); it is turned back on after
+ * that one change.
  */
 export function useFlip(container: RefObject<HTMLElement | null>, order: string, duration = 200, enabled?: RefObject<boolean>) {
   const previous = useRef<Map<string, number>>(new Map())
@@ -17,7 +20,9 @@ export function useFlip(container: RefObject<HTMLElement | null>, order: string,
     const next = new Map<string, number>()
     for (const node of nodes) next.set(node.dataset.flipKey!, node.getBoundingClientRect().top)
 
-    if (!prefersReducedMotion() && (enabled?.current ?? true)) {
+    const run = enabled?.current ?? true
+    if (enabled) enabled.current = true
+    if (!prefersReducedMotion() && run) {
       for (const node of nodes) {
         const key = node.dataset.flipKey!
         const before = previous.current.get(key)

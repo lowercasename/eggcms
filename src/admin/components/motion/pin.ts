@@ -24,13 +24,27 @@ export function pinElement(el: HTMLElement, duration = 260) {
   const started = performance.now()
   const budget = prefersReducedMotion() ? 0 : duration
 
+  // The moment the person scrolls themselves, stop steering.
+  let cancelled = false
+  const cancel = () => {
+    cancelled = true
+  }
+  const opts = { passive: true, once: true } as const
+  window.addEventListener('wheel', cancel, opts)
+  window.addEventListener('touchmove', cancel, opts)
+
   const step = () => {
+    if (cancelled || !el.isConnected) return
     const drift = el.getBoundingClientRect().top - startTop
     if (drift) {
       if (target === window) window.scrollBy(0, drift)
       else (target as HTMLElement).scrollTop += drift
     }
     if (performance.now() - started < budget) requestAnimationFrame(step)
+    else {
+      window.removeEventListener('wheel', cancel)
+      window.removeEventListener('touchmove', cancel)
+    }
   }
   requestAnimationFrame(step)
 }

@@ -3,12 +3,13 @@ import { Input } from '../components/ui'
 import { useFieldControl } from '../components/ui/FieldContext'
 import type { EditorProps } from './types'
 
-/** ISO string → the local value a datetime-local input wants. */
+/** ISO instant → the same moment as local wall-clock "YYYY-MM-DDTHH:mm", which is what a datetime-local input shows. */
 function toLocalDatetime(iso: string | null | undefined) {
   if (!iso) return ''
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString().slice(0, 16)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 export default function DatetimeEditor({ field, value, onChange }: EditorProps) {

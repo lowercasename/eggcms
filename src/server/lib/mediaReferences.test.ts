@@ -12,7 +12,7 @@ vi.mock('../db', async () => {
   return { sqlite: state.sqlite }
 })
 
-import { findAllMediaReferences } from './mediaReferences'
+import { findAllMediaReferences, describeReferences } from './mediaReferences'
 import type { SchemaDefinition } from '../../lib/schema'
 
 const schemas: SchemaDefinition[] = [
@@ -40,15 +40,49 @@ describe('findAllMediaReferences', () => {
     const refs = findAllMediaReferences(schemas, ['/uploads/a.png', '/uploads/b.pdf', '/uploads/c.mp3'])
 
     expect(refs.get('/uploads/a.png')).toEqual([
-      { schema: 'page', schemaLabel: 'Pages', id: 'p1', label: 'Australia' },
-      { schema: 'settings', schemaLabel: 'Site Settings', id: 'settings', label: 'Site Settings' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p1', label: 'Australia' },
+      { schema: 'settings', schemaLabel: 'Site Settings', schemaType: 'singleton', id: 'settings', label: 'Site Settings' },
     ])
     // An untitled item falls back to the schema label.
-    expect(refs.get('/uploads/b.pdf')).toEqual([{ schema: 'page', schemaLabel: 'Pages', id: 'p2', label: 'Pages' }])
+    expect(refs.get('/uploads/b.pdf')).toEqual([{ schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p2', label: 'Pages' }])
     expect(refs.get('/uploads/c.mp3')).toEqual([])
   })
 
   it('skips a schema whose table does not exist yet', () => {
     expect(() => findAllMediaReferences(schemas, ['/uploads/a.png'])).not.toThrow()
+  })
+
+  it('does not treat a path as used because a longer path starts with it', () => {
+    db().prepare('INSERT INTO page VALUES (?, ?, ?)').run('p1', 'Thesis', '<a href="/uploads/thesis.docx">read</a>')
+    const refs = findAllMediaReferences(schemas, ['/uploads/thesis.doc', '/uploads/thesis.docx'])
+    expect(refs.get('/uploads/thesis.doc')).toEqual([])
+    expect(refs.get('/uploads/thesis.docx')).toHaveLength(1)
+  })
+
+  it('still matches a path at the end of a URL, before a query string, or inside JSON', () => {
+    db().prepare('INSERT INTO page VALUES (?, ?, ?)').run('p1', 'A', 'https://x.org/uploads/a.png')
+    db().prepare('INSERT INTO page VALUES (?, ?, ?)').run('p2', 'B', '<img src="/uploads/a.png?v=2">')
+    db().prepare('INSERT INTO page VALUES (?, ?, ?)').run('p3', 'C', JSON.stringify([{ _type: 'photo', src: '/uploads/a.png' }]))
+    expect(findAllMediaReferences(schemas, ['/uploads/a.png']).get('/uploads/a.png')?.map((r) => r.id)).toEqual(['p1', 'p2', 'p3'])
+  })
+
+  it('rethrows database errors other than a missing table, so a delete cannot proceed blind', () => {
+    db().exec('DROP VIEW IF EXISTS broken; CREATE VIEW broken AS SELECT nosuchfunction(1) AS id, 1 AS title, 1 AS body')
+    const broken = { ...schemas[0], name: 'broken' }
+    expect(() => findAllMediaReferences([broken], ['/uploads/a.png'])).toThrow(/no such function/)
+  })
+})
+
+describe('describeReferences', () => {
+  it('names the page and its kind in plain words', () => {
+    expect(describeReferences([{ schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p1', label: 'Australia' }])).toBe('the page “Australia”')
+    expect(describeReferences([{ schema: 'settings', schemaLabel: 'Site Settings', schemaType: 'singleton', id: 'settings', label: 'Site Settings' }])).toBe('Site Settings')
+    expect(
+      describeReferences([
+        { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p1', label: 'Australia' },
+        { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p2', label: 'Belarus' },
+        { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p3', label: 'Family' },
+      ])
+    ).toBe('the page “Australia” and 2 others')
   })
 })

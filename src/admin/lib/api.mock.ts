@@ -111,7 +111,7 @@ export const api = {
     await delay()
     const item = state.media.find((m) => m.id === id)
     if (item && item.references && item.references.length > 0) {
-      throw new Error(`This file is used by ${item.references[0].label} (${item.references[0].schema}). Remove it there first.`)
+      throw new Error(`This file is used by the page “${item.references[0].label}”. Remove it there first.`)
     }
     state.media = state.media.filter((m) => m.id !== id)
     return { data: { success: true } }

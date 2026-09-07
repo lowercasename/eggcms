@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check } from 'lucide-react'
 import { Button } from '../ui'
+import { pushDialog } from '../ui/dialogStack'
 
 interface FullscreenOverlayProps {
   title: string
@@ -15,15 +16,13 @@ interface FullscreenOverlayProps {
 
 /** The writing room: a fixed overlay with a big toolbar and a wide page. */
 export default function FullscreenOverlay({ title, subtitle, icon, toolbar, onDone, children }: FullscreenOverlayProps) {
+  // Escape leaves the writing room only while no dialog (Link, Image) is open on top of it.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onDone()
-    }
-    document.addEventListener('keydown', onKey)
+    const pop = pushDialog(onDone)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
+      pop()
       document.body.style.overflow = prev
     }
   }, [onDone])

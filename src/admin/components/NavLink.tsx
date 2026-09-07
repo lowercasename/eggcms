@@ -1,9 +1,9 @@
 // src/admin/components/NavLink.tsx
-import { useCallback, type ReactNode, type MouseEvent } from 'react'
-import { Link, useLocation } from 'wouter'
+import { useCallback, type ReactNode, type MouseEvent, type AnchorHTMLAttributes } from 'react'
+import { Link } from 'wouter'
 import { useDirtyStateContext } from '../contexts/DirtyStateContext'
 
-interface NavLinkProps {
+interface NavLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'> {
   href: string
   className?: string
   children: ReactNode
@@ -12,9 +12,8 @@ interface NavLinkProps {
 /**
  * Navigation link that confirms before navigating if there are unsaved changes.
  */
-export default function NavLink({ href, className, children }: NavLinkProps) {
+export default function NavLink({ href, className, children, ...rest }: NavLinkProps) {
   const { confirmNavigation } = useDirtyStateContext()
-  const [, navigate] = useLocation()
 
   const handleClick = useCallback((e: MouseEvent<HTMLAnchorElement>) => {
     if (!confirmNavigation()) {
@@ -23,7 +22,7 @@ export default function NavLink({ href, className, children }: NavLinkProps) {
   }, [confirmNavigation])
 
   return (
-    <Link href={href} className={className} onClick={handleClick}>
+    <Link href={href} className={className} onClick={handleClick} {...rest}>
       {children}
     </Link>
   )

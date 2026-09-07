@@ -124,3 +124,16 @@ describe('SlugEditor', () => {
     expect(onChange).toHaveBeenCalledWith('b')
   })
 })
+
+describe('DatetimeEditor', () => {
+  it('shows the stored instant in local time and stores what is typed as an instant', () => {
+    const onChange = vi.fn()
+    render(<DatetimeEditor field={{ name: 'when', type: 'datetime' }} value="2026-08-22T09:30:00.000Z" onChange={onChange} />)
+    const input = screen.getByDisplayValue(/2026-08-22T\d{2}:\d{2}/) as HTMLInputElement
+    const shown = new Date(input.value)
+    // The local wall-clock value shown must denote the same instant.
+    expect(shown.toISOString()).toBe('2026-08-22T09:30:00.000Z')
+    fireEvent.change(input, { target: { value: '2026-08-22T10:00' } })
+    expect(onChange).toHaveBeenCalledWith(new Date('2026-08-22T10:00').toISOString())
+  })
+})

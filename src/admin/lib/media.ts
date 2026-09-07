@@ -7,6 +7,8 @@ export type MediaKind = 'image' | 'document' | 'audio' | 'video'
 export interface MediaReference {
   schema: string
   schemaLabel: string
+  /** Optional for older servers; a singleton is named in full ("Used in Site Settings"). */
+  schemaType?: 'collection' | 'singleton'
   id: string
   label: string
 }
@@ -75,7 +77,8 @@ export function describeUsage(refs: MediaReference[] | undefined): { text: strin
   if (schemas.size === 1) {
     const first = refs[0]
     // A singleton has one row, so its label is its name: "Used in Site Settings".
-    if (refs.length === 1 && first.id === first.schema) return { text: `Used in ${first.schemaLabel}`, used: true }
+    const singleton = first.schemaType ? first.schemaType === 'singleton' : first.id === first.schema
+    if (refs.length === 1 && singleton) return { text: `Used in ${first.schemaLabel}`, used: true }
     return { text: `Used on ${refs.length} ${nounFor(first.schemaLabel, refs.length)}`, used: true }
   }
   return { text: `Used in ${refs.length} places`, used: true }
