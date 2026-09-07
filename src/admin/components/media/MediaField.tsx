@@ -45,13 +45,15 @@ export default function MediaField({ value, onChange, kinds, noun, preview, plac
     }
     let cancelled = false
     api
-      .getMedia()
-      .then((res) => {
-        if (cancelled) return
-        setEntry((res.data as MediaItem[]).find((m) => m.path === path) ?? null)
+      .findMedia(path)
+      .then((found) => {
+        if (!cancelled) setEntry(found)
       })
-      .catch(() => {
-        if (!cancelled) setEntry(null)
+      .catch((err) => {
+        if (!cancelled) {
+          setEntry(null)
+          console.warn(`[media] Could not look up ${path}:`, err)
+        }
       })
     return () => {
       cancelled = true

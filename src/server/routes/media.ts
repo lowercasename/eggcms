@@ -17,7 +17,7 @@ import {
 import { sqlite } from '../db'
 import { describeReferences, findAllMediaReferences, findMediaReferences, type MediaReference } from '../lib/mediaReferences'
 import type { SchemaDefinition } from '../../lib/schema'
-import type { MediaItemResponse } from '../../lib/media'
+import { isMediaKind, type MediaItemResponse } from '../../lib/media'
 
 interface MediaItem {
   id: string
@@ -42,41 +42,75 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
   const storage = createStorage()
 
 
-  // GET /api/media - List all visible media (hidden items excluded).
-  // Optional ?kind=image|document|audio|video narrows the list. An unrecognised
-  // kind is ignored rather than returning an empty library.
-  media.get('/', optionalAuth, (c) => {
-    const kind = c.req.query('kind')
-    const types = Object.entries(ALLOWED_MIME_TYPES)
-      .filter(([, k]) => k === kind)
-      .map(([type]) => type)
-
-    const items =
-      types.length > 0
-        ? (sqlite
-            .prepare(
-              `SELECT * FROM _media WHERE hidden = 0 AND mimetype IN (${types
-                .map(() => '?')
-                .join(', ')}) ORDER BY created_at DESC`
-            )
-            .all(...types) as MediaItem[])
-        : (sqlite
-            .prepare('SELECT * FROM _media WHERE hidden = 0 ORDER BY created_at DESC')
-            .all() as MediaItem[])
-
-    // For a signed-in editor each item says where it is used, so the library
-    // can show "Used on 2 pages" and warn before a delete without a second
-    // request (DELETE re-checks for itself). Visitors get no references: they
-    // would name unpublished drafts.
-    const user = c.get('user')
-    if (!user) {
-      return c.json({ data: items.map((item) => present(item)), meta: { total: items.length } })
-    }
+  const withReferences = (items: MediaItem[], user: { email: string } | undefined) => {
+    if (!user) return items.map((item) => present(item))
     const references = findAllMediaReferences(schemas, items.map((i) => i.path))
-    return c.json({
-      data: items.map((item) => present(item, references.get(item.path) ?? [])),
-      meta: { total: items.length },
-    })
+    return items.map((item) => present(item, references.get(item.path) ?? []))
+  }
+
+  // GET /api/media - One page of the library.
+  //   q       matches file names, case-insensitively
+  //   kinds   comma-separated: image,document,audio,video (kind= also works)
+  //   sort    newest (default) | oldest | name
+  //   limit   1–200, default 60; offset from 0
+  // meta.counts says how many files the search found of each kind, whatever
+  // kinds are being shown, so a type filter can carry its numbers.
+  // For a signed-in editor each item says where it is used, so the library can
+  // show "Used on 2 pages" and warn before a delete without a second request
+  // (DELETE re-checks for itself). Visitors get no references: they would name
+  // unpublished drafts.
+  media.get('/', optionalAuth, (c) => {
+    const q = (c.req.query('q') ?? '').trim()
+    const kindsParam = c.req.query('kinds') ?? c.req.query('kind') ?? ''
+    const kinds = kindsParam.split(',').map((k) => k.trim()).filter(isMediaKind)
+    const sort = c.req.query('sort') === 'oldest' ? 'oldest' : c.req.query('sort') === 'name' ? 'name' : 'newest'
+    const limit = Math.min(200, Math.max(1, Number(c.req.query('limit')) || 60))
+    const offset = Math.max(0, Number(c.req.query('offset')) || 0)
+
+    const where: string[] = ['hidden = 0']
+    const params: Array<string | number> = []
+    if (q) {
+      where.push('instr(lower(filename), lower(?)) > 0')
+      params.push(q)
+    }
+    const searchWhere = where.join(' AND ')
+    const searchParams = [...params]
+
+    if (kinds.length > 0) {
+      const types = Object.entries(ALLOWED_MIME_TYPES)
+        .filter(([, k]) => kinds.includes(k))
+        .map(([type]) => type)
+      where.push(`mimetype IN (${types.map(() => '?').join(', ')})`)
+      params.push(...types)
+    }
+
+    const order = sort === 'name' ? 'lower(filename) ASC, created_at DESC' : sort === 'oldest' ? 'created_at ASC, rowid ASC' : 'created_at DESC, rowid DESC'
+    const items = sqlite
+      .prepare(`SELECT * FROM _media WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ? OFFSET ?`)
+      .all(...params, limit, offset) as MediaItem[]
+    const total = (sqlite.prepare(`SELECT COUNT(*) AS n FROM _media WHERE ${where.join(' AND ')}`).get(...params) as { n: number }).n
+
+    const counts: Record<'all' | MediaKind, number> = { all: 0, image: 0, document: 0, audio: 0, video: 0 }
+    const byType = sqlite.prepare(`SELECT mimetype, COUNT(*) AS n FROM _media WHERE ${searchWhere} GROUP BY mimetype`).all(...searchParams) as Array<{ mimetype: string; n: number }>
+    for (const row of byType) {
+      counts.all += row.n
+      const kind = kindForMimeType(row.mimetype)
+      if (kind) counts[kind] += row.n
+    }
+
+    return c.json({ data: withReferences(items, c.get('user')), meta: { total, counts, limit, offset } })
+  })
+
+  // GET /api/media/by-path?path= - The library entry behind a stored path or
+  // the public URL content carries (which ends with the stored path).
+  media.get('/by-path', optionalAuth, (c) => {
+    const path = (c.req.query('path') ?? '').trim()
+    if (!path) return c.json({ error: { code: 'BAD_REQUEST', message: 'No path given' } }, 400)
+    const item = sqlite
+      .prepare('SELECT * FROM _media WHERE hidden = 0 AND (path = ? OR substr(?, -length(path)) = path) LIMIT 1')
+      .get(path, path) as MediaItem | undefined
+    if (!item) return c.json({ error: { code: 'NOT_FOUND', message: 'That file is not in the library' } }, 404)
+    return c.json({ data: withReferences([item], c.get('user'))[0] })
   })
 
   // POST /api/media - Upload file (with content-hash dedupe)

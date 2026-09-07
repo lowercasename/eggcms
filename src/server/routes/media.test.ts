@@ -339,3 +339,84 @@ describe('media routes - listing says where each file is used', () => {
     expect(JSON.stringify(list)).not.toContain('Secret draft')
   })
 })
+
+describe('media routes - paging, search, sort and counts', () => {
+  async function seed() {
+    await uploadFile(makeFile('essay.pdf', 'PDF', 'application/pdf'))
+    await uploadFile(makeFile('photo.jpg', 'JPEG', 'image/jpeg'))
+    await uploadFile(makeFile('interview.mp3', 'MP3', 'audio/mpeg'))
+    await uploadFile(makeFile('atlas.png', 'PNG', 'image/png'))
+  }
+
+  it('returns one page at a time, and says how many there are in all', async () => {
+    await seed()
+    const first = await (await media.request('/?limit=3&offset=0')).json()
+    expect(first.data).toHaveLength(3)
+    expect(first.meta).toMatchObject({ total: 4, limit: 3, offset: 0 })
+    const second = await (await media.request('/?limit=3&offset=3')).json()
+    expect(second.data).toHaveLength(1)
+    expect(second.meta.offset).toBe(3)
+    // Pages do not overlap.
+    const ids = [...first.data, ...second.data].map((m: { id: string }) => m.id)
+    expect(new Set(ids).size).toBe(4)
+  })
+
+  it('keeps the page size within reason', async () => {
+    await seed()
+    const list = await (await media.request('/?limit=100000')).json()
+    expect(list.meta.limit).toBeLessThanOrEqual(200)
+    const tiny = await (await media.request('/?limit=0')).json()
+    expect(tiny.meta.limit).toBeGreaterThanOrEqual(1)
+  })
+
+  it('searches by file name, case-insensitively, and counts what the search found', async () => {
+    await seed()
+    const list = await (await media.request('/?q=ESS')).json()
+    expect(list.data.map((m: { filename: string }) => m.filename)).toEqual(['essay.pdf'])
+    expect(list.meta.total).toBe(1)
+    expect(list.meta.counts).toEqual({ all: 1, image: 0, document: 1, audio: 0, video: 0 })
+  })
+
+  it('counts every kind for the whole search even when only some kinds are shown', async () => {
+    await seed()
+    const list = await (await media.request('/?kinds=document,audio')).json()
+    expect(list.data.map((m: { kind: string }) => m.kind).sort()).toEqual(['audio', 'document'])
+    expect(list.meta.total).toBe(2)
+    expect(list.meta.counts).toEqual({ all: 4, image: 2, document: 1, audio: 1, video: 0 })
+  })
+
+  it('sorts by name or by age', async () => {
+    await seed()
+    const byName = await (await media.request('/?sort=name')).json()
+    expect(byName.data.map((m: { filename: string }) => m.filename)).toEqual(['atlas.png', 'essay.pdf', 'interview.mp3', 'photo.jpg'])
+    const oldest = await (await media.request('/?sort=oldest')).json()
+    expect(oldest.data[0].filename).toBe('essay.pdf')
+    const newest = await (await media.request('/')).json()
+    expect(newest.data[0].filename).toBe('atlas.png')
+  })
+})
+
+describe('media routes - one file by its path', () => {
+  it('finds the library entry for a stored path, with its references for a signed-in editor', async () => {
+    const upload = await uploadFile(makeFile('cover.png', 'BYTES'))
+    const path = upload.data.data.path
+    addPage('Australia', `<img src="${path}">`)
+
+    const res = await media.request(`/by-path?path=${encodeURIComponent(path)}`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.filename).toBe('cover.png')
+    expect(body.data.references).toHaveLength(1)
+  })
+
+  it('also finds it when given the public URL the content carries', async () => {
+    const upload = await uploadFile(makeFile('cover.png', 'BYTES'))
+    const res = await media.request(`/by-path?path=${encodeURIComponent('https://example.org' + upload.data.data.path)}`)
+    expect(res.status).toBe(200)
+  })
+
+  it('answers 404 for a path that is not in the library', async () => {
+    const res = await media.request('/by-path?path=%2Fuploads%2Fnope.png')
+    expect(res.status).toBe(404)
+  })
+})

@@ -1,9 +1,9 @@
 // src/admin/components/media/MediaBrowser.tsx
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Upload, SearchX, Trash2 } from 'lucide-react'
-import { api } from '../../lib/api'
+import { api, type MediaPage } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
-import { KIND_LABELS, KIND_ORDER, describeKinds, rejectWrongKinds, sortMedia, type MediaItem, type MediaKind, type MediaSort } from '../../lib/media'
+import { KIND_LABELS, KIND_ORDER, describeKinds, rejectWrongKinds, type MediaItem, type MediaKind, type MediaSort } from '../../lib/media'
 import Dropzone from '../Dropzone'
 import MediaCard from './MediaCard'
 import { Button, EmptyState, FileInput, NoticeBar, SearchInput, SegmentedControl, Select } from '../ui'
@@ -14,12 +14,17 @@ interface MediaBrowserProps {
   /** Restrict to these kinds. Omit for everything. */
   kinds?: MediaKind[]
   onPick?: (path: string) => void
+  /** In pick mode, the file already chosen, shown selected. */
+  selectedPath?: string
   /** Show the page header ("Media · 224 files · Upload files"). */
   header?: boolean
   className?: string
 }
 
 type Filter = 'all' | MediaKind
+
+const PAGE_SIZE = 60
+const EMPTY_COUNTS: MediaPage['meta']['counts'] = { all: 0, image: 0, document: 0, audio: 0, video: 0 }
 
 const SORT_OPTIONS: Array<{ value: MediaSort; label: string }> = [
   { value: 'newest', label: 'Newest first' },
@@ -55,14 +60,20 @@ function describeSelection(selected: MediaItem[]): { count: string; usage: strin
  * anywhere upload, and either multi-select + delete (manage) or single pick.
  * The picker a field opens is this same view in a dialog.
  */
-export default function MediaBrowser({ mode, kinds, onPick, header, className = '' }: MediaBrowserProps) {
+export default function MediaBrowser({ mode, kinds, onPick, selectedPath, header, className = '' }: MediaBrowserProps) {
   const [items, setItems] = useState<MediaItem[]>([])
+  const [meta, setMeta] = useState<MediaPage['meta']>({ total: 0, counts: EMPTY_COUNTS, limit: PAGE_SIZE, offset: 0 })
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
-  const [failures, setFailures] = useState<{ op: 'upload' | 'delete'; items: Array<{ name: string; message: string }> }>({ op: 'upload', items: [] })
+  const [failures, setFailures] = useState<{ op: 'upload' | 'delete'; items: Array<{ name: string; message: string }> }>({
+    op: 'upload',
+    items: [],
+  })
   const [query, setQuery] = useState('')
+  const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<MediaSort>('newest')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -72,23 +83,49 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
   const allowedKinds = kinds && kinds.length > 0 ? kinds : KIND_ORDER
   const restricted = !!kinds && kinds.length > 0
 
-  const fetchMedia = () => {
-    setLoading(true)
-    setError('')
-    api
-      .getMedia()
-      // A picker shows only the kinds its field takes; the library shows
-      // everything, including files whose type was not recognised, so they can
-      // still be found and deleted.
-      .then((res) => setItems((res.data as MediaItem[]).filter((i) => !restricted || (i.kind !== null && allowedKinds.includes(i.kind)))))
-      .catch((err) => setError(errorMessage(err, 'Could not load the library')))
-      .finally(() => setLoading(false))
-  }
+  // Typing waits a moment before asking the server.
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearch(query.trim()), 200)
+    return () => window.clearTimeout(t)
+  }, [query])
+
+  // The server does the searching, filtering, sorting and paging; this keeps
+  // the pages it has been given. A picker shows only the kinds its field
+  // takes; the library shows everything, including files whose type was not
+  // recognised, so they can still be found and deleted. Answers that arrive
+  // out of order are ignored.
+  const requestId = useRef(0)
+  const fetchMedia = useCallback(
+    (offset = 0) => {
+      const id = ++requestId.current
+      if (offset === 0) setLoading(true)
+      else setLoadingMore(true)
+      setError('')
+      const kindsWanted = filter === 'all' ? (restricted ? allowedKinds : undefined) : [filter]
+      api
+        .getMedia({ q: search || undefined, kinds: kindsWanted, sort, limit: PAGE_SIZE, offset })
+        .then((page) => {
+          if (id !== requestId.current) return
+          setItems((prev) => (offset === 0 ? page.data : [...prev, ...page.data]))
+          setMeta(page.meta)
+        })
+        .catch((err) => {
+          if (id === requestId.current) setError(errorMessage(err, 'Could not load the library'))
+        })
+        .finally(() => {
+          if (id !== requestId.current) return
+          setLoading(false)
+          setLoadingMore(false)
+        })
+    },
+    // allowedKinds is derived from the kinds prop, which does not change while mounted
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [search, filter, sort, restricted, kinds],
+  )
 
   useEffect(() => {
-    fetchMedia()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    fetchMedia(0)
+  }, [fetchMedia])
 
   // A selection only means anything while the same files are on screen, and a
   // pending "Yes, delete" only while the selection it was asked about stands.
@@ -127,7 +164,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
       onPick?.(lastPath)
       return
     }
-    fetchMedia()
+    fetchMedia(0)
   }
 
   const deleteSelected = async () => {
@@ -145,20 +182,17 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
     setSelected(new Set())
     setConfirmingDelete(false)
     setDeleting(false)
-    fetchMedia()
+    fetchMedia(0)
   }
 
-  const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: items.length, image: 0, document: 0, audio: 0, video: 0 }
-    for (const i of items) if (i.kind) c[i.kind] += 1
-    return c
-  }, [items])
-
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const list = items.filter((i) => (filter === 'all' || i.kind === filter) && (!q || i.filename.toLowerCase().includes(q)))
-    return sortMedia(list, sort)
-  }, [items, filter, query, sort])
+  // Counts come from the server for the current search, whatever kinds are shown.
+  const counts: Record<Filter, number> = {
+    ...meta.counts,
+    all: restricted ? allowedKinds.reduce((n, k) => n + meta.counts[k], 0) : meta.counts.all,
+  }
+  // Only an answer from the server can say the library is empty.
+  const libraryEmpty = !loading && !error && !search && filter === 'all' && meta.total === 0
+  const remaining = Math.max(0, meta.total - items.length)
 
   const selectedItems = items.filter((i) => selected.has(i.id))
   const selection = describeSelection(selectedItems)
@@ -172,12 +206,19 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
   const uploadLabel = uploading ? (progress ? `Uploading ${progress.done}/${progress.total}…` : 'Uploading…') : 'Upload files'
 
   return (
-    <Dropzone onFiles={uploadFiles} disabled={uploading} label="Drop files to add them to the library" className={`flex flex-col min-h-0 ${className}`}>
+    <Dropzone
+      onFiles={uploadFiles}
+      disabled={uploading}
+      label="Drop files to add them to the library"
+      className={`flex flex-col min-h-0 ${className}`}
+    >
       {header && (
         <div className="flex items-center gap-3.5 px-6 py-3.5 bg-panel border-b border-line-strong">
           <h1 className="m-0 text-[19px] font-bold text-ink">Media</h1>
           <span className="text-[15px] text-ink-2">
-            {items.length} {items.length === 1 ? 'file' : 'files'}
+            {search
+              ? `${meta.total} of ${counts.all} ${counts.all === 1 ? 'file' : 'files'}`
+              : `${counts.all} ${counts.all === 1 ? 'file' : 'files'}`}
           </span>
           <div className="flex-1" />
           <FileInput multiple onFiles={uploadFiles} loading={uploading} label={uploadLabel} />
@@ -189,9 +230,17 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
         {showFilter && <SegmentedControl aria-label="Type" options={filterOptions} value={filter} onChange={setFilter} />}
         <div className="flex-1" />
         <div className="w-[190px]">
-          <Select aria-label="Sort" options={SORT_OPTIONS} value={sort} onChange={(e) => setSort(e.target.value as MediaSort)} className="!py-[9px] !text-[15px] font-semibold" />
+          <Select
+            aria-label="Sort"
+            options={SORT_OPTIONS}
+            value={sort}
+            onChange={(e) => setSort(e.target.value as MediaSort)}
+            className="!py-[9px] !text-[15px] font-semibold"
+          />
         </div>
-        {!header && <FileInput multiple={mode === 'manage'} onFiles={uploadFiles} loading={uploading} label={uploadLabel} variant="secondary" />}
+        {!header && (
+          <FileInput multiple={mode === 'manage'} onFiles={uploadFiles} loading={uploading} label={uploadLabel} variant="secondary" />
+        )}
       </div>
 
       {selectedItems.length > 0 && (
@@ -228,7 +277,8 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
       {failures.items.length > 0 && (
         <NoticeBar variant="error">
           <b>
-            {failures.items.length} {failures.items.length === 1 ? 'file was' : 'files were'} not {failures.op === 'delete' ? 'deleted' : 'added'}:
+            {failures.items.length} {failures.items.length === 1 ? 'file was' : 'files were'} not{' '}
+            {failures.op === 'delete' ? 'deleted' : 'added'}:
           </b>{' '}
           {failures.items.map((f, i) => (
             <span key={f.name}>
@@ -242,19 +292,27 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
       <div className="flex-1 overflow-auto px-6 py-5">
         {loading ? (
           <p className="text-[15px] text-ink-2">Loading…</p>
-        ) : items.length === 0 ? (
+        ) : error ? null : libraryEmpty ? (
           <EmptyState
             dashed="strong"
             icon={<Upload />}
             title="No files yet"
-            description={restricted ? `Drag files here, or choose them from your computer. This field takes ${describeKinds(allowedKinds)}.` : 'Drag images, PDFs, audio or video here, or choose them from your computer.'}
+            description={
+              restricted
+                ? `Drag files here, or choose them from your computer. This field takes ${describeKinds(allowedKinds)}.`
+                : 'Drag images, PDFs, audio or video here, or choose them from your computer.'
+            }
             action={<FileInput multiple onFiles={uploadFiles} loading={uploading} label="Choose files" />}
           />
-        ) : visible.length === 0 ? (
+        ) : items.length === 0 ? (
           <EmptyState
             icon={<SearchX />}
-            title={query ? `No files match “${query.trim()}”` : `No ${filter === 'all' ? 'files' : KIND_LABELS[filter as MediaKind].toLowerCase()} yet`}
-            description={query ? `Try fewer words, or clear the search to see all ${items.length} files.` : 'Drag files here to add some.'}
+            title={
+              search
+                ? `No files match “${search}”`
+                : `No ${filter === 'all' ? 'files' : KIND_LABELS[filter as MediaKind].toLowerCase()} yet`
+            }
+            description={search ? 'Try fewer words, or clear the search to see everything.' : 'Drag files here to add some.'}
             action={
               query ? (
                 <Button variant="secondary" onClick={() => setQuery('')}>
@@ -264,25 +322,34 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
             }
           />
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-[18px]">
-            {visible.map((item) => (
-              <MediaCard
-                key={item.id}
-                item={item}
-                mode={mode}
-                selected={selected.has(item.id)}
-                onToggle={(on) =>
-                  setSelected((prev) => {
-                    const next = new Set(prev)
-                    if (on) next.add(item.id)
-                    else next.delete(item.id)
-                    return next
-                  })
-                }
-                onPick={() => onPick?.(item.path)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-[18px]">
+              {items.map((item) => (
+                <MediaCard
+                  key={item.id}
+                  item={item}
+                  mode={mode}
+                  selected={mode === 'pick' ? item.path === selectedPath : selected.has(item.id)}
+                  onToggle={(on) =>
+                    setSelected((prev) => {
+                      const next = new Set(prev)
+                      if (on) next.add(item.id)
+                      else next.delete(item.id)
+                      return next
+                    })
+                  }
+                  onPick={() => onPick?.(item.path)}
+                />
+              ))}
+            </div>
+            {remaining > 0 && (
+              <div className="flex justify-center pt-6">
+                <Button variant="secondary" loading={loadingMore} onClick={() => fetchMedia(items.length)}>
+                  Show {Math.min(remaining, PAGE_SIZE)} more
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </Dropzone>

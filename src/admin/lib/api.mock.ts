@@ -3,7 +3,8 @@
 // It keeps state for the life of the page so stories behave like the app:
 // saving a page updates the list, uploading adds to the library, and so on.
 import { sampleMedia, samplePages, sampleSchemas, sampleSettings } from './sample'
-import type { MediaItem } from './media'
+import type { MediaItem, MediaKind } from './media'
+import type { MediaQuery } from './api'
 
 const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms))
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v))
@@ -87,9 +88,24 @@ export const api = {
     return { data: { success: true } }
   },
 
-  getMedia: async () => {
+  getMedia: async (query: MediaQuery = {}) => {
     await delay()
-    return { data: clone(state.media) }
+    const q = (query.q ?? '').trim().toLowerCase()
+    const found = state.media.filter((i) => !q || i.filename.toLowerCase().includes(q))
+    const counts: Record<'all' | MediaKind, number> = { all: found.length, image: 0, document: 0, audio: 0, video: 0 }
+    for (const i of found) if (i.kind) counts[i.kind] += 1
+    const shown = found
+      .filter((i) => !query.kinds || query.kinds.length === 0 || (i.kind !== null && query.kinds.includes(i.kind)))
+      .sort((a, b) =>
+        query.sort === 'name' ? a.filename.localeCompare(b.filename) : query.sort === 'oldest' ? a.created_at.localeCompare(b.created_at) : b.created_at.localeCompare(a.created_at)
+      )
+    const limit = query.limit ?? 60
+    const offset = query.offset ?? 0
+    return { data: clone(shown.slice(offset, offset + limit)), meta: { total: shown.length, counts, limit, offset } }
+  },
+  findMedia: async (path: string) => {
+    await delay(40)
+    return clone(state.media.find((m) => m.path === path || path.endsWith(m.path)) ?? null)
   },
   uploadMedia: async (file: File) => {
     await delay(300)

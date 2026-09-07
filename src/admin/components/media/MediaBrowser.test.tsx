@@ -5,8 +5,10 @@ import userEvent from '@testing-library/user-event'
 import MediaBrowser from './MediaBrowser'
 import MediaPickerDialog from './MediaPickerDialog'
 import { api } from '../../lib/api'
+import { fakeLibrary } from '../../test/fakeLibrary'
+import type { MediaItemResponse } from '../../../lib/media'
 
-const library = [
+const library: MediaItemResponse[] = [
   {
     id: '1',
     filename: 'Russian Anzacs.jpg',
@@ -16,8 +18,8 @@ const library = [
     size: 5900,
     created_at: '2026-08-03T00:00:00.000Z',
     references: [
-      { schema: 'page', schemaLabel: 'Pages', id: 'p1', label: 'Australia' },
-      { schema: 'page', schemaLabel: 'Pages', id: 'p2', label: 'Anzacs' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p1', label: 'Australia' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection', id: 'p2', label: 'Anzacs' },
     ],
   },
   {
@@ -44,7 +46,7 @@ const library = [
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(api.getMedia).mockResolvedValue({ data: library } as never)
+  vi.mocked(api.getMedia).mockImplementation(fakeLibrary(library))
   vi.mocked(api.uploadMedia).mockResolvedValue({ data: { id: 'new', path: '/uploads/new.pdf' } } as never)
   ;(api as unknown as { deleteMedia: ReturnType<typeof vi.fn> }).deleteMedia = vi.fn().mockResolvedValue({ data: { success: true } })
 })
@@ -74,10 +76,10 @@ describe('MediaBrowser in manage mode', () => {
     render(<MediaBrowser mode="manage" />)
     await screen.findByText('Russian Anzacs.jpg')
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search by file name' }), 'zzz')
-    expect(screen.getByText(/No files match “zzz”/)).toBeInTheDocument()
+    expect(await screen.findByText(/No files match “zzz”/)).toBeInTheDocument()
     // Both the search box and the empty state offer a way out; take the empty state's.
     await userEvent.click(screen.getAllByRole('button', { name: 'Clear search' }).at(-1)!)
-    expect(screen.getByText('Russian Anzacs.jpg')).toBeInTheDocument()
+    expect(await screen.findByText('Russian Anzacs.jpg')).toBeInTheDocument()
   })
 
   it('selects files and says how many are in use before deleting', async () => {
@@ -118,7 +120,7 @@ describe('MediaBrowser in manage mode', () => {
     expect(alert).toHaveTextContent(/used by Australia/)
     // The selection is gone and the library was read again.
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
-    expect(api.getMedia).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(api.getMedia).mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
   it('forgets a pending delete confirmation when the selection changes', async () => {
@@ -145,9 +147,9 @@ describe('MediaBrowser in manage mode', () => {
   })
 
   it('shows files whose type the server did not recognise, so they can still be deleted', async () => {
-    vi.mocked(api.getMedia).mockResolvedValue({
-      data: [...library, { id: '9', filename: 'mystery.bin', path: '/uploads/mystery.bin', mimetype: 'application/octet-stream', kind: null, size: 10, created_at: '2026-01-01T00:00:00.000Z', references: [] }],
-    } as never)
+    vi.mocked(api.getMedia).mockImplementation(
+      fakeLibrary([...library, { id: '9', filename: 'mystery.bin', path: '/uploads/mystery.bin', mimetype: 'application/octet-stream', kind: null, size: 10, created_at: '2026-01-01T00:00:00.000Z', references: [] }])
+    )
     render(<MediaBrowser mode="manage" />)
     expect(await screen.findByText('mystery.bin')).toBeInTheDocument()
   })
@@ -172,8 +174,39 @@ describe('MediaBrowser in manage mode', () => {
     await waitFor(() => expect(api.getMedia).toHaveBeenCalled())
   })
 
+  it('loads one page at a time and offers more', async () => {
+    const many: MediaItemResponse[] = Array.from({ length: 70 }, (_, i) => ({
+      id: `f${i}`,
+      filename: `file-${String(i).padStart(2, '0')}.pdf`,
+      path: `/uploads/file-${i}.pdf`,
+      mimetype: 'application/pdf',
+      kind: 'document',
+      size: 1,
+      created_at: `2026-01-01T00:${String(i % 60).padStart(2, '0')}:${String(Math.floor(i / 60)).padStart(2, '0')}.000Z`,
+      references: [],
+    }))
+    vi.mocked(api.getMedia).mockImplementation(fakeLibrary(many))
+    render(<MediaBrowser mode="manage" />)
+    await screen.findByText('file-69.pdf')
+    expect(screen.getAllByTestId('media-card')).toHaveLength(60)
+    const more = screen.getByRole('button', { name: /show 10 more/i })
+    await userEvent.click(more)
+    await waitFor(() => expect(screen.getAllByTestId('media-card')).toHaveLength(70))
+    expect(screen.queryByRole('button', { name: /show .* more/i })).not.toBeInTheDocument()
+    expect(api.getMedia).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 60 }))
+  })
+
+  it('asks the server to search rather than filtering what it already has', async () => {
+    render(<MediaBrowser mode="manage" />)
+    await screen.findByText('Russian Anzacs.jpg')
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search by file name' }), 'map')
+    await waitFor(() => expect(api.getMedia).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'map', offset: 0 })))
+    expect(await screen.findByText('mapping-2025.pdf')).toBeInTheDocument()
+    expect(screen.queryByText('Russian Anzacs.jpg')).not.toBeInTheDocument()
+  })
+
   it('tells the person what to do when the library is empty', async () => {
-    vi.mocked(api.getMedia).mockResolvedValue({ data: [] } as never)
+    vi.mocked(api.getMedia).mockImplementation(fakeLibrary([]))
     render(<MediaBrowser mode="manage" />)
     expect(await screen.findByText('No files yet')).toBeInTheDocument()
     expect(screen.getByText(/Drag images, PDFs, audio or video here/)).toBeInTheDocument()

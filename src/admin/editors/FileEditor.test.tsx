@@ -3,10 +3,12 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FileEditor from "./FileEditor";
 import { api } from "../lib/api";
+import { fakeLibrary } from "../test/fakeLibrary";
+import type { MediaItemResponse } from "../../lib/media";
 
 const field = { name: "pdf", type: "file" as const };
 
-const library = [
+const library: MediaItemResponse[] = [
   {
     id: "1",
     filename: "essay.pdf",
@@ -14,6 +16,7 @@ const library = [
     mimetype: "application/pdf",
     kind: "document",
     size: 1024,
+    created_at: "2026-01-01T00:00:00.000Z",
   },
   {
     id: "2",
@@ -22,12 +25,14 @@ const library = [
     mimetype: "image/jpeg",
     kind: "image",
     size: 2048,
+    created_at: "2026-01-02T00:00:00.000Z",
   },
 ];
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(api.getMedia).mockResolvedValue({ data: library } as never);
+  vi.mocked(api.getMedia).mockImplementation(fakeLibrary(library));
+  vi.mocked(api.findMedia).mockImplementation(async (path: string) => library.find((m) => m.path === path) ?? null);
   vi.mocked(api.uploadMedia).mockResolvedValue({
     data: { id: "3", path: "/uploads/new.pdf", filename: "new.pdf" },
   } as never);

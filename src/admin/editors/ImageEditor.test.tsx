@@ -12,8 +12,8 @@ const field = {
 
 describe('ImageEditor', () => {
   beforeEach(() => {
-    vi.mocked(api.getMedia).mockReset()
-    vi.mocked(api.getMedia).mockResolvedValue({ data: [] } as never)
+    vi.mocked(api.findMedia).mockReset()
+    vi.mocked(api.findMedia).mockResolvedValue(null)
   })
 
   it('renders empty state when no value', () => {
@@ -23,14 +23,10 @@ describe('ImageEditor', () => {
   })
 
   it('shows the original filename from the media library when matched by path', async () => {
-    vi.mocked(api.getMedia).mockResolvedValue({
-      data: [
-        {
-          id: 'm1',
-          filename: 'family-portrait-1925.jpg',
-          path: '/uploads/d10d840e-9e0b-400d-80af-dbccb23ec375.jpg',
-        },
-      ],
+    vi.mocked(api.findMedia).mockResolvedValue({
+      id: 'm1',
+      filename: 'family-portrait-1925.jpg',
+      path: '/uploads/d10d840e-9e0b-400d-80af-dbccb23ec375.jpg',
     } as never)
 
     render(
@@ -50,14 +46,10 @@ describe('ImageEditor', () => {
   })
 
   it('matches by path when value is an absolute URL and library entry is relative', async () => {
-    vi.mocked(api.getMedia).mockResolvedValue({
-      data: [
-        {
-          id: 'm1',
-          filename: 'photo.png',
-          path: 'https://cms.example.com/uploads/uuid.png',
-        },
-      ],
+    vi.mocked(api.findMedia).mockResolvedValue({
+      id: 'm1',
+      filename: 'photo.png',
+      path: 'https://cms.example.com/uploads/uuid.png',
     } as never)
 
     render(

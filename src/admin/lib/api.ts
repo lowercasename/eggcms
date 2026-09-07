@@ -1,7 +1,20 @@
 // src/admin/lib/api.ts
 
 import type { PublicSchema } from '../../lib/schema'
-import type { MediaItemResponse } from '../../lib/media'
+import type { MediaItemResponse, MediaKind } from '../../lib/media'
+
+export interface MediaQuery {
+  q?: string
+  kinds?: MediaKind[]
+  sort?: 'newest' | 'oldest' | 'name'
+  limit?: number
+  offset?: number
+}
+
+export interface MediaPage {
+  data: MediaItemResponse[]
+  meta: { total: number; counts: Record<'all' | MediaKind, number>; limit: number; offset: number }
+}
 
 const BASE_URL = '/api'
 
@@ -102,8 +115,28 @@ export const api = {
     }),
 
   // Media
-  getMedia: () =>
-    request<{ data: MediaItemResponse[]; meta: { total: number } }>('/media'),
+  /** One page of the library; see MediaQuery. */
+  getMedia: (query: MediaQuery = {}) => {
+    const params = new URLSearchParams()
+    if (query.q) params.set('q', query.q)
+    if (query.kinds && query.kinds.length > 0) params.set('kinds', query.kinds.join(','))
+    if (query.sort) params.set('sort', query.sort)
+    if (query.limit !== undefined) params.set('limit', String(query.limit))
+    if (query.offset !== undefined) params.set('offset', String(query.offset))
+    const qs = params.toString()
+    return request<MediaPage>(`/media${qs ? `?${qs}` : ''}`)
+  },
+
+  /** The library entry behind a stored path, or null if it is not in the library. */
+  findMedia: async (path: string): Promise<MediaItemResponse | null> => {
+    try {
+      const res = await request<{ data: MediaItemResponse }>(`/media/by-path?path=${encodeURIComponent(path)}`)
+      return res.data
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null
+      throw err
+    }
+  },
 
   uploadMedia: async (file: File) => {
     const formData = new FormData()

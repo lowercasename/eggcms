@@ -5,7 +5,11 @@ import { vi } from "vitest";
 // Mock the api module
 vi.mock("../lib/api", () => ({
   api: {
-    getMedia: vi.fn().mockResolvedValue({ data: [] }),
+    getMedia: vi.fn().mockResolvedValue({
+      data: [],
+      meta: { total: 0, counts: { all: 0, image: 0, document: 0, audio: 0, video: 0 }, limit: 60, offset: 0 },
+    }),
+    findMedia: vi.fn().mockResolvedValue(null),
     uploadMedia: vi.fn().mockResolvedValue({ data: { path: "/uploads/test.jpg" } }),
     getSchemas: vi.fn().mockResolvedValue({ data: [] }),
   },

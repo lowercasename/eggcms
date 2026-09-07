@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { ExternalLink, FileText, Paperclip } from "lucide-react";
 import Modal, { ModalBody, ModalFooter } from "../Modal";
 import { api } from "../../lib/api";
-import type { MediaItem } from "../../lib/media";
 import { errorMessage } from "../../lib/errors";
 import { Button, EmptyState, Input, Label, SearchInput, Select } from "../ui";
+import MediaBrowser from "../media/MediaBrowser";
 
 interface Schema {
   name: string;
@@ -106,11 +106,9 @@ export default function LinkModal({
   const [loadingItems, setLoadingItems] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // The File tab is the media library in pick mode; one click chooses.
   // Images are deliberately excluded: those belong in the editor's image button.
-  const [files, setFiles] = useState<MediaItem[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string>(currentHref?.startsWith("/uploads/") ? currentHref : "");
-  const [fileQuery, setFileQuery] = useState("");
-  const [loadingFiles, setLoadingFiles] = useState(true);
+  const currentFile = currentHref?.startsWith("/uploads/") ? currentHref : undefined;
 
   useEffect(() => {
     if (currentContentRef) {
@@ -136,14 +134,6 @@ export default function LinkModal({
   }, [currentContentRef]);
 
   useEffect(() => {
-    api
-      .getMedia()
-      .then((res) => setFiles((res.data as MediaItem[]).filter((item) => item.kind !== "image")))
-      .catch((err) => setLoadError(`Could not load the files: ${errorMessage(err, "request failed")}`))
-      .finally(() => setLoadingFiles(false));
-  }, []);
-
-  useEffect(() => {
     if (!selectedSchema) {
       setItems([]);
       return;
@@ -163,13 +153,8 @@ export default function LinkModal({
   };
 
   const filteredItems = items.filter((item) => !searchQuery || getItemLabel(item).toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredFiles = files.filter((file) => !fileQuery || file.filename.toLowerCase().includes(fileQuery.toLowerCase()));
 
   const handleSave = () => {
-    if (tab === "file") {
-      if (selectedFile) onSaveExternal(selectedFile);
-      return;
-    }
     if (tab === "external") {
       let finalUrl = url.trim();
       if (!finalUrl) return;
@@ -186,27 +171,19 @@ export default function LinkModal({
   };
 
   const hasExistingLink = currentHref || currentContentRef;
-  const canSave =
-    (tab === "external" && url.trim()) || (tab === "internal" && selectedSchema && selectedItem) || (tab === "file" && selectedFile);
+  const canSave = (tab === "external" && url.trim()) || (tab === "internal" && selectedSchema && selectedItem);
 
   /** The body of the tab that is open: one list of things to link to. */
   function tabPanel() {
     if (tab === "file") {
-      if (loadingFiles) return <p className="m-0 text-[15px] text-ink-2">Loading…</p>;
-      if (files.length === 0) {
-        return loadError ? null : <EmptyState icon={<Paperclip />} title="No files in the library" description="Upload a PDF on the Media page first." />;
-      }
       return (
-        <>
-          <SearchInput value={fileQuery} onChange={setFileQuery} placeholder="Search files..." />
-          <ChoiceList
-            items={filteredFiles.map((f) => ({ key: f.path, label: f.filename }))}
-            selected={selectedFile}
-            onSelect={setSelectedFile}
-            empty="No matching files"
-            icon={Paperclip}
-          />
-        </>
+        <MediaBrowser
+          mode="pick"
+          kinds={["document", "audio", "video"]}
+          selectedPath={currentFile}
+          onPick={onSaveExternal}
+          className="-mx-6 -my-5 h-[60vh]"
+        />
       );
     }
 
@@ -260,7 +237,7 @@ export default function LinkModal({
   }
 
   return (
-    <Modal title={hasExistingLink ? "Edit link" : "Add a link"} onClose={onClose} maxWidth="xl">
+    <Modal title={hasExistingLink ? "Edit link" : "Add a link"} onClose={onClose} maxWidth={tab === "file" ? "full" : "xl"}>
       <div role="tablist" aria-label="Link to" className="flex border-b border-line-strong bg-page">
         {TABS.map(({ value, label, Icon }) => {
           const active = tab === value;
@@ -302,9 +279,11 @@ export default function LinkModal({
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={!canSave}>
-          {hasExistingLink ? "Update" : "Insert"}
-        </Button>
+        {tab !== "file" && (
+          <Button onClick={handleSave} disabled={!canSave}>
+            {hasExistingLink ? "Update" : "Insert"}
+          </Button>
+        )}
       </ModalFooter>
     </Modal>
   );

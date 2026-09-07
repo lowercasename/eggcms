@@ -3,8 +3,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Media from "./Media";
 import { api } from "../lib/api";
+import { fakeLibrary } from "../test/fakeLibrary";
+import type { MediaItemResponse } from "../../lib/media";
 
-const items = [
+const items: MediaItemResponse[] = [
   {
     id: "1",
     filename: "cover.jpg",
@@ -42,7 +44,7 @@ beforeEach(() => {
   // The api mock lives in the shared test setup, so call history survives
   // between tests unless it is cleared here.
   vi.clearAllMocks();
-  vi.mocked(api.getMedia).mockResolvedValue({ data: items } as never);
+  vi.mocked(api.getMedia).mockImplementation(fakeLibrary(items));
   vi.mocked(api.uploadMedia).mockResolvedValue({
     data: { id: "new", path: "/uploads/new.pdf" },
   } as never);
@@ -139,7 +141,7 @@ describe("Media library", () => {
   });
 
   it("tells the user what to do when the library is empty", async () => {
-    vi.mocked(api.getMedia).mockResolvedValue({ data: [] } as never);
+    vi.mocked(api.getMedia).mockImplementation(fakeLibrary([]));
     render(<Media />);
 
     expect(await screen.findByText(/no files yet/i)).toBeInTheDocument();

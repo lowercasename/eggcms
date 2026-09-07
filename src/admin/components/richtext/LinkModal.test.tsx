@@ -1,10 +1,12 @@
 // src/admin/components/richtext/LinkModal.test.tsx
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import LinkModal from "./LinkModal";
 import { api } from "../../lib/api";
+import { fakeLibrary } from "../../test/fakeLibrary";
+import type { MediaItemResponse } from "../../../lib/media";
 
-const mediaLibrary = [
+const mediaLibrary: MediaItemResponse[] = [
   {
     id: "1",
     filename: "2021_Govor_Belarus.pdf",
@@ -12,6 +14,7 @@ const mediaLibrary = [
     mimetype: "application/pdf",
     kind: "document",
     size: 1024,
+    created_at: "2026-01-03T00:00:00.000Z",
   },
   {
     id: "2",
@@ -20,6 +23,7 @@ const mediaLibrary = [
     mimetype: "audio/mpeg",
     kind: "audio",
     size: 2048,
+    created_at: "2026-01-02T00:00:00.000Z",
   },
   {
     id: "3",
@@ -28,13 +32,14 @@ const mediaLibrary = [
     mimetype: "image/jpeg",
     kind: "image",
     size: 512,
+    created_at: "2026-01-01T00:00:00.000Z",
   },
 ];
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.getSchemas).mockResolvedValue({ data: [] });
-  vi.mocked(api.getMedia).mockResolvedValue({ data: mediaLibrary } as never);
+  vi.mocked(api.getMedia).mockImplementation(fakeLibrary(mediaLibrary));
 });
 
 describe("LinkModal external URL normalization", () => {
@@ -106,8 +111,8 @@ describe("LinkModal when the library cannot be read", () => {
       <LinkModal onSaveExternal={vi.fn()} onSaveInternal={vi.fn()} onRemove={vi.fn()} onClose={vi.fn()} />
     );
     fireEvent.click(screen.getByRole("tab", { name: /^file$/i }));
-    expect(await screen.findByText(/could not load the files/i)).toBeInTheDocument();
-    expect(screen.queryByText(/no files in the library/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/could not load the library/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no files/i)).not.toBeInTheDocument();
   });
 });
 
@@ -138,13 +143,12 @@ describe("LinkModal file links", () => {
     expect(screen.queryByText("cover.jpg")).not.toBeInTheDocument();
   });
 
-  it("saves the file path as the link href", async () => {
+  it("saves the file path as the link href with one click, like every other picker", async () => {
     const onSaveExternal = vi.fn();
     open({ onSaveExternal });
 
     fireEvent.click(screen.getByRole("tab", { name: /^file$/i }));
-    fireEvent.click(await screen.findByText("2021_Govor_Belarus.pdf"));
-    fireEvent.click(screen.getByText("Insert"));
+    fireEvent.click(await screen.findByRole("button", { name: /2021_Govor_Belarus\.pdf/ }));
 
     expect(onSaveExternal).toHaveBeenCalledWith("/uploads/belarus.pdf");
   });
@@ -154,17 +158,18 @@ describe("LinkModal file links", () => {
     fireEvent.click(screen.getByRole("tab", { name: /^file$/i }));
     await screen.findByText("2021_Govor_Belarus.pdf");
 
-    fireEvent.change(screen.getByPlaceholderText(/search files/i), {
+    fireEvent.change(screen.getByRole("searchbox", { name: /search by file name/i }), {
       target: { value: "belarus" },
     });
 
-    expect(screen.getByText("2021_Govor_Belarus.pdf")).toBeInTheDocument();
-    expect(screen.queryByText("interview.mp3")).not.toBeInTheDocument();
+    expect(await screen.findByText("2021_Govor_Belarus.pdf")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("interview.mp3")).not.toBeInTheDocument());
   });
 
-  it("opens on the File tab when editing a link that points at an upload", async () => {
+  it("opens on the File tab, with the file marked, when editing a link that points at an upload", async () => {
     open({ currentHref: "/uploads/belarus.pdf" });
 
-    expect(await screen.findByText("2021_Govor_Belarus.pdf")).toBeInTheDocument();
+    const card = await screen.findByRole("button", { name: /2021_Govor_Belarus\.pdf/ });
+    expect(card).toHaveAttribute("aria-pressed", "true");
   });
 });

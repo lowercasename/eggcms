@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ImageSettingsModal from "./ImageSettingsModal";
 import { api } from "../../lib/api";
+import { fakeLibrary } from "../../test/fakeLibrary";
 
 describe("ImageSettingsModal", () => {
   const defaultProps = {
@@ -307,9 +308,9 @@ describe("ImageSettingsModal", () => {
       const user = userEvent.setup();
       const onReplace = vi.fn();
       const onSave = vi.fn();
-      vi.mocked(api.getMedia).mockResolvedValue({
-        data: [{ id: "m1", filename: "new.png", path: "/uploads/new.png", mimetype: "image/png", kind: "image", size: 1, created_at: "2026-01-01T00:00:00.000Z" }],
-      } as never);
+      vi.mocked(api.getMedia).mockImplementation(
+        fakeLibrary([{ id: "m1", filename: "new.png", path: "/uploads/new.png", mimetype: "image/png", kind: "image", size: 1, created_at: "2026-01-01T00:00:00.000Z" }])
+      );
       render(<ImageSettingsModal {...defaultProps} onReplace={onReplace} onSave={onSave} />);
 
       await user.click(screen.getByRole("button", { name: "Replace image" }));
