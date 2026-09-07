@@ -247,21 +247,58 @@ The CMS sends a POST request to the webhook URL when content is published or del
 
 #### Serving with Caddy
 
-If you're running both EggCMS and a static site on the same server, use Caddy to route `/admin`, `/api`, and `/uploads` to the CMS while serving the static site for everything else:
+If you're running both EggCMS and a static site on the same server, use Caddy to route `/admin`, `/api`, and `/uploads` to the CMS while serving the static site for everything else. The `eggcms` snippet below does that, adds the security headers the admin needs, and limits login attempts. Import it once per site with the port the CMS listens on:
 
 ```
-example.com {
+{
+    # Only needed for the rate_limit directive (see below).
+    order rate_limit before basicauth
+}
+
+# Shared by every EggCMS site on the server: `import eggcms <port>`.
+(eggcms) {
+    # Login attempts are limited here, by the real client address. The CMS
+    # deliberately has no limiter of its own: anything it could key on, such
+    # as x-forwarded-for, is a header the client chooses.
+    # Needs the caddy-ratelimit plugin (github.com/mholt/caddy-ratelimit);
+    # delete this stanza on a stock Caddy build.
+    @login path /api/auth/login
+    rate_limit @login {
+        zone eggcms_login {
+            key {remote_host}
+            events 10
+            window 1m
+        }
+    }
+
+    # Keep the admin out of frames, and pin HTTPS for the whole site.
+    header /admin* {
+        X-Frame-Options "DENY"
+        Content-Security-Policy "frame-ancestors 'none'"
+        defer
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        defer
+    }
+
     handle /admin* {
-        reverse_proxy localhost:3000
+        reverse_proxy localhost:{args[0]}
     }
 
     handle /api* {
-        reverse_proxy localhost:3000
+        reverse_proxy localhost:{args[0]}
     }
 
     handle /uploads* {
-        reverse_proxy localhost:3000
+        reverse_proxy localhost:{args[0]}
     }
+}
+
+example.com {
+    import eggcms 3000
 
     handle {
         root * /var/www/my-site/_site
@@ -270,6 +307,8 @@ example.com {
     }
 }
 ```
+
+The session cookie is always set `Secure`, so the admin must be served over HTTPS (Caddy does this by default). For local development, browsers treat `http://localhost` as a secure context, so the Vite dev server on `localhost:5173` still works.
 
 ### Volumes Reference
 
@@ -285,7 +324,7 @@ example.com {
 |----------|----------|-------------|
 | `ADMIN_EMAIL` | Yes | Admin login email |
 | `ADMIN_PASSWORD` | Yes | Admin login password |
-| `JWT_SECRET` | Yes | Random 32+ character secret |
+| `JWT_SECRET` | Yes | Random secret of 32+ characters. The server refuses to start without one |
 | `PORT` | No | Server port (default: 3000) |
 | `PUBLIC_API` | No | Allow public read access (default: true) |
 | `PUBLIC_URL` | No | Base URL for media files (e.g., `https://cms.example.com`) |
@@ -303,7 +342,7 @@ All configuration is done via environment variables. Create a `.env` file in the
 |----------|-------------|
 | `ADMIN_EMAIL` | Admin login email address |
 | `ADMIN_PASSWORD` | Admin login password |
-| `JWT_SECRET` | Secret key for JWT tokens (use a random 32+ character string) |
+| `JWT_SECRET` | Secret key for JWT tokens. Must be 32+ characters and not an example value, or the server refuses to start. Generate one with `openssl rand -base64 32` |
 
 ### Optional Settings
 
@@ -612,7 +651,7 @@ Draft saves do not trigger webhooks. Use `WEBHOOK_DEBOUNCE_MS` to batch rapid ch
 - **Database**: SQLite (via better-sqlite3 + Drizzle ORM)
 - **Admin UI**: React 19 + React Router + Tailwind CSS v4
 - **Rich Text**: Tiptap
-- **Auth**: JWT with httpOnly cookies
+- **Auth**: JWT in an httpOnly, Secure, SameSite=Strict cookie. Login rate limiting is the reverse proxy's job (see "Serving with Caddy")
 
 ## License
 
