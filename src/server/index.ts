@@ -1,22 +1,22 @@
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/bun'
 import path from 'path'
 import fs from 'fs'
 import { runMigrations } from './lib/migrator'
 import { loadSchemas } from './lib/schemaLoader'
+import { getJwtSecret } from './lib/auth'
 import auth from './routes/auth'
 import { createContentRoutes } from './routes/content'
 import { createSchemasRoute } from './routes/schemas'
 import { createMediaRoutes } from './routes/media'
 
-const app = new Hono()
+// Refuse to start rather than sign sessions with a missing or weak secret.
+// (Throwing here exits Bun with the message; there is no fallback secret.)
+getJwtSecret()
 
-// Middleware
-app.use('*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true,
-}))
+// No CORS middleware on purpose: the admin is served from this same origin
+// under /admin, and the public API is read by build tools, not browsers.
+const app = new Hono()
 
 // Static file serving for uploads
 app.use('/uploads/*', serveStatic({ root: './' }))

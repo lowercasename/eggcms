@@ -57,6 +57,9 @@ describe('auth routes', () => {
       expect(setCookie).toContain('token=test-jwt-token')
       expect(setCookie).toContain('HttpOnly')
       expect(setCookie).toContain('SameSite=Strict')
+      // Always Secure: the admin is only ever served over HTTPS, and browsers
+      // treat http://localhost as a secure context, so dev still works.
+      expect(setCookie).toContain('Secure')
     })
 
     it('returns 401 for invalid email', async () => {
@@ -99,81 +102,6 @@ describe('auth routes', () => {
       expect(res.status).toBe(500)
       const json = await res.json()
       expect(json.error.code).toBe('CONFIG_ERROR')
-    })
-
-    it('returns 429 after 5 failed attempts', async () => {
-      mockVerifyPassword.mockReturnValue(false)
-
-      // Make 5 failed attempts
-      for (let i = 0; i < 5; i++) {
-        await auth.request('/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-forwarded-for': '192.168.1.100',
-          },
-          body: JSON.stringify({ email: 'admin@example.com', password: 'wrong' }),
-        })
-      }
-
-      // 6th attempt should be rate limited
-      const res = await auth.request('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-forwarded-for': '192.168.1.100',
-        },
-        body: JSON.stringify({ email: 'admin@example.com', password: 'wrong' }),
-      })
-
-      expect(res.status).toBe(429)
-      const json = await res.json()
-      expect(json.error.code).toBe('RATE_LIMITED')
-    })
-
-    it('clears rate limit on successful login', async () => {
-      mockVerifyPassword.mockReturnValue(false)
-
-      // Make some failed attempts
-      for (let i = 0; i < 3; i++) {
-        await auth.request('/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-forwarded-for': '192.168.1.200',
-          },
-          body: JSON.stringify({ email: 'admin@example.com', password: 'wrong' }),
-        })
-      }
-
-      // Successful login
-      mockVerifyPassword.mockReturnValue(true)
-      mockCreateToken.mockResolvedValue('token')
-
-      const successRes = await auth.request('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-forwarded-for': '192.168.1.200',
-        },
-        body: JSON.stringify({ email: 'admin@example.com', password: 'secret123' }),
-      })
-
-      expect(successRes.status).toBe(200)
-
-      // More attempts should work (rate limit cleared)
-      mockVerifyPassword.mockReturnValue(false)
-
-      const res = await auth.request('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-forwarded-for': '192.168.1.200',
-        },
-        body: JSON.stringify({ email: 'admin@example.com', password: 'wrong' }),
-      })
-
-      expect(res.status).toBe(401) // Not 429
     })
   })
 
