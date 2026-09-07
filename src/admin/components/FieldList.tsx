@@ -1,6 +1,6 @@
 // src/admin/components/FieldList.tsx
 import type { FieldDefinition } from '../types'
-import type { EditorMap } from '../editors/types'
+import type { EditorComponent } from '../editors/types'
 import { editorMap as defaultEditors } from '../editors'
 import FormField, { isTallField } from './ui/FormField'
 import Card from './ui/Card'
@@ -14,7 +14,7 @@ interface FieldListProps {
   /** Draw attention to one field, with a sentence of help, and focus it. */
   highlight?: { field: string; hint?: string }
   /** Editor components by field type. Defaults to the app's registry. */
-  editors?: EditorMap
+  editors?: Partial<Record<string, EditorComponent>>
   className?: string
 }
 
@@ -57,7 +57,7 @@ function UnsupportedField({ field }: { field: FieldDefinition }) {
  * scalar fields share one white card, tall fields take the full width.
  */
 export default function FieldList({ fields, data, onChange, labelWidth, highlight, editors, className = '' }: FieldListProps) {
-  const map = editors ?? defaultEditors
+  const map: Partial<Record<string, EditorComponent>> = editors ?? defaultEditors
 
   const renderField = (field: FieldDefinition) => {
     const Editor = map[field.type] ?? UnsupportedField

@@ -13,7 +13,7 @@ const field = {
 describe('ImageEditor', () => {
   beforeEach(() => {
     vi.mocked(api.getMedia).mockReset()
-    vi.mocked(api.getMedia).mockResolvedValue({ data: [] })
+    vi.mocked(api.getMedia).mockResolvedValue({ data: [] } as never)
   })
 
   it('renders empty state when no value', () => {
@@ -74,7 +74,7 @@ describe('ImageEditor', () => {
   })
 
   it('falls back to path basename when value is not in the media library', async () => {
-    vi.mocked(api.getMedia).mockResolvedValue({ data: [] })
+    vi.mocked(api.getMedia).mockResolvedValue({ data: [] } as never)
 
     render(
       <ImageEditor

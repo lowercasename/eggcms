@@ -38,26 +38,23 @@ Blocks support two optional presentation hints, used only by the admin:
 
 Rich text fields accept `toolbar: 'minimal'` to show only Bold, Italic and Link (for single-paragraph fields such as publication details).
 
-**Important:** When adding new schema properties, you must update THREE places:
-1. `src/lib/schema.ts` - Add to `SchemaDefinition` interface
-2. `src/admin/types/index.ts` - Add to `Schema` interface
-3. `src/server/routes/schemas.ts` - Include in `/schemas` API response mapping
+**Important:** When adding new schema properties, update `src/lib/schema.ts` in two places: the definition (`FieldDefinition` / `BlockDefinition` / `SchemaDefinition`) and the wire shape (`PublicField` / `PublicBlock` / `PublicSchema`). The admin's types (`src/admin/types/index.ts`) are re-exports of the wire shape, and the `/schemas` route (`src/server/routes/schemas.ts`) maps into it, so the compiler points at the mapping if you forget it. Field types live in `FIELD_TYPES`; `validateSchema` refuses a schema that uses any other type, an unknown `toolbar`, or an unknown media `kind`.
 
 ## Adding New Field Types
 
 To add a new field type (e.g., `f.myField()`), update these files:
 
 ### 1. Schema Definition (`src/lib/schema.ts`)
-- Add to `FieldType` union type
-- Add any new properties to `FieldDefinition` interface (e.g., `myFieldConfig?: SomeType`)
+- Add the type to `FIELD_TYPES`
+- Add any new properties to `FieldDefinition` and to the wire shape `PublicField` (e.g., `myFieldConfig?: SomeType`)
 - Add validation in `validateSchema()` if needed
 - Add `f.myField()` helper function
 
-### 2. Admin Types (`src/admin/types/index.ts`)
-- Mirror any new `FieldDefinition` properties here
+### 2. Admin Types
+- Nothing to do: `src/admin/types/index.ts` re-exports the wire shape
 
 ### 3. API Schema Mapping (`src/server/routes/schemas.ts`)
-- In the `mapField()` function inside `/schemas` route, include any new field properties so they're sent to the admin UI
+- In `mapField()`, include any new field properties so they're sent to the admin UI (the compiler flags a missing one)
 
 ### 4. Content Storage (`src/server/lib/content.ts`)
 - If the field stores JSON data (objects/arrays), add the type to `JSON_FIELD_TYPES` array

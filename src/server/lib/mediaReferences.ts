@@ -1,14 +1,9 @@
 // src/server/lib/mediaReferences.ts
 import { sqlite } from '../db'
 import type { SchemaDefinition } from '../../lib/schema'
+import type { MediaReference } from '../../lib/media'
 
-export interface MediaReference {
-  schema: string
-  schemaLabel: string
-  schemaType: 'collection' | 'singleton'
-  id: string
-  label: string
-}
+export type { MediaReference }
 
 /** The label a content row is known by: its label field, or the schema's label. */
 function rowLabel(schema: SchemaDefinition, row: Record<string, unknown>): string {

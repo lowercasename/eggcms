@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateSchema, defineCollection, f } from './schema'
+import { validateSchema, defineCollection, defineBlock, f, FIELD_TYPES } from './schema'
 
 describe('validateSchema', () => {
   it('rejects reserved field names', () => {
@@ -75,5 +75,52 @@ describe('validateSchema', () => {
       })
       expect(() => validateSchema(schema)).not.toThrow()
     })
+  })
+})
+
+describe('validateSchema checks what the admin can actually edit', () => {
+  it('rejects a field type the admin has no editor for', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [{ name: 'body', type: 'markdown' } as any],
+    })
+    expect(() => validateSchema(schema)).toThrow("Field 'body' has unknown type 'markdown'")
+  })
+
+  it('rejects an unknown rich text toolbar option', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [f.richtext('body', { toolbar: 'compact' as any })],
+    })
+    expect(() => validateSchema(schema)).toThrow("Richtext field 'body' has unknown toolbar 'compact'")
+  })
+
+  it('rejects an unknown media kind on a file field', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [f.file('sheet', { kinds: ['spreadsheet'] as any })],
+    })
+    expect(() => validateSchema(schema)).toThrow("File field 'sheet' has unknown kind 'spreadsheet'")
+  })
+
+  it('rejects a field named _id, which blocks use for their own ids', () => {
+    const schema = defineCollection({ name: 'post', label: 'Posts', fields: [f.string('_id')] })
+    expect(() => validateSchema(schema)).toThrow("Field '_id' is reserved")
+  })
+
+  it('lists every field type once', () => {
+    expect(FIELD_TYPES).toContain('richtext')
+    expect(new Set(FIELD_TYPES).size).toBe(FIELD_TYPES.length)
+  })
+})
+
+describe('block presentation hints live on the block definition', () => {
+  it('defineBlock accepts icon and description', () => {
+    const block = defineBlock({ name: 'book', label: 'Book', icon: 'book-open', description: 'A book', fields: [f.string('title')] })
+    expect(block.icon).toBe('book-open')
+    expect(block.type).toBe('block')
   })
 })

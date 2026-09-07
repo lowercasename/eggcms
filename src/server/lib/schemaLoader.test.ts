@@ -1,7 +1,7 @@
 // src/server/lib/schemaLoader.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { validateSchemas, resolveBlockReferences, parseYamlSchemas } from './schemaLoader'
-import type { SchemaDefinition } from '../../lib/schema'
+import type { BlockDefinition, SchemaDefinition } from '../../lib/schema'
 
 describe('schemaLoader', () => {
   describe('validateSchemas', () => {
@@ -148,7 +148,7 @@ describe('schemaLoader', () => {
           label: 'Pages',
           type: 'collection',
           fields: [
-            { name: 'blocks', type: 'blocks', blocks: ['heroBlock'] as unknown as SchemaDefinition[] },
+            { name: 'blocks', type: 'blocks', blocks: ['heroBlock'] as unknown as BlockDefinition[] },
           ],
         },
         heroBlock,
@@ -175,7 +175,7 @@ describe('schemaLoader', () => {
           label: 'Posts',
           type: 'collection',
           fields: [
-            { name: 'featuredImage', type: 'block', block: 'imageBlock' as unknown as SchemaDefinition },
+            { name: 'featuredImage', type: 'block', block: 'imageBlock' as unknown as BlockDefinition },
           ],
         },
         imageBlock,
@@ -202,7 +202,7 @@ describe('schemaLoader', () => {
           label: 'Pages',
           type: 'collection',
           fields: [
-            { name: 'blocks', type: 'blocks', blocks: [heroBlock] },
+            { name: 'blocks', type: 'blocks', blocks: [heroBlock as BlockDefinition] },
           ],
         },
         heroBlock,
@@ -222,7 +222,7 @@ describe('schemaLoader', () => {
           label: 'Pages',
           type: 'collection',
           fields: [
-            { name: 'blocks', type: 'blocks', blocks: ['nonExistentBlock'] as unknown as SchemaDefinition[] },
+            { name: 'blocks', type: 'blocks', blocks: ['nonExistentBlock'] as unknown as BlockDefinition[] },
           ],
         },
       ]
@@ -237,7 +237,7 @@ describe('schemaLoader', () => {
           label: 'Posts',
           type: 'collection',
           fields: [
-            { name: 'hero', type: 'block', block: 'missingBlock' as unknown as SchemaDefinition },
+            { name: 'hero', type: 'block', block: 'missingBlock' as unknown as BlockDefinition },
           ],
         },
       ]
@@ -265,7 +265,7 @@ describe('schemaLoader', () => {
           label: 'Pages',
           type: 'collection',
           fields: [
-            { name: 'blocks', type: 'blocks', blocks: ['heroBlock', 'textBlock'] as unknown as SchemaDefinition[] },
+            { name: 'blocks', type: 'blocks', blocks: ['heroBlock', 'textBlock'] as unknown as BlockDefinition[] },
           ],
         },
         heroBlock,

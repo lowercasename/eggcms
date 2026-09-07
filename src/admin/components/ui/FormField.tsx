@@ -1,7 +1,7 @@
 // src/admin/components/ui/FormField.tsx
 import { useId, type ReactNode } from 'react'
 import { Layers, AlignLeft, Image, Paperclip, Group, Type } from 'lucide-react'
-import type { FieldDefinition } from '../../types'
+import type { FieldDefinition, FieldType } from '../../types'
 import { getFieldLabel } from '../../types'
 import FieldRow from './FieldRow'
 import FieldBlock from './FieldBlock'
@@ -9,13 +9,13 @@ import Chip from './Chip'
 import { FieldControlProvider } from './FieldContext'
 
 /** Field types that take the full width with the label above. Everything else is a row. */
-export const TALL_TYPES = new Set(['richtext', 'text', 'blocks', 'block', 'image', 'file'])
+export const TALL_TYPES: ReadonlySet<FieldType> = new Set<FieldType>(['richtext', 'text', 'blocks', 'block', 'image', 'file'])
 
 export function isTallField(field: Pick<FieldDefinition, 'type'>): boolean {
   return TALL_TYPES.has(field.type)
 }
 
-const typeChips: Record<string, { label: string; Icon: typeof Layers }> = {
+const typeChips: Partial<Record<FieldType, { label: string; Icon: typeof Layers }>> = {
   richtext: { label: 'Rich text', Icon: AlignLeft },
   text: { label: 'Text', Icon: Type },
   blocks: { label: 'Blocks', Icon: Layers },

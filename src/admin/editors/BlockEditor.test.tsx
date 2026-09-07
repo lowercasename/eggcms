@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import BlockEditor from './BlockEditor'
+import type { BlockDefinition } from '../types'
 
 vi.mock('./StringEditor', () => ({
   default: ({ field, value, onChange }: { field: { name: string }; value: unknown; onChange: (v: unknown) => void }) => (
@@ -9,7 +10,7 @@ vi.mock('./StringEditor', () => ({
   ),
 }))
 
-const block = { name: 'featured', label: 'Featured image', fields: [{ name: 'alt', type: 'string' }, { name: 'caption', type: 'string' }] }
+const block: BlockDefinition = { name: 'featured', label: 'Featured image', fields: [{ name: 'alt', type: 'string' }, { name: 'caption', type: 'string' }] }
 
 describe('BlockEditor (a single group of fields)', () => {
   it('renders the group fields with the block label column and merges changes', () => {

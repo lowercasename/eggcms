@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import RichtextEditor from './RichtextEditor'
 import FormField from '../components/ui/FormField'
 import { SectionProvider } from '../contexts/SectionContext'
+import type { FieldDefinition } from '../types'
 
 const meta = { title: 'Editors/Rich text', component: RichtextEditor } satisfies Meta<typeof RichtextEditor>
 export default meta
@@ -14,7 +15,7 @@ const body =
 
 function Demo({ toolbar, initial, label }: { toolbar?: 'full' | 'minimal'; initial: string; label: string }) {
   const [value, setValue] = useState(initial)
-  const field = { name: 'body', type: 'richtext', label, toolbar }
+  const field: FieldDefinition = { name: 'body', type: 'richtext', label, toolbar }
   return (
     <div className="w-[780px]">
       <SectionProvider value={{ typeLabel: 'Book', index: 2, total: 12 }}>

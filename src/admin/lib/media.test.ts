@@ -20,23 +20,23 @@ describe('describeUsage', () => {
   })
   it('counts pages when every use is in one collection', () => {
     const refs = [
-      { schema: 'page', schemaLabel: 'Pages', id: '1', label: 'A' },
-      { schema: 'page', schemaLabel: 'Pages', id: '2', label: 'B' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection' as const, id: '1', label: 'A' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection' as const, id: '2', label: 'B' },
     ]
     expect(describeUsage(refs)).toEqual({ text: 'Used on 2 pages', used: true })
   })
   it('names a single page', () => {
-    expect(describeUsage([{ schema: 'page', schemaLabel: 'Pages', id: '1', label: 'A' }]).text).toBe('Used on 1 page')
+    expect(describeUsage([{ schema: 'page', schemaLabel: 'Pages', schemaType: 'collection' as const, id: '1', label: 'A' }]).text).toBe('Used on 1 page')
   })
   it('names a singleton in full', () => {
-    expect(describeUsage([{ schema: 'settings', schemaLabel: 'Site Settings', id: 'settings', label: 'Site Settings' }]).text).toBe(
+    expect(describeUsage([{ schema: 'settings', schemaLabel: 'Site Settings', schemaType: 'singleton' as const, id: 'settings', label: 'Site Settings' }]).text).toBe(
       'Used in Site Settings'
     )
   })
   it('falls back to places when uses are spread across kinds of content', () => {
     const refs = [
-      { schema: 'page', schemaLabel: 'Pages', id: '1', label: 'A' },
-      { schema: 'post', schemaLabel: 'Blog Posts', id: '2', label: 'B' },
+      { schema: 'page', schemaLabel: 'Pages', schemaType: 'collection' as const, id: '1', label: 'A' },
+      { schema: 'post', schemaLabel: 'Blog Posts', schemaType: 'collection' as const, id: '2', label: 'B' },
     ]
     expect(describeUsage(refs).text).toBe('Used in 2 places')
   })

@@ -212,3 +212,23 @@ describe('GET /schemas - admin presentation hints', () => {
     expect(json.data[0].fields[0].toolbar).toBe('minimal')
   })
 })
+
+describe('GET /schemas - a block that contains itself', () => {
+  it('answers without recursing forever', async () => {
+    const article: SchemaDefinition = { name: 'article', label: 'Article', type: 'block', fields: [{ name: 'title', type: 'string' }] }
+    // A nested list of articles inside an article: legal, and a cycle.
+    article.fields.push({ name: 'related', type: 'blocks', blocks: [article as never] })
+    const schemas: SchemaDefinition[] = [
+      { name: 'page', label: 'Pages', type: 'collection', fields: [{ name: 'sections', type: 'blocks', blocks: [article as never] }] },
+    ]
+    const app = createSchemasRoute(schemas)
+    const res = await app.request('/schemas')
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    const outer = json.data[0].fields[0].blocks[0]
+    expect(outer.name).toBe('article')
+    // The second level is present but stops there.
+    expect(outer.fields[1].blocks[0].name).toBe('article')
+    expect(outer.fields[1].blocks[0].fields).toEqual([])
+  })
+})

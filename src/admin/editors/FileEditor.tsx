@@ -5,7 +5,7 @@ import type { EditorProps } from './types'
 
 /** Kinds this field will accept. Defaults to documents (PDFs and the like). */
 function acceptedKinds(field: EditorProps['field']): MediaKind[] {
-  return field.kinds && field.kinds.length > 0 ? (field.kinds as MediaKind[]) : ['document']
+  return field.kinds && field.kinds.length > 0 ? field.kinds : ['document']
 }
 
 export default function FileEditor({ field, value, onChange }: EditorProps) {

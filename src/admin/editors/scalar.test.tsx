@@ -11,6 +11,7 @@ import TextEditor from './TextEditor'
 import SlugEditor from './SlugEditor'
 import FormField from '../components/ui/FormField'
 import { EntryProvider } from '../contexts/EntryContext'
+import type { FieldDefinition } from '../types'
 
 describe('scalar editors wire up to their FormField label', () => {
   it('string input is labelled by the field label and marked required', () => {
@@ -94,7 +95,7 @@ describe('BooleanEditor', () => {
 })
 
 describe('SlugEditor', () => {
-  const field = { name: 'slug', type: 'slug', from: 'title' }
+  const field: FieldDefinition = { name: 'slug', type: 'slug', from: 'title' }
 
   it('shows the value in mono with a leading slash and a Generate button', () => {
     render(<SlugEditor field={field} value="south-pacific" onChange={() => {}} formData={{ title: 'South Pacific' }} />)

@@ -1,6 +1,6 @@
 // src/admin/editors/types.ts
 import type { ComponentType } from 'react'
-import type { FieldDefinition } from '../types'
+import type { FieldDefinition, FieldType } from '../types'
 
 /** Every field editor takes the same props, so the layout never has to know the type. */
 export interface EditorProps {
@@ -14,4 +14,5 @@ export interface EditorProps {
 }
 
 export type EditorComponent = ComponentType<EditorProps>
-export type EditorMap = Record<string, EditorComponent>
+/** One editor per field type; the compiler refuses a missing entry. */
+export type EditorMap = Record<FieldType, EditorComponent>

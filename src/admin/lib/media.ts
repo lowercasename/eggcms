@@ -3,27 +3,10 @@
 import { Image, FileText, Music, Video, File as FileIcon, type LucideIcon } from 'lucide-react'
 import { joinWords, plural, singularize } from './words'
 
-export type MediaKind = 'image' | 'document' | 'audio' | 'video'
+import type { MediaItemResponse, MediaKind, MediaReference } from '../../lib/media'
 
-export interface MediaReference {
-  schema: string
-  schemaLabel: string
-  /** Optional for older servers; a singleton is named in full ("Used in Site Settings"). */
-  schemaType?: 'collection' | 'singleton'
-  id: string
-  label: string
-}
-
-export interface MediaItem {
-  id: string
-  filename: string
-  path: string
-  mimetype: string
-  kind: MediaKind | null
-  size: number
-  created_at: string
-  references?: MediaReference[]
-}
+export type { MediaKind, MediaReference }
+export type MediaItem = MediaItemResponse
 
 export type MediaSort = 'newest' | 'oldest' | 'name'
 
@@ -76,7 +59,7 @@ export function describeUsage(refs: MediaReference[] | undefined): { text: strin
   if (schemas.size === 1) {
     const first = refs[0]
     // A singleton has one row, so its label is its name: "Used in Site Settings".
-    const singleton = first.schemaType ? first.schemaType === 'singleton' : first.id === first.schema
+    const singleton = first.schemaType === 'singleton'
     if (refs.length === 1 && singleton) return { text: `Used in ${first.schemaLabel}`, used: true }
     return { text: `Used on ${refs.length} ${nounFor(first.schemaLabel, refs.length)}`, used: true }
   }

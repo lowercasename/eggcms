@@ -1,7 +1,7 @@
 // src/server/lib/schemaLoader.ts
 import { existsSync, readFileSync } from 'fs'
 import { parse as parseYaml } from 'yaml'
-import type { SchemaDefinition } from '../../lib/schema'
+import type { BlockDefinition, SchemaDefinition } from '../../lib/schema'
 import compiledSchemas from '../../schemas'
 
 const VALID_SCHEMA_TYPES = ['collection', 'singleton', 'block']
@@ -66,10 +66,10 @@ export function parseYamlSchemas(content: string): SchemaDefinition[] {
 // Resolve block references from string names to actual block definitions
 export function resolveBlockReferences(schemas: SchemaDefinition[]): SchemaDefinition[] {
   // Build a map of block definitions by name
-  const blockMap = new Map<string, SchemaDefinition>()
+  const blockMap = new Map<string, BlockDefinition>()
   for (const schema of schemas) {
     if (schema.type === 'block') {
-      blockMap.set(schema.name, schema)
+      blockMap.set(schema.name, schema as BlockDefinition)
     }
   }
 
@@ -78,7 +78,7 @@ export function resolveBlockReferences(schemas: SchemaDefinition[]): SchemaDefin
     for (const field of schema.fields) {
       // Resolve blocks array (e.g., blocks: ['heroBlock', 'textBlock'])
       if (field.type === 'blocks' && Array.isArray(field.blocks)) {
-        field.blocks = field.blocks.map((b: unknown) => {
+        field.blocks = (field.blocks as unknown[]).map((b): BlockDefinition => {
           if (typeof b === 'string') {
             const blockDef = blockMap.get(b)
             if (!blockDef) {
@@ -86,13 +86,13 @@ export function resolveBlockReferences(schemas: SchemaDefinition[]): SchemaDefin
             }
             return blockDef
           }
-          return b // Already a block definition object
+          return b as BlockDefinition // Already a block definition object
         })
       }
 
       // Resolve single block reference (e.g., block: 'imageBlock')
-      if (field.type === 'block' && typeof field.block === 'string') {
-        const blockDef = blockMap.get(field.block)
+      if (field.type === 'block' && typeof (field.block as unknown) === 'string') {
+        const blockDef = blockMap.get(field.block as unknown as string)
         if (!blockDef) {
           throw new Error(`Block '${field.block}' referenced in field '${field.name}' of schema '${schema.name}' not found`)
         }

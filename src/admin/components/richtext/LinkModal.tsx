@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { ExternalLink, FileText, Paperclip } from "lucide-react";
 import Modal, { ModalBody, ModalFooter } from "../Modal";
 import { api } from "../../lib/api";
+import type { MediaItem } from "../../lib/media";
 import { errorMessage } from "../../lib/errors";
 import { Button, EmptyState, Input, Label, SearchInput, Select } from "../ui";
 
@@ -13,12 +14,6 @@ interface Schema {
   labelField?: string;
 }
 
-interface MediaItem {
-  id: string;
-  filename: string;
-  path: string;
-  kind: string | null;
-}
 
 interface ContentItem {
   id: string;

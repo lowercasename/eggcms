@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import BlocksEditor from './BlocksEditor'
-import type { FieldDefinition } from '../types'
+import type { BlockDefinition, FieldDefinition } from '../types'
 
 vi.mock('./StringEditor', () => ({
   default: ({ field, value, onChange }: { field: { name: string }; value: unknown; onChange: (v: unknown) => void }) => (
@@ -13,9 +13,9 @@ vi.mock('./StringEditor', () => ({
 vi.mock('./RichtextEditor', () => ({ default: () => <div data-testid="richtext-editor" /> }))
 vi.mock('./ImageEditor', () => ({ default: () => <div data-testid="image-editor" /> }))
 
-const heading = { name: 'heading', label: 'Heading', description: 'A large title', fields: [{ name: 'text', type: 'string', required: true }] }
-const text = { name: 'text', label: 'Text', fields: [{ name: 'body', type: 'richtext' }] }
-const book = {
+const heading: BlockDefinition = { name: 'heading', label: 'Heading', description: 'A large title', fields: [{ name: 'text', type: 'string', required: true }] }
+const text: BlockDefinition = { name: 'text', label: 'Text', fields: [{ name: 'body', type: 'richtext' }] }
+const book: BlockDefinition = {
   name: 'book',
   label: 'Book',
   icon: 'book-open',
@@ -132,7 +132,7 @@ describe('BlocksEditor: reorder', () => {
   })
 
   it('shows the first image field as the row thumbnail', () => {
-    const photo = { name: 'photo', label: 'Photo', fields: [{ name: 'src', type: 'image' }, { name: 'caption', type: 'string' }] }
+    const photo: BlockDefinition = { name: 'photo', label: 'Photo', fields: [{ name: 'src', type: 'image' }, { name: 'caption', type: 'string' }] }
     render(<BlocksEditor field={{ ...field, blocks: [heading, photo] }} value={[{ _type: 'photo', _id: 'ph1', src: '/uploads/rocket.png', caption: 'Hello there' }]} onChange={onChange} />)
     const row = screen.getByTestId('block-row')
     expect(within(row).getByRole('presentation')).toHaveAttribute('src', '/uploads/rocket.png')
@@ -179,7 +179,7 @@ describe('BlocksEditor: insert between', () => {
 
   it('initialises a new block with field defaults', async () => {
     const user = userEvent.setup()
-    const withDefault = { name: 'quote', label: 'Quote', fields: [{ name: 'text', type: 'string', default: 'Say something' }] }
+    const withDefault: BlockDefinition = { name: 'quote', label: 'Quote', fields: [{ name: 'text', type: 'string', default: 'Say something' }] }
     render(<BlocksEditor field={{ ...field, blocks: [heading, withDefault] }} value={[three[0]]} onChange={onChange} />)
     await user.click(screen.getAllByRole('button', { name: 'Insert a section here' })[1])
     await user.click(screen.getByRole('menuitem', { name: /quote/i }))
@@ -222,7 +222,7 @@ describe('BlocksEditor: empty state', () => {
 })
 
 describe('BlocksEditor with a single block type is a repeater', () => {
-  const article = { name: 'article', label: 'Article', fields: [{ name: 'title', type: 'string' }, { name: 'link', type: 'string' }] }
+  const article: BlockDefinition = { name: 'article', label: 'Article', fields: [{ name: 'title', type: 'string' }, { name: 'link', type: 'string' }] }
   const list: FieldDefinition = { name: 'items', type: 'blocks', label: 'Articles', blocks: [article] }
   const items = [
     { _type: 'article', _id: 'a1', title: 'Mapping', link: '' },

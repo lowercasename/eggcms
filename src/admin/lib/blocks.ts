@@ -2,7 +2,7 @@
 // Generic rules for the blocks field: how a block is previewed, iconed,
 // described and created. Nothing here knows any particular block type.
 import { icons, Layers, AlignLeft, Heading2, Image, Paperclip, Link, Square, type LucideIcon } from 'lucide-react'
-import type { BlockDefinition, FieldDefinition } from '../types'
+import type { BlockDefinition, FieldDefinition, FieldType } from '../types'
 import { getFieldLabel } from '../types'
 import { joinWords, plural, singularize } from './words'
 
@@ -25,7 +25,7 @@ export function makeBlock(def: BlockDefinition): BlockValue {
   return block
 }
 
-const TEXT_TYPES = new Set(['string', 'text', 'slug', 'select'])
+const TEXT_TYPES: ReadonlySet<FieldType> = new Set<FieldType>(['string', 'text', 'slug', 'select'])
 
 export function stripHtml(html: string): string {
   return html

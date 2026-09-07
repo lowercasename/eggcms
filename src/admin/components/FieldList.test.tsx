@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import FieldList from './FieldList'
 import type { EditorProps } from '../editors/types'
+import type { FieldType } from '../types'
 
 const FakeInput = ({ field, value, onChange }: EditorProps) => (
   <input
@@ -85,7 +86,7 @@ describe('FieldList', () => {
 
   it('says plainly when there is no editor for a field type, rather than offering a text box', () => {
     render(
-      <FieldList fields={[{ name: 'mystery', type: 'whatever' }]} data={{ mystery: [1, 2] }} onChange={() => {}} editors={editors} />
+      <FieldList fields={[{ name: 'mystery', type: 'whatever' as FieldType }]} data={{ mystery: [1, 2] }} onChange={() => {}} editors={editors} />
     )
     expect(screen.queryByTestId('editor-mystery')).not.toBeInTheDocument()
     expect(screen.getByText(/no editor for “whatever” fields/i)).toBeInTheDocument()

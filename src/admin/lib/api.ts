@@ -1,5 +1,8 @@
 // src/admin/lib/api.ts
 
+import type { PublicSchema } from '../../lib/schema'
+import type { MediaItemResponse } from '../../lib/media'
+
 const BASE_URL = '/api'
 
 /** An error from the server, carrying its status and code so callers can tell "not found" from "broken". */
@@ -61,7 +64,7 @@ export const api = {
 
   // Schemas
   getSchemas: () =>
-    request<{ data: Array<{ name: string; label: string; type: string; labelField?: string; fields: Array<{ name: string; type: string; label?: string; required?: boolean; default?: unknown; placeholder?: string; options?: string[]; from?: string }> }>; siteName?: string }>('/schemas'),
+    request<{ data: PublicSchema[]; siteName?: string }>('/schemas'),
 
   // Content
   getContent: <T>(schema: string, drafts = true) =>
@@ -100,7 +103,7 @@ export const api = {
 
   // Media
   getMedia: () =>
-    request<{ data: Array<{ id: string; filename: string; path: string; mimetype: string; kind: string | null; size: number; created_at: string; references?: unknown[] }> }>('/media'),
+    request<{ data: MediaItemResponse[]; meta: { total: number } }>('/media'),
 
   uploadMedia: async (file: File) => {
     const formData = new FormData()

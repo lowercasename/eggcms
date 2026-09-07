@@ -17,6 +17,7 @@ import {
 import { sqlite } from '../db'
 import { describeReferences, findAllMediaReferences, findMediaReferences, type MediaReference } from '../lib/mediaReferences'
 import type { SchemaDefinition } from '../../lib/schema'
+import type { MediaItemResponse } from '../../lib/media'
 
 interface MediaItem {
   id: string
@@ -31,10 +32,9 @@ interface MediaItem {
   created_at: string
 }
 
-type MediaItemResponse = MediaItem & { kind: MediaKind | null; references?: MediaReference[] }
-
 function present(item: MediaItem, references?: MediaReference[]): MediaItemResponse {
-  return { ...item, path: toPublicUrl(item.path), kind: kindForMimeType(item.mimetype), references }
+  const { hash: _hash, hidden: _hidden, ...rest } = item
+  return { ...rest, path: toPublicUrl(item.path), kind: kindForMimeType(item.mimetype), references }
 }
 
 export function createMediaRoutes(schemas: SchemaDefinition[]) {

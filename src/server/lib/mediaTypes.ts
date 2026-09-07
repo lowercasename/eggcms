@@ -5,7 +5,9 @@
 // this is an allowlist rather than a denylist: anything not named here is
 // refused.
 
-export type MediaKind = 'image' | 'document' | 'audio' | 'video'
+import type { MediaKind } from '../../lib/media'
+
+export type { MediaKind }
 
 export const ALLOWED_MIME_TYPES: Record<string, MediaKind> = {
   // Images

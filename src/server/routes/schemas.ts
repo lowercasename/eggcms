@@ -1,49 +1,50 @@
 // src/server/routes/schemas.ts
 import { Hono } from 'hono'
-import type { SchemaDefinition } from '../../lib/schema'
+import type { BlockDefinition, FieldDefinition, PublicBlock, PublicField, PublicSchema, SchemaDefinition } from '../../lib/schema'
+
+/**
+ * The definitions as the admin sees them. A block may contain itself (a list
+ * of articles inside an article); the second visit is sent without fields so
+ * the mapping ends and the admin still knows the block's name and label.
+ */
+function mapField(f: FieldDefinition, seen: ReadonlySet<string>): PublicField {
+  return {
+    name: f.name,
+    type: f.type,
+    label: f.label,
+    required: f.required,
+    default: f.default,
+    placeholder: f.placeholder,
+    options: f.options,
+    from: f.from,
+    blocks: f.blocks?.map((b) => mapBlock(b, seen)),
+    block: f.block ? mapBlock(f.block, seen) : undefined,
+    collections: f.collections,
+    kinds: f.kinds,
+    toolbar: f.toolbar,
+  }
+}
+
+function mapBlock(b: BlockDefinition, seen: ReadonlySet<string>): PublicBlock {
+  const base = { name: b.name, label: b.label, icon: b.icon, description: b.description }
+  if (seen.has(b.name)) return { ...base, fields: [] }
+  const inner = new Set(seen).add(b.name)
+  return { ...base, fields: b.fields.map((f) => mapField(f, inner)) }
+}
 
 export function createSchemasRoute(schemas: SchemaDefinition[]) {
   const app = new Hono()
 
   // GET /schemas - List all schemas (public, for introspection)
   app.get('/schemas', (c) => {
-    const mapField = (f: typeof schemas[0]['fields'][0]): Record<string, unknown> => ({
-      name: f.name,
-      type: f.type,
-      label: f.label,
-      required: f.required,
-      default: f.default,
-      placeholder: f.placeholder,
-      options: f.options,
-      from: f.from,
-      // Include block definitions for blocks fields (array)
-      blocks: f.blocks?.map(mapBlock),
-      // Include block definition for single block field
-      block: f.block ? mapBlock(f.block) : undefined,
-      // Include collections restriction for link fields
-      collections: f.collections,
-      // Include accepted media kinds for file fields
-      kinds: f.kinds,
-      // Include toolbar option for richtext fields
-      toolbar: f.toolbar,
-    })
-
-    const mapBlock = (b: NonNullable<typeof schemas[0]['fields'][0]['blocks']>[0]) => ({
-      name: b.name,
-      label: b.label,
-      icon: b.icon,
-      description: b.description,
-      fields: b.fields.map(mapField),
-    })
-
-    const publicSchemas = schemas
-      .filter((s) => s.type !== 'block')
+    const publicSchemas: PublicSchema[] = schemas
+      .filter((s): s is SchemaDefinition & { type: 'singleton' | 'collection' } => s.type !== 'block')
       .map((s) => ({
         name: s.name,
         label: s.label,
         type: s.type,
         labelField: s.labelField,
-        fields: s.fields.map(mapField),
+        fields: s.fields.map((f) => mapField(f, new Set())),
       }))
     return c.json({ data: publicSchemas, siteName: process.env.SITE_NAME || 'EggCMS' })
   })
