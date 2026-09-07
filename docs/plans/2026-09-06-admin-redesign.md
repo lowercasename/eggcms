@@ -1,5 +1,15 @@
 <!-- Design handoff for the September 2026 admin redesign. Source: design_handoff_eggcms_admin bundle. -->
 
+> **Where the build differs from this handoff** (the code is right; this document is a snapshot):
+> - Interface font is Manrope, not Satoshi, so Latin and Cyrillic share weights.
+> - Drag and drop uses `@hello-pangea/dnd` by the grip handle only; there is no HTML5 drop-target styling.
+> - Rich text Heading / Sub-heading / Normal are icon buttons (H1, H2, ¶), not worded.
+> - There is no "Preview" header button (EggCMS has no preview URL).
+> - `text` and `block` are tall types too; Button and NoticeBar gained more variants.
+> - The media grid is `auto-fill, minmax(210px, 1fr)` rather than four fixed columns.
+> - The new-entry hint reads "Start here — this is the name shown across the website." and the empty list's action is "+ New".
+> - The entry list collapses to a 48px rail instead of disappearing.
+
 # Handoff: EggCMS admin redesign
 
 Repo: `lowercasename/eggcms`, branch `main`, scope `src/admin/` (React + Tailwind, Satoshi font already loaded via `index.css`, Lucide icons already in use).

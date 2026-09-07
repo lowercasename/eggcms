@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ImageSettingsModal from "./ImageSettingsModal";
+import { api } from "../../lib/api";
 
 describe("ImageSettingsModal", () => {
   const defaultProps = {
@@ -298,6 +299,29 @@ describe("ImageSettingsModal", () => {
       await user.click(screen.getByRole("button", { name: "Back" }));
 
       expect(screen.getByRole("dialog", { name: "Image settings" })).toBeInTheDocument();
+    });
+  });
+
+  describe("replacing the image is staged until Save", () => {
+    it("does not swap the image until Save, and Cancel leaves it alone", async () => {
+      const user = userEvent.setup();
+      const onReplace = vi.fn();
+      const onSave = vi.fn();
+      vi.mocked(api.getMedia).mockResolvedValue({
+        data: [{ id: "m1", filename: "new.png", path: "/uploads/new.png", mimetype: "image/png", kind: "image", size: 1, created_at: "2026-01-01T00:00:00.000Z" }],
+      } as never);
+      render(<ImageSettingsModal {...defaultProps} onReplace={onReplace} onSave={onSave} />);
+
+      await user.click(screen.getByRole("button", { name: "Replace image" }));
+      await user.click(await screen.findByRole("button", { name: /new\.png/ }));
+      // Back on the settings dialog, showing the new picture, nothing committed yet.
+      expect(screen.getByRole("dialog", { name: "Image settings" })).toBeInTheDocument();
+      expect(screen.getByRole("img")).toHaveAttribute("src", "/uploads/new.png");
+      expect(onReplace).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      expect(onReplace).toHaveBeenCalledWith("/uploads/new.png");
+      expect(onSave).toHaveBeenCalled();
     });
   });
 

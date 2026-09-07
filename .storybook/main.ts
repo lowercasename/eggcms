@@ -20,8 +20,9 @@ const config: StorybookConfig = {
       ...config.resolve,
       alias: [
         ...(Array.isArray(config.resolve?.alias) ? config.resolve!.alias : []),
-        // Stories talk to an in-memory library instead of the real server.
-        { find: /^(\.\.\/)+lib\/api$/, replacement: path.resolve(root, 'src/admin/lib/api.mock.ts') },
+        // Stories talk to an in-memory library instead of the real server,
+        // whichever relative form the import takes (./lib/api or ../../lib/api).
+        { find: /^(\.{1,2}\/)+lib\/api$/, replacement: path.resolve(root, 'src/admin/lib/api.mock.ts') },
         { find: '@', replacement: path.resolve(root, 'src') },
       ],
     }

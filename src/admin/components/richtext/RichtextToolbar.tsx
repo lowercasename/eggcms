@@ -29,8 +29,9 @@ interface RichtextToolbarProps {
 }
 
 /**
- * The one rich text toolbar. Bold/Italic/lists are icons; the things people
- * cannot guess from an icon (Heading, Normal, Link, Image) are worded.
+ * The one rich text toolbar. Formatting is icon-only (H1, H2 and ¶ for
+ * headings and normal text); Link and Image, which people cannot guess from
+ * an icon, are worded.
  */
 export default function RichtextToolbar({ editor, preset = 'full', size = 'md', onLink, onImage }: RichtextToolbarProps) {
   const isMinimal = preset === 'minimal'

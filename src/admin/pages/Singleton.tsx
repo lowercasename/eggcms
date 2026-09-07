@@ -19,6 +19,8 @@ export default function Singleton() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [justSaved, showJustSaved] = useJustSaved()
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
 
@@ -35,15 +37,22 @@ export default function Singleton() {
   useEffect(() => {
     if (!schema) return
     setLoading(true)
+    setLoadError('')
+    setError('')
     api
       .getSingleton(schema.name)
       .then((res) => {
         const { _meta, ...fields } = (res.data as Record<string, unknown>) || {}
         setData(fields)
       })
-      .catch(() => setData({}))
+      .catch((err) => {
+        // Settings that have never been saved start empty; anything else is a real failure.
+        const status = (err as { status?: number } | null)?.status
+        if (status === 404) setData({})
+        else setLoadError(err instanceof Error ? err.message : 'Request failed')
+      })
       .finally(() => setLoading(false))
-  }, [schema?.name])
+  }, [schema?.name, loadAttempt])
 
   const save = async () => {
     if (!schema) return
@@ -70,6 +79,17 @@ export default function Singleton() {
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center text-[15px] text-ink-2">Loading…</div>
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex-1 min-h-0 flex flex-col">
+        <EntryHeader title={schema.label} status={null} />
+        <NoticeBar variant="error" actions={<Button variant="secondary" onClick={() => setLoadAttempt((n) => n + 1)}>Try again</Button>}>
+          <b>{schema.label} could not be loaded.</b> {loadError}
+        </NoticeBar>
+      </div>
+    )
   }
 
   return (

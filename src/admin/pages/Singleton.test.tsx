@@ -56,6 +56,27 @@ describe('Singleton', () => {
     expect(await screen.findByText(/Saved just now/)).toBeInTheDocument()
   })
 
+  it('shows the load error instead of an empty form that could overwrite the real settings', async () => {
+    mockApi.getSingleton.mockRejectedValue(new Error('Request failed'))
+    render(
+      <DirtyStateProvider>
+        <Singleton />
+      </DirtyStateProvider>
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Request failed/)
+    expect(screen.queryByTestId('string-editor-siteName')).not.toBeInTheDocument()
+  })
+
+  it('starts empty when the settings have never been saved', async () => {
+    mockApi.getSingleton.mockRejectedValue(Object.assign(new Error('Not found'), { status: 404 }))
+    render(
+      <DirtyStateProvider>
+        <Singleton />
+      </DirtyStateProvider>
+    )
+    expect(await screen.findByTestId('string-editor-siteName')).toHaveValue('')
+  })
+
   it('asks before discarding changes', async () => {
     const user = userEvent.setup()
     render(

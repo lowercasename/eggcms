@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import ItemList from '../components/ItemList'
 import ItemEdit from './ItemEdit'
 import { useSchemas } from '../App'
-import { Button, EmptyState } from '../components/ui'
+import { Button, EmptyState, NoticeBar } from '../components/ui'
 import { entryNoun } from '../lib/words'
 import type { Schema } from '../types'
 
@@ -23,6 +23,7 @@ export default function Collection() {
   const { schemas } = useSchemas()
   const [items, setItems] = useState<Array<{ id: string }>>([])
   const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState('')
   const [listOpen, setListOpen] = useState(true)
 
   const schema = schemas.find((s) => s.name === params.schema && s.type === 'collection')
@@ -31,17 +32,21 @@ export default function Collection() {
     if (!schema) return
     api
       .getContent<{ id: string }>(schema.name)
-      .then((res) => setItems(res.data))
-      .catch(console.error)
+      .then((res) => {
+        setItems(res.data)
+        setListError('')
+      })
+      .catch((err) => setListError(err instanceof Error ? err.message : 'Request failed'))
   }
 
   useEffect(() => {
     if (!schema) return
     setLoading(true)
+    setListError('')
     api
       .getContent<{ id: string }>(schema.name)
       .then((res) => setItems(res.data))
-      .catch(console.error)
+      .catch((err) => setListError(err instanceof Error ? err.message : 'Request failed'))
       .finally(() => setLoading(false))
   }, [schema?.name])
 
@@ -66,6 +71,12 @@ export default function Collection() {
         {listOpen ? (
           loading ? (
             <div className="w-[250px] h-screen bg-panel border-r border-line-strong flex items-center justify-center text-[15px] text-ink-2">Loading…</div>
+          ) : listError ? (
+            <div className="w-[250px] h-screen bg-panel border-r border-line-strong flex flex-col">
+              <NoticeBar variant="error" className="!px-3.5 flex-wrap" actions={<Button variant="secondary" size="sm" onClick={refreshList}>Try again</Button>}>
+                <b>The list could not be loaded.</b> {listError}
+              </NoticeBar>
+            </div>
           ) : (
             <ItemList
               items={items}

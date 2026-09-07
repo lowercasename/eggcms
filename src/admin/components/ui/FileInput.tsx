@@ -3,7 +3,9 @@ import { type InputHTMLAttributes, useRef } from 'react'
 import Button, { type ButtonVariant } from './Button'
 import { Upload } from 'lucide-react'
 
-interface FileInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
+interface FileInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange' | 'id'> {
+  /** Goes on the visible button, so a field label can point at it. */
+  id?: string
   /** Called with the first selected file. */
   onChange?: (file: File | null) => void
   /** Called with every selected file. Use with `multiple`. */
@@ -21,6 +23,7 @@ export default function FileInput({
   variant = 'primary',
   accept,
   disabled,
+  id,
   ...props
 }: FileInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -45,7 +48,7 @@ export default function FileInput({
         className="hidden"
         {...props}
       />
-      <Button variant={variant} loading={loading} disabled={disabled} icon={<Upload aria-hidden />} onClick={() => inputRef.current?.click()}>
+      <Button id={id} variant={variant} loading={loading} disabled={disabled} icon={<Upload aria-hidden />} onClick={() => inputRef.current?.click()}>
         {label}
       </Button>
     </div>

@@ -43,7 +43,8 @@ export default function FormField({ field, children, chip, hint, labelWidth, hig
   const id = useId()
   const hintId = hint ? `${id}-hint` : undefined
   const label = getFieldLabel(field)
-  const control = { id, required: !!field.required, hintId }
+  const labelId = `${id}-label`
+  const control = { id, required: !!field.required, hintId, labelId }
 
   if (!isTallField(field)) {
     return (
@@ -76,7 +77,7 @@ export default function FormField({ field, children, chip, hint, labelWidth, hig
   return (
     <FieldControlProvider value={control}>
       <div data-field="tall" className={className}>
-        <FieldBlock id={id} label={label} required={field.required} chip={chipNode} hint={hint} hintId={hintId}>
+        <FieldBlock id={id} labelId={labelId} label={label} required={field.required} chip={chipNode} hint={hint} hintId={hintId}>
           {children}
         </FieldBlock>
       </div>

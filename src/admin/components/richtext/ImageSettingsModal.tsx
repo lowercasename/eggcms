@@ -34,8 +34,15 @@ export default function ImageSettingsModal({
   const [alt, setAlt] = useState(initialAlt)
   const [caption, setCaption] = useState(initialCaption)
   const [showReplace, setShowReplace] = useState(false)
+  // A replacement is only staged here; it is committed with Save, so Cancel
+  // really does cancel.
+  const [pendingSrc, setPendingSrc] = useState<string | null>(null)
+  const shownSrc = pendingSrc ?? src
 
-  const handleSave = () => onSave({ size, width: customWidth ? customWidth : null, alt, caption })
+  const handleSave = () => {
+    if (pendingSrc && pendingSrc !== src) onReplace(pendingSrc)
+    onSave({ size, width: customWidth ? customWidth : null, alt, caption })
+  }
 
   const handleWidthChange = (value: string) => setCustomWidth(value.replace(/[^0-9px]/g, ''))
   const handleWidthBlur = () => {
@@ -48,7 +55,7 @@ export default function ImageSettingsModal({
         title="Replace image"
         kinds={['image']}
         onSelect={(newSrc) => {
-          onReplace(newSrc)
+          setPendingSrc(newSrc)
           setShowReplace(false)
         }}
         onBack={() => setShowReplace(false)}
@@ -61,7 +68,7 @@ export default function ImageSettingsModal({
     <Modal title="Image settings" onClose={onClose} maxWidth="lg">
       <ModalBody className="flex flex-col gap-5">
         <div className="flex justify-center bg-page rounded-control p-4">
-          <img src={src} alt={alt} className="max-h-40 max-w-full object-contain rounded-[6px]" />
+          <img src={shownSrc} alt={alt} className="max-h-40 max-w-full object-contain rounded-[6px]" />
         </div>
 
         <div>

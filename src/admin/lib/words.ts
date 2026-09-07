@@ -1,7 +1,8 @@
 // src/admin/lib/words.ts
 // Small English helpers for the copy the admin writes about schema labels.
 
-const IRREGULAR: Record<string, string> = { people: 'person', children: 'child', men: 'man', women: 'woman' }
+const IRREGULAR: Record<string, string> = { people: 'person', children: 'child', men: 'man', women: 'woman', series: 'series', news: 'news' }
+const IRREGULAR_PLURAL: Record<string, string> = { person: 'people', child: 'children', man: 'men', woman: 'women', series: 'series', news: 'news' }
 
 /** "Sections" → "Section", "People" → "Person", "Blog Posts" → "Blog Post"; leaves "Address" alone. */
 export function singularize(label: string): string {
@@ -11,6 +12,8 @@ export function singularize(label: string): string {
   if (irregular) return label[0] === label[0].toUpperCase() ? irregular[0].toUpperCase() + irregular.slice(1) : irregular
   if (/ss$/i.test(label) || !/s$/i.test(label)) return label
   if (/ies$/i.test(label)) return label.slice(0, -3) + 'y'
+  // Addresses → Address, Boxes → Box, Churches → Church
+  if (/(ss|x|ch|sh)es$/i.test(label)) return label.slice(0, -2)
   return label.slice(0, -1)
 }
 
@@ -27,5 +30,9 @@ export function entryNoun(schemaLabel: string): string {
 /** "page", 3 → "pages"; "page", 1 → "page". */
 export function plural(noun: string, count: number): string {
   if (count === 1) return noun
-  return /s$/i.test(noun) ? noun : `${noun}s`
+  const irregular = IRREGULAR_PLURAL[noun.toLowerCase()]
+  if (irregular) return irregular
+  if (/(s|x|ch|sh)$/i.test(noun)) return /s$/i.test(noun) && !/ss$/i.test(noun) ? noun : `${noun}es`
+  if (/[^aeiou]y$/i.test(noun)) return `${noun.slice(0, -1)}ies`
+  return `${noun}s`
 }

@@ -9,12 +9,13 @@ interface StepperProps {
   max?: number
   step?: number
   'aria-label': string
+  id?: string
   placeholder?: string
   disabled?: boolean
 }
 
 /** A number control with big − and + buttons and a typeable mono value. */
-export default function Stepper({ value, onChange, min, max, step = 1, placeholder, disabled, ...props }: StepperProps) {
+export default function Stepper({ value, onChange, min, max, step = 1, id, placeholder, disabled, ...props }: StepperProps) {
   const current = typeof value === 'number' && !Number.isNaN(value) ? value : null
   // What is in the box while typing: "2." and "-" are on the way to a number
   // and must not be corrected under the person's fingers.
@@ -43,6 +44,7 @@ export default function Stepper({ value, onChange, min, max, step = 1, placehold
         <Minus className="w-[18px] h-[18px]" aria-hidden />
       </button>
       <input
+        id={id}
         type="text"
         inputMode="decimal"
         aria-label={props['aria-label']}

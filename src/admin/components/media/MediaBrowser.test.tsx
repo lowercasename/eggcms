@@ -112,8 +112,50 @@ describe('MediaBrowser in manage mode', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
     await waitFor(() => expect(api.deleteMedia).toHaveBeenCalledTimes(2))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Russian Anzacs\.jpg/)
-    expect(screen.getByRole('alert')).toHaveTextContent(/used by Australia/)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('1 file was not deleted')
+    expect(alert).toHaveTextContent(/Russian Anzacs\.jpg/)
+    expect(alert).toHaveTextContent(/used by Australia/)
+    // The selection is gone and the library was read again.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(api.getMedia).toHaveBeenCalledTimes(2)
+  })
+
+  it('forgets a pending delete confirmation when the selection changes', async () => {
+    render(<MediaBrowser mode="manage" />)
+    await screen.findByText('Russian Anzacs.jpg')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select mapping-2025.pdf' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete 1 file' }))
+    expect(screen.getByRole('button', { name: 'Yes, delete' })).toBeInTheDocument()
+
+    // Untick, tick something else: back to the first step, never straight to "Yes, delete".
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select mapping-2025.pdf' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select interview.mp3' }))
+    expect(screen.queryByRole('button', { name: 'Yes, delete' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete 1 file' })).toBeInTheDocument()
+  })
+
+  it('clears the selection when the search or filter changes, so nothing hidden gets deleted', async () => {
+    render(<MediaBrowser mode="manage" />)
+    await screen.findByText('Russian Anzacs.jpg')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Russian Anzacs.jpg' }))
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Documents 1' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows files whose type the server did not recognise, so they can still be deleted', async () => {
+    vi.mocked(api.getMedia).mockResolvedValue({
+      data: [...library, { id: '9', filename: 'mystery.bin', path: '/uploads/mystery.bin', mimetype: 'application/octet-stream', kind: null, size: 10, created_at: '2026-01-01T00:00:00.000Z', references: [] }],
+    } as never)
+    render(<MediaBrowser mode="manage" />)
+    expect(await screen.findByText('mystery.bin')).toBeInTheDocument()
+  })
+
+  it('says what went wrong when the library cannot be loaded', async () => {
+    vi.mocked(api.getMedia).mockRejectedValue(new Error('Request failed'))
+    render(<MediaBrowser mode="manage" />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not load/i)
   })
 
   it('uploads dropped files and lists them again afterwards', async () => {
@@ -134,7 +176,7 @@ describe('MediaBrowser in manage mode', () => {
     vi.mocked(api.getMedia).mockResolvedValue({ data: [] } as never)
     render(<MediaBrowser mode="manage" />)
     expect(await screen.findByText('No files yet')).toBeInTheDocument()
-    expect(screen.getByText(/Drag images and PDFs here/)).toBeInTheDocument()
+    expect(screen.getByText(/Drag images, PDFs, audio or video here/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Choose files' })).toBeInTheDocument()
   })
 })
@@ -156,6 +198,20 @@ describe('MediaBrowser in pick mode', () => {
     render(<MediaBrowser mode="pick" kinds={['image']} onPick={() => {}} />)
     await screen.findByText('Russian Anzacs.jpg')
     expect(screen.queryByRole('group', { name: 'Type' })).not.toBeInTheDocument()
+  })
+
+  it('refuses a dropped file of the wrong kind instead of attaching it', async () => {
+    const onPick = vi.fn()
+    render(<MediaBrowser mode="pick" kinds={['image']} onPick={onPick} />)
+    await screen.findByText('Russian Anzacs.jpg')
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.drop(screen.getByTestId('dropzone'), {
+      dataTransfer: { files: [new File(['a'], 'one.pdf', { type: 'application/pdf' })], items: [], types: ['Files'] },
+    })
+    expect(await screen.findByRole('alert')).toHaveTextContent(/one\.pdf/)
+    expect(screen.getByRole('alert')).toHaveTextContent(/only images/i)
+    expect(api.uploadMedia).not.toHaveBeenCalled()
+    expect(onPick).not.toHaveBeenCalled()
   })
 
   it('uploads a file and picks it straight away', async () => {

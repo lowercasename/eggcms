@@ -38,7 +38,7 @@ function present(item: MediaItem, references?: MediaReference[]): MediaItemRespo
 }
 
 export function createMediaRoutes(schemas: SchemaDefinition[]) {
-  const media = new Hono()
+  const media = new Hono<{ Variables: { user?: { email: string } } }>()
   const storage = createStorage()
 
 
@@ -68,7 +68,7 @@ export function createMediaRoutes(schemas: SchemaDefinition[]) {
     // can show "Used on 2 pages" and warn before a delete without a second
     // request (DELETE re-checks for itself). Visitors get no references: they
     // would name unpublished drafts.
-    const user = c.get('user') as { email: string } | undefined
+    const user = c.get('user')
     if (!user) {
       return c.json({ data: items.map((item) => present(item)), meta: { total: items.length } })
     }

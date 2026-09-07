@@ -2,10 +2,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { FolderOpen, Trash2 } from 'lucide-react'
 import { api } from '../../lib/api'
-import { formatSize, iconForKind, type MediaItem, type MediaKind } from '../../lib/media'
+import { formatSize, iconForKind, rejectWrongKinds, type MediaItem, type MediaKind } from '../../lib/media'
 import Dropzone from '../Dropzone'
 import MediaPickerDialog from './MediaPickerDialog'
 import { Button, FileInput } from '../ui'
+import { useFieldControl } from '../ui/FieldContext'
 
 interface MediaFieldProps {
   /** The stored upload path, or nothing. */
@@ -31,6 +32,7 @@ export default function MediaField({ value, onChange, kinds, noun, preview, plac
   const [error, setError] = useState('')
   const [showPicker, setShowPicker] = useState(false)
   const [entry, setEntry] = useState<MediaItem | null>(null)
+  const { id } = useFieldControl()
 
   const path = value || ''
 
@@ -58,6 +60,11 @@ export default function MediaField({ value, onChange, kinds, noun, preview, plac
   const upload = async (files: File[]) => {
     const file = files[0]
     if (!file) return
+    const { refused } = rejectWrongKinds([file], kinds)
+    if (refused.length > 0) {
+      setError(`${refused[0].name}: ${refused[0].message}`)
+      return
+    }
     setUploading(true)
     setError('')
     try {
@@ -97,7 +104,7 @@ export default function MediaField({ value, onChange, kinds, noun, preview, plac
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <FileInput variant="secondary" accept={accept} onFiles={upload} loading={uploading} label={uploading ? 'Uploading…' : 'Upload new'} />
+              <FileInput id={id} variant="secondary" accept={accept} onFiles={upload} loading={uploading} label={uploading ? 'Uploading…' : 'Upload new'} />
               <Button variant="secondary" icon={<FolderOpen aria-hidden />} onClick={() => setShowPicker(true)}>
                 Choose from library
               </Button>
@@ -111,7 +118,11 @@ export default function MediaField({ value, onChange, kinds, noun, preview, plac
         </div>
       </Dropzone>
 
-      {error && <p className="mt-2 mb-0 text-[14px] text-danger-text">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-2 mb-0 text-[14px] text-danger-text">
+          {error}
+        </p>
+      )}
 
       {showPicker && (
         <MediaPickerDialog

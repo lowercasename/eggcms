@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link as LinkIcon, ExternalLink, FileText, X } from 'lucide-react'
 import LinkModal from '../components/richtext/LinkModal'
 import { Button } from '../components/ui'
+import { useFieldControl } from '../components/ui/FieldContext'
 import type { EditorProps } from './types'
 
 interface LinkValue {
@@ -14,6 +15,7 @@ interface LinkValue {
 
 export default function LinkFieldEditor({ value, onChange }: EditorProps) {
   const [showModal, setShowModal] = useState(false)
+  const { id } = useFieldControl()
   const linkValue = value as LinkValue | null
 
   const displayText = linkValue ? (linkValue.type === 'internal' ? linkValue.label || linkValue.ref : linkValue.url) : null
@@ -28,7 +30,7 @@ export default function LinkFieldEditor({ value, onChange }: EditorProps) {
             <ExternalLink className="w-[17px] h-[17px] text-ink-2 shrink-0" aria-hidden />
           )}
           <span className={`flex-1 min-w-0 truncate text-ink ${linkValue.type === 'external' ? 'font-mono text-[15px]' : 'text-[16px]'}`}>{displayText}</span>
-          <Button variant="secondary" size="sm" onClick={() => setShowModal(true)}>
+          <Button id={id} variant="secondary" size="sm" onClick={() => setShowModal(true)}>
             Edit
           </Button>
           <Button variant="icon" size="sm" aria-label="Remove link" onClick={() => onChange(null)}>
@@ -36,7 +38,7 @@ export default function LinkFieldEditor({ value, onChange }: EditorProps) {
           </Button>
         </div>
       ) : (
-        <Button variant="secondary" icon={<LinkIcon aria-hidden />} onClick={() => setShowModal(true)}>
+        <Button id={id} variant="secondary" icon={<LinkIcon aria-hidden />} onClick={() => setShowModal(true)}>
           Choose link...
         </Button>
       )}

@@ -1,9 +1,11 @@
 // src/admin/editors/BlockEditor.tsx
 // Editor for a single block field: one group of fields, not an array.
 import FieldList from '../components/FieldList'
+import { useFieldControl } from '../components/ui/FieldContext'
 import type { EditorProps } from './types'
 
 export default function BlockEditor({ field, value, onChange }: EditorProps) {
+  const { labelId } = useFieldControl()
   const blockValue = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
   const def = field.block
 
@@ -12,7 +14,7 @@ export default function BlockEditor({ field, value, onChange }: EditorProps) {
   }
 
   return (
-    <div className="border-[1.5px] border-line-strong rounded-block bg-panel overflow-hidden">
+    <div role="group" aria-labelledby={labelId} className="border-[1.5px] border-line-strong rounded-block bg-panel overflow-hidden">
       <FieldList
         fields={def.fields}
         data={blockValue}

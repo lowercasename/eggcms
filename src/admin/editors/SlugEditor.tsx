@@ -18,8 +18,8 @@ function deriveSlug(from: string | string[] | undefined, formData: Record<string
 
 /**
  * A URL path shown in mono behind a leading slash. On a brand-new entry it
- * writes itself from the title and cannot be edited yet; afterwards it can be
- * typed over or regenerated.
+ * writes itself from its `from` field(s), usually the title, and cannot be
+ * edited yet; afterwards it can be typed over or regenerated.
  */
 export default function SlugEditor({ field, value, onChange, formData }: EditorProps) {
   const { id, required } = useFieldControl()

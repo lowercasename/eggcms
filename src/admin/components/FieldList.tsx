@@ -4,7 +4,6 @@ import type { EditorMap } from '../editors/types'
 import { editorMap as defaultEditors } from '../editors'
 import FormField, { isTallField } from './ui/FormField'
 import Card from './ui/Card'
-import StringEditor from '../editors/StringEditor'
 
 interface FieldListProps {
   fields: FieldDefinition[]
@@ -44,6 +43,15 @@ function blocksChip(field: FieldDefinition, value: unknown): string {
   return `${n} block${n === 1 ? '' : 's'}`
 }
 
+/** Shown in place of an editor for a field type the admin does not know, so its value is left alone. */
+function UnsupportedField({ field }: { field: FieldDefinition }) {
+  return (
+    <p role="note" className="m-0 px-3 py-[11px] text-[15px] text-ink-2 border-[1.5px] border-dashed border-line-strong rounded-control">
+      There is no editor for “{field.type}” fields in this version of the admin. The value is kept as it is.
+    </p>
+  )
+}
+
 /**
  * Renders a schema's fields in order, applying the layout rule: consecutive
  * scalar fields share one white card, tall fields take the full width.
@@ -52,7 +60,7 @@ export default function FieldList({ fields, data, onChange, labelWidth, highligh
   const map = editors ?? defaultEditors
 
   const renderField = (field: FieldDefinition) => {
-    const Editor = map[field.type] || map.string || StringEditor
+    const Editor = map[field.type] ?? UnsupportedField
     const isHighlighted = highlight?.field === field.name
     return (
       <FormField

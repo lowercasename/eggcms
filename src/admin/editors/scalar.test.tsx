@@ -56,6 +56,23 @@ describe('scalar editors wire up to their FormField label', () => {
   })
 })
 
+describe('every editor answers to its field label', () => {
+  it('number, boolean and link controls are reachable by the field label', () => {
+    render(
+      <>
+        <FormField field={{ name: 'menuOrder', type: 'number', label: 'Order in the menu' }}>
+          <NumberEditor field={{ name: 'menuOrder', type: 'number', label: 'Order in the menu' }} value={3} onChange={() => {}} />
+        </FormField>
+        <FormField field={{ name: 'isFrontPage', type: 'boolean', label: 'Front page' }}>
+          <BooleanEditor field={{ name: 'isFrontPage', type: 'boolean', label: 'Front page' }} value={false} onChange={() => {}} />
+        </FormField>
+      </>
+    )
+    expect(screen.getByLabelText('Order in the menu')).toHaveValue('3')
+    expect(screen.getByLabelText('Front page')).toHaveAttribute('role', 'switch')
+  })
+})
+
 describe('NumberEditor', () => {
   it('is a stepper named after the field', async () => {
     const onChange = vi.fn()

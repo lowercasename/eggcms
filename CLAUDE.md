@@ -41,7 +41,7 @@ Rich text fields accept `toolbar: 'minimal'` to show only Bold, Italic and Link 
 **Important:** When adding new schema properties, you must update THREE places:
 1. `src/lib/schema.ts` - Add to `SchemaDefinition` interface
 2. `src/admin/types/index.ts` - Add to `Schema` interface
-3. `src/server/routes/content.ts` - Include in `/schemas` API response mapping
+3. `src/server/routes/schemas.ts` - Include in `/schemas` API response mapping
 
 ## Adding New Field Types
 
@@ -56,7 +56,7 @@ To add a new field type (e.g., `f.myField()`), update these files:
 ### 2. Admin Types (`src/admin/types/index.ts`)
 - Mirror any new `FieldDefinition` properties here
 
-### 3. API Schema Mapping (`src/server/routes/content.ts`)
+### 3. API Schema Mapping (`src/server/routes/schemas.ts`)
 - In the `mapField()` function inside `/schemas` route, include any new field properties so they're sent to the admin UI
 
 ### 4. Content Storage (`src/server/lib/content.ts`)
@@ -64,16 +64,16 @@ To add a new field type (e.g., `f.myField()`), update these files:
 - This ensures proper JSON.stringify on save and JSON.parse on load
 
 ### 5. Admin Editor (`src/admin/editors/`)
-- Create `MyFieldEditor.tsx` component
-- Props: `{ field: FieldDefinition; value: unknown; onChange: (v: unknown) => void; formData?: Record<string, unknown> }`
+- Create `MyFieldEditor.tsx` component taking `EditorProps` from `src/admin/editors/types.ts`
+- Read `useFieldControl()` for the control `id` (so the field label points at it) and the hint id
 
-### 6. Editor Registration (`src/admin/pages/ItemEdit.tsx`)
-- Import the editor
-- Add to `editorMap`: `myField: MyFieldEditor`
+### 6. Editor Registration (`src/admin/editors/index.ts`)
+- Add to `editorMap`: `myField: MyFieldEditor`. That one registry serves the top level, blocks and repeaters.
+- If the editor is tall (label above, full width), add the type to `TALL_TYPES` in `src/admin/components/ui/FormField.tsx`
+- A field type with no registered editor shows a "no editor" notice and leaves the value alone; it never falls back to a text box
 
-### 7. Nested Editor Support (if field can appear inside blocks)
-- Add to `editorMap` in `src/admin/editors/BlocksEditor.tsx`
-- Add to `editorMap` in `src/admin/editors/BlockEditor.tsx`
+### 7. Storybook
+- Add a story next to the editor so it renders in `bun run test:stories`
 
 ### Example: The `block` field type
 
@@ -92,8 +92,7 @@ Files modified when adding `block`:
 - `src/server/routes/content.ts` - Added `block` mapping in `mapField()`
 - `src/server/lib/content.ts` - Added 'block' to `JSON_FIELD_TYPES`
 - `src/admin/editors/BlockEditor.tsx` - Created editor component
-- `src/admin/pages/ItemEdit.tsx` - Added to editorMap
-- `src/admin/editors/BlocksEditor.tsx` - Added to editorMap for nesting
+- `src/admin/editors/index.ts` - Added to `editorMap`
 
 ### Example: The `file` field type
 
@@ -111,7 +110,7 @@ Files modified when adding `file`:
 - `src/admin/types/index.ts` - Added `kinds?: string[]`
 - `src/server/routes/schemas.ts` - Added `kinds` mapping in `mapField()`
 - `src/admin/editors/FileEditor.tsx` - Created editor component (drop target + library picker)
-- `src/admin/pages/ItemEdit.tsx` + `BlocksEditor.tsx` + `BlockEditor.tsx` - Added to editorMaps
+- `src/admin/editors/index.ts` - Added to `editorMap`
 
 No entry in `JSON_FIELD_TYPES`: the value is a string, like `image`.
 
@@ -135,24 +134,23 @@ Files modified when adding `link`:
 - `src/server/routes/schemas.ts` - Added `collections` mapping in `mapField()`
 - `src/server/lib/content.ts` - Added 'link' to `JSON_FIELD_TYPES`
 - `src/admin/editors/LinkFieldEditor.tsx` - Created editor component (reuses LinkModal)
-- `src/admin/pages/ItemEdit.tsx` - Added to editorMap
-- `src/admin/editors/BlocksEditor.tsx` + `BlockEditor.tsx` - Added to editorMaps for nesting
+- `src/admin/editors/index.ts` - Added to `editorMap`
 
 ## Admin design system
 
-The admin follows the design handoff in `docs/plans/2026-09-06-admin-redesign.md`. The rules that matter when adding UI:
+The admin follows the design handoff in `docs/plans/2026-09-06-admin-redesign.md` (a snapshot; the note at its top lists where the build differs). The rules that matter when adding UI:
 
 - **Tokens, never hex.** Colours, radii, shadows, fonts (Manrope: it covers Latin and Cyrillic at matching weights) and motion live in `@theme` in `src/admin/index.css` and are used as Tailwind utilities (`bg-page`, `text-ink-2`, `border-line-input`, `rounded-panel`, `shadow-menu`). No literal hex in `src/admin/**/*.tsx`.
-- **Layout by field type.** `FormField` (`src/admin/components/ui/FormField.tsx`) renders scalar fields as a `FieldRow` (label in a fixed 180px column, 140px inside blocks) and tall fields (`richtext`, `text`, `blocks`, `block`, `image`, `file`) as a `FieldBlock` (label above, type chip, actions on the right). `FieldList` groups consecutive scalar rows into one card. A new field type needs no layout code: register its editor in `src/admin/editors/index.ts` and, if it is tall, add it to `TALL_TYPES`.
+- **Layout by field type.** `FormField` (`src/admin/components/ui/FormField.tsx`) renders scalar fields as a `FieldRow` (label in a fixed 180px column, 140px inside a block, 100px inside repeater items) and tall fields (`richtext`, `text`, `blocks`, `block`, `image`, `file`) as a `FieldBlock` (label above, type chip, actions on the right). `FieldList` groups consecutive scalar rows into one card. A new field type needs no layout code: register its editor in `src/admin/editors/index.ts` and, if it is tall, add it to `TALL_TYPES`.
 - **Editors wire themselves to the label.** Read `useFieldControl()` for the control `id` / hint id. Editors that need buttons in the label row (Full screen, Collapse all) render them inside `<FieldActions>`.
 - **Primitives** in `src/admin/components/ui/`: `Button` (primary / secondary / destructive / destructive-solid / dark / structure / ghost / icon), `Chip` (published / edited / draft / type), `SegmentedControl`, `SearchInput`, `NoticeBar` (unsaved / info / selection / published / error), `EmptyState`, `Stepper`, `Toggle`, `InsertDivider`, `TypeMenu`, `OverflowMenu`. Status is always icon + word, never colour alone.
-- **Blocks.** `BlocksEditor` renders any block schema: accordion (`openId`), insert-between dividers with a `TypeMenu`, ↑/↓ plus HTML5 drag, inline confirm-remove, and an explaining empty state. Row previews come from `getBlockPreview()` in `src/admin/lib/blocks.ts` (first non-empty text-like field). A blocks field with exactly one block type renders as a numbered `RepeaterEditor`.
-- **Media.** `MediaBrowser` (`mode: 'manage' | 'pick'`) is the one way media is browsed; the Media page and every "Choose from library" dialog use it. `GET /api/media` returns `references` for each file so cards can say "Used on 2 pages".
+- **Blocks.** `BlocksEditor` renders any block schema: accordion (`openId`), insert-between dividers with a `TypeMenu`, ↑/↓ plus drag by the grip handle (`@hello-pangea/dnd`), inline confirm-remove, and an explaining empty state. A block whose first image field is set shows it as the row thumbnail. Row previews come from `getBlockPreview()` in `src/admin/lib/blocks.ts` (first non-empty text-like field). A blocks field with exactly one block type renders as a numbered `RepeaterEditor`.
+- **Media.** `MediaBrowser` (`mode: 'manage' | 'pick'`) is how the library and every "Choose from library" dialog browse media (the link dialog's File tab has its own short list). `GET /api/media` returns `references` for each file, for signed-in users only, so cards can say "Used on 2 pages".
 - **Motion** lives in `src/admin/components/motion/` (`Collapse`, `useFlip`, `pinElement`) and honours `prefers-reduced-motion`.
 
 ## Storybook
 
-Every primitive, editor, media view and the handoff screens have stories (`*.stories.tsx` next to the component; screens in `src/admin/stories/`). Stories run against an in-memory API (`src/admin/lib/api.mock.ts`, aliased in `.storybook/main.ts`) seeded from `src/admin/lib/sample.ts`.
+Nearly every primitive, editor, media view and the handoff screens have stories (`*.stories.tsx` next to the component; screens in `src/admin/stories/`). Stories run against an in-memory API (`src/admin/lib/api.mock.ts`, aliased in `.storybook/main.ts`) seeded from `src/admin/lib/sample.ts`.
 
 ```bash
 bun run storybook        # dev server on :6006
@@ -160,7 +158,7 @@ bun run build-storybook  # static build
 bun run test:stories     # render every story in headless Chromium with axe a11y checks
 ```
 
-`bun run test` runs the unit project only; `bunx vitest run` runs both. The story project needs Playwright's Chromium (`bunx playwright install chromium`).
+`bun run test` runs the unit project once (`test:watch` keeps it running); `bunx vitest run` runs both. The story project needs Playwright's Chromium (`bunx playwright install chromium`).
 
 ## API Response Structure
 

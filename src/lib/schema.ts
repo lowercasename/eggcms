@@ -102,8 +102,8 @@ export interface SchemaDefinition {
   fields: FieldDefinition[]
   drafts?: boolean
   labelField?: string  // Field to use as display label in lists (defaults to 'title')
-  icon?: string  // Blocks only: a Lucide icon name (e.g. 'book-open') shown in the admin
-  description?: string  // Blocks only: one sentence shown when choosing a block type
+  icon?: string  // Blocks only (ignored elsewhere): a Lucide icon name (e.g. 'book-open') shown in the admin
+  description?: string  // Blocks only (ignored elsewhere): one sentence shown when choosing a block type
 }
 
 export type BlockDefinition = SchemaDefinition & { type: 'block' }

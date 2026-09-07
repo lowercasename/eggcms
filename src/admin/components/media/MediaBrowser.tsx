@@ -2,14 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Upload, SearchX, Trash2 } from 'lucide-react'
 import { api } from '../../lib/api'
-import {
-  KIND_LABELS,
-  KIND_ORDER,
-  sortMedia,
-  type MediaItem,
-  type MediaKind,
-  type MediaSort,
-} from '../../lib/media'
+import { KIND_LABELS, KIND_ORDER, describeKinds, rejectWrongKinds, sortMedia, type MediaItem, type MediaKind, type MediaSort } from '../../lib/media'
 import Dropzone from '../Dropzone'
 import MediaCard from './MediaCard'
 import { Button, EmptyState, FileInput, NoticeBar, SearchInput, SegmentedControl, Select } from '../ui'
@@ -58,7 +51,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
-  const [failures, setFailures] = useState<Array<{ name: string; message: string }>>([])
+  const [failures, setFailures] = useState<{ op: 'upload' | 'delete'; items: Array<{ name: string; message: string }> }>({ op: 'upload', items: [] })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<MediaSort>('newest')
@@ -67,13 +60,18 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
   const [deleting, setDeleting] = useState(false)
 
   const allowedKinds = kinds && kinds.length > 0 ? kinds : KIND_ORDER
+  const restricted = !!kinds && kinds.length > 0
 
   const fetchMedia = () => {
     setLoading(true)
+    setError('')
     api
       .getMedia()
-      .then((res) => setItems((res.data as MediaItem[]).filter((i) => i.kind !== null && allowedKinds.includes(i.kind))))
-      .catch((err) => setError(err.message))
+      // A picker shows only the kinds its field takes; the library shows
+      // everything, including files whose type was not recognised, so they can
+      // still be found and deleted.
+      .then((res) => setItems((res.data as MediaItem[]).filter((i) => !restricted || (i.kind !== null && allowedKinds.includes(i.kind)))))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load the library'))
       .finally(() => setLoading(false))
   }
 
@@ -82,15 +80,26 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // A selection only means anything while the same files are on screen, and a
+  // pending "Yes, delete" only while the selection it was asked about stands.
+  useEffect(() => {
+    setSelected(new Set())
+  }, [query, filter])
+  useEffect(() => {
+    setConfirmingDelete(false)
+  }, [selected])
+
   // Uploads run one at a time so dropping a folder of PDFs doesn't open fifty
   // parallel requests, and so one rejected file doesn't take the rest with it.
-  const uploadFiles = async (files: File[]) => {
+  const uploadFiles = async (dropped: File[]) => {
+    if (dropped.length === 0) return
+    const { accepted: files, refused } = restricted ? rejectWrongKinds(dropped, allowedKinds) : { accepted: dropped, refused: [] }
+    setError('')
+    setFailures({ op: 'upload', items: refused })
     if (files.length === 0) return
     setUploading(true)
-    setError('')
-    setFailures([])
     setProgress({ done: 0, total: files.length })
-    const failed: Array<{ name: string; message: string }> = []
+    const failed: Array<{ name: string; message: string }> = [...refused]
     let lastPath: string | null = null
     for (const [index, file] of files.entries()) {
       try {
@@ -101,7 +110,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
       }
       setProgress({ done: index + 1, total: files.length })
     }
-    setFailures(failed)
+    setFailures({ op: 'upload', items: failed })
     setUploading(false)
     setProgress(null)
     if (mode === 'pick' && lastPath && files.length === 1) {
@@ -122,7 +131,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
         failed.push({ name: item.filename, message: err instanceof Error ? err.message : 'Delete failed' })
       }
     }
-    setFailures(failed)
+    setFailures({ op: 'delete', items: failed })
     setSelected(new Set())
     setConfirmingDelete(false)
     setDeleting(false)
@@ -213,13 +222,13 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
         </NoticeBar>
       )}
 
-      {error && <NoticeBar variant="error">{error}</NoticeBar>}
-      {failures.length > 0 && (
+      {error && <NoticeBar variant="error">Could not load the library: {error}</NoticeBar>}
+      {failures.items.length > 0 && (
         <NoticeBar variant="error">
           <b>
-            {failures.length} {failures.length === 1 ? 'file was' : 'files were'} not {deleting ? 'deleted' : 'changed'}:
+            {failures.items.length} {failures.items.length === 1 ? 'file was' : 'files were'} not {failures.op === 'delete' ? 'deleted' : 'added'}:
           </b>{' '}
-          {failures.map((f, i) => (
+          {failures.items.map((f, i) => (
             <span key={f.name}>
               {i > 0 && ' · '}
               <span className="font-semibold">{f.name}</span> — {f.message}
@@ -236,7 +245,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
             dashed="strong"
             icon={<Upload />}
             title="No files yet"
-            description="Drag images and PDFs here, or choose them from your computer."
+            description={restricted ? `Drag files here, or choose them from your computer. This field takes ${describeKinds(allowedKinds)}.` : 'Drag images, PDFs, audio or video here, or choose them from your computer.'}
             action={<FileInput multiple onFiles={uploadFiles} loading={uploading} label="Choose files" />}
           />
         ) : visible.length === 0 ? (

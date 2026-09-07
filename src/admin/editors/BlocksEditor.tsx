@@ -4,10 +4,11 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import { Layers } from 'lucide-react'
 import type { BlockDefinition } from '../types'
 import { getFieldLabel } from '../types'
-import { describeBlockType, iconForBlock, makeBlock, singularize, type BlockValue } from '../lib/blocks'
+import { describeBlockType, iconForBlock, makeBlock, singularize, indefinite, type BlockValue } from '../lib/blocks'
 import { useFlip } from '../components/motion/useFlip'
 import { pinElement } from '../components/motion/pin'
 import FieldActions from '../components/ui/FieldActions'
+import { useFieldControl } from '../components/ui/FieldContext'
 import { Button, EmptyState, InsertDivider, TypeMenu } from '../components/ui'
 import BlockRow from './BlockRow'
 import RepeaterEditor from './RepeaterEditor'
@@ -30,6 +31,7 @@ export default function BlocksEditor({ field, value, onChange }: EditorProps) {
   const defs = field.blocks ?? []
   const label = getFieldLabel(field)
   const noun = singularize(label).toLowerCase()
+  const { labelId } = useFieldControl()
 
   const [openId, setOpenId] = useState<string | null>(null)
   const [insertAt, setInsertAt] = useState<number | null>(null)
@@ -115,7 +117,7 @@ export default function BlocksEditor({ field, value, onChange }: EditorProps) {
 
   const insertPoint = (at: number) => (
     <div key={`insert-${at}`}>
-      <InsertDivider label={`Insert a ${noun} here`} active={insertAt === at} onClick={() => setInsertAt(insertAt === at ? null : at)} />
+      <InsertDivider label={`Insert ${indefinite(noun)} here`} active={insertAt === at} onClick={() => setInsertAt(insertAt === at ? null : at)} />
       {insertAt === at && (
         <div className="flex justify-center -mt-1 mb-2">
           <TypeMenu
@@ -149,7 +151,7 @@ export default function BlocksEditor({ field, value, onChange }: EditorProps) {
   }
 
   return (
-    <div ref={listRef} className="flex flex-col">
+    <div ref={listRef} role="group" aria-labelledby={labelId} className="flex flex-col">
       <FieldActions>
         <Button
           variant="secondary"

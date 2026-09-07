@@ -99,6 +99,18 @@ describe("LinkModal external URL normalization", () => {
   });
 });
 
+describe("LinkModal when the library cannot be read", () => {
+  it("says so rather than claiming the library is empty", async () => {
+    vi.mocked(api.getMedia).mockRejectedValue(new Error("Request failed"));
+    render(
+      <LinkModal onSaveExternal={vi.fn()} onSaveInternal={vi.fn()} onRemove={vi.fn()} onClose={vi.fn()} />
+    );
+    fireEvent.click(screen.getByRole("tab", { name: /^file$/i }));
+    expect(await screen.findByText(/could not load the files/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no files in the library/i)).not.toBeInTheDocument();
+  });
+});
+
 describe("LinkModal file links", () => {
   const open = (props: Partial<React.ComponentProps<typeof LinkModal>> = {}) =>
     render(

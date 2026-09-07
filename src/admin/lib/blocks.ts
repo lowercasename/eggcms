@@ -104,7 +104,7 @@ export function iconByName(name: string | undefined): LucideIcon | null {
   return (icons as Record<string, LucideIcon>)[pascal] ?? null
 }
 
-/** The schema's icon, or a guess from what the block's fields mostly are. */
+/** The schema's icon, or a guess by priority: a nested list, then an image, a file, prose, a link, then a heading if every field is text. */
 export function iconForBlock(def: BlockDefinition): LucideIcon {
   const named = iconByName(def.icon)
   if (named) return named

@@ -10,8 +10,9 @@
     "build:server": "bun build src/server/index.ts --outdir dist/server --target bun",
     "build:admin": "vite build",
     "start": "bun dist/server/index.js",
-    "test": "vitest --project unit",
-    "test:stories": "vitest --project storybook",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:stories": "vitest run --project storybook",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

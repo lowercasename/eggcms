@@ -7,13 +7,15 @@ interface ToggleProps {
   /** The words shown beside the switch for off and on. */
   words?: [string, string]
   'aria-label'?: string
+  id?: string
 }
 
 /** A 52×28 switch followed by the word for its state, so it never relies on colour. */
-export default function Toggle({ checked, onChange, disabled, words = ['No', 'Yes'], ...props }: ToggleProps) {
+export default function Toggle({ checked, onChange, disabled, words = ['No', 'Yes'], id, ...props }: ToggleProps) {
   return (
     <div className="inline-flex items-center gap-[11px]">
       <button
+        id={id}
         type="button"
         role="switch"
         aria-checked={checked}

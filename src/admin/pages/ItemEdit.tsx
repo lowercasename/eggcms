@@ -33,6 +33,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const [justSaved, showJustSaved] = useJustSaved()
@@ -64,6 +65,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
 
   const isDraft = isNew ? true : !!(data._meta as { draft?: boolean } | undefined)?.draft
 
+  const [loadAttempt, setLoadAttempt] = useState(0)
   useEffect(() => {
     if (isNew) {
       const defaults: Record<string, unknown> = {}
@@ -75,12 +77,13 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       return
     }
     setLoading(true)
+    setLoadError('')
     api
       .getItem(schema.name, itemId)
       .then((res) => setData(res.data as Record<string, unknown>))
-      .catch((err) => setError(err.message))
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Request failed'))
       .finally(() => setLoading(false))
-  }, [itemId, schema.name, schema.fields, isNew])
+  }, [itemId, schema.name, schema.fields, isNew, loadAttempt])
 
   const save = async (asDraft: boolean, source: Record<string, unknown> = data) => {
     setSaving(true)
@@ -135,6 +138,17 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center text-[15px] text-ink-2">Loading…</div>
+  }
+
+  // Never show an empty form for a record that failed to load: saving it would wipe the real one.
+  if (loadError) {
+    return (
+      <div className="flex-1 min-h-0 flex flex-col">
+        <NoticeBar variant="error" actions={<Button variant="secondary" onClick={() => setLoadAttempt((n) => n + 1)}>Try again</Button>}>
+          <b>This {noun} could not be loaded.</b> {loadError}
+        </NoticeBar>
+      </div>
+    )
   }
 
   const title = getItemLabel(data as { id: string }, labelField)

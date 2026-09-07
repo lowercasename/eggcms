@@ -2,6 +2,18 @@
 
 const BASE_URL = '/api'
 
+/** An error from the server, carrying its status and code so callers can tell "not found" from "broken". */
+export class ApiError extends Error {
+  status: number
+  code?: string
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
@@ -15,10 +27,17 @@ async function request<T>(
     credentials: 'include',
   })
 
-  const data = await response.json()
+  // A proxy or crash can answer with HTML; do not let that become a JSON parse error.
+  const text = await response.text()
+  let data: any = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = null
+  }
 
   if (!response.ok) {
-    throw new Error(data.error?.message || 'Request failed')
+    throw new ApiError(data?.error?.message || `The server answered ${response.status}`, response.status, data?.error?.code)
   }
 
   return data

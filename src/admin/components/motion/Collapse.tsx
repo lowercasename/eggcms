@@ -74,8 +74,7 @@ export default function Collapse({ open, children, appear = false, duration = 20
     <div
       data-testid="collapse"
       aria-hidden={!open || undefined}
-      // @ts-expect-error React 19 accepts the boolean attribute; older typings do not.
-      inert={!open ? '' : undefined}
+      inert={!open || undefined}
       onTransitionEnd={onTransitionEnd}
       className={className}
       style={{

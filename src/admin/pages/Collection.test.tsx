@@ -29,6 +29,17 @@ beforeEach(() => {
 })
 
 describe('Collection list panel', () => {
+  it('says the list could not be loaded rather than showing an empty collection', async () => {
+    mockApi.getContent.mockRejectedValue(new Error('Request failed'))
+    render(
+      <DirtyStateProvider>
+        <Collection />
+      </DirtyStateProvider>
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Request failed/)
+    expect(screen.queryByText(/No blog posts yet/)).not.toBeInTheDocument()
+  })
+
   it('collapses to a rail that can reopen it, even with no entry chosen', async () => {
     const user = userEvent.setup()
     render(

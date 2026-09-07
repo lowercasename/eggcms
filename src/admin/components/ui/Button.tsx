@@ -9,7 +9,7 @@ export type ButtonVariant =
   | 'destructive-solid' // red fill – the confirming half of a destructive pair
   | 'dark'             // ink fill ("Done writing")
   | 'structure'        // white, slate border – only for adding structure
-  | 'ghost'            // borderless, for overflow menus and toolbars
+  | 'ghost'            // borderless
   | 'icon'             // square, bordered, needs aria-label
 
 export type ButtonSize = 'md' | 'sm'

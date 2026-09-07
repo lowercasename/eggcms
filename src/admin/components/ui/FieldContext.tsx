@@ -7,6 +7,8 @@ export interface FieldControl {
   required: boolean
   /** id of the helper text, for aria-describedby. */
   hintId?: string
+  /** id of the label element, for editors that are a group rather than one control. */
+  labelId?: string
 }
 
 const FieldControlContext = createContext<FieldControl | null>(null)

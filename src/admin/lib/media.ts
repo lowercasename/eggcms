@@ -84,6 +84,40 @@ export function describeUsage(refs: MediaReference[] | undefined): { text: strin
   return { text: `Used in ${refs.length} places`, used: true }
 }
 
+/** The kind a file will be filed under, judged from its browser-reported type and name. */
+export function kindOfFile(file: File): MediaKind {
+  const type = file.type || ''
+  if (type.startsWith('image/')) return 'image'
+  if (type.startsWith('audio/')) return 'audio'
+  if (type.startsWith('video/')) return 'video'
+  const ext = file.name.toLowerCase().split('.').pop() || ''
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'].includes(ext)) return 'image'
+  if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) return 'audio'
+  if (['mp4', 'webm', 'mov', 'm4v'].includes(ext)) return 'video'
+  return 'document'
+}
+
+/** "only images", "only documents or audio" – what a field will take. */
+export function describeKinds(kinds: MediaKind[]): string {
+  const words = kinds.map((k) => KIND_LABELS[k].toLowerCase())
+  if (words.length === 1) return `only ${words[0]}`
+  return `only ${words.slice(0, -1).join(', ')} or ${words[words.length - 1]}`
+}
+
+const KIND_NOUN: Record<MediaKind, string> = { image: 'an image', document: 'a document', audio: 'an audio file', video: 'a video' }
+
+/** Splits dropped files into those a field takes and those it must refuse, with a sentence for each refusal. */
+export function rejectWrongKinds(files: File[], kinds: MediaKind[]): { accepted: File[]; refused: Array<{ name: string; message: string }> } {
+  const accepted: File[] = []
+  const refused: Array<{ name: string; message: string }> = []
+  for (const file of files) {
+    const kind = kindOfFile(file)
+    if (kinds.includes(kind)) accepted.push(file)
+    else refused.push({ name: file.name, message: `This is ${KIND_NOUN[kind]}; this field takes ${describeKinds(kinds)}.` })
+  }
+  return { accepted, refused }
+}
+
 export function sortMedia(items: MediaItem[], sort: MediaSort): MediaItem[] {
   const copy = [...items]
   switch (sort) {

@@ -109,6 +109,31 @@ describe('ItemEdit header', () => {
   })
 })
 
+describe('ItemEdit when things go wrong', () => {
+  it('shows the load error instead of an empty, publishable form', async () => {
+    mockApi.getItem.mockRejectedValue(new Error('Request failed'))
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Request failed/)
+    expect(screen.queryByTestId('string-editor-title')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('keeps the edits and says why when a save fails', async () => {
+    mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'South Pacific', _meta: { draft: false } } })
+    mockApi.updateItem.mockRejectedValue(new Error('Server said no'))
+    const user = userEvent.setup()
+    renderEdit(<ItemEdit schema={schema} itemId="123" refreshList={refreshList} />)
+    await loaded()
+    await user.type(screen.getByTestId('string-editor-title'), '!')
+    await user.click(screen.getByRole('button', { name: 'Publish changes' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Server said no')
+    expect(screen.getByRole('status')).toHaveTextContent('1 unsaved change.')
+    expect(screen.getByRole('button', { name: 'Publish changes' })).toBeEnabled()
+    expect(screen.getByTestId('string-editor-title')).toHaveValue('South Pacific!')
+  })
+})
+
 describe('ItemEdit unsaved changes', () => {
   beforeEach(() => {
     mockApi.getItem.mockResolvedValue({ data: { id: '123', title: 'South Pacific', subtitle: '', _meta: { draft: false } } })

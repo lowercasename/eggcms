@@ -83,11 +83,12 @@ describe('FieldList', () => {
     expect(screen.getByText('Empty')).toBeInTheDocument()
   })
 
-  it('falls back to a plain text input for an unknown field type', () => {
+  it('says plainly when there is no editor for a field type, rather than offering a text box', () => {
     render(
-      <FieldList fields={[{ name: 'mystery', type: 'whatever' }]} data={{}} onChange={() => {}} editors={editors} />
+      <FieldList fields={[{ name: 'mystery', type: 'whatever' }]} data={{ mystery: [1, 2] }} onChange={() => {}} editors={editors} />
     )
-    expect(screen.getByTestId('editor-mystery')).toBeInTheDocument()
+    expect(screen.queryByTestId('editor-mystery')).not.toBeInTheDocument()
+    expect(screen.getByText(/no editor for “whatever” fields/i)).toBeInTheDocument()
   })
 
   it('highlights and focuses the named field', () => {

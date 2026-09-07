@@ -16,9 +16,9 @@ interface RepeaterEditorProps {
 }
 
 /**
- * A list of items that are all the same shape: numbered down the left, each
- * one an open card with its own fields and a Remove, and a dashed slate button
- * to add another at the end. Used for every single-type blocks field, inside a
+ * A list of items that are all the same shape: numbered down the left with a
+ * drag handle, each one an open card with its own fields, ↑/↓ and a Remove,
+ * and a dashed slate button to add another at the end. Used for every single-type blocks field, inside a
  * block or at the top level.
  */
 export default function RepeaterEditor({ def, items, onChange }: RepeaterEditorProps) {

@@ -4,6 +4,7 @@ import { FieldActionsSlotContext } from './FieldContext'
 
 interface FieldBlockProps {
   id: string
+  labelId?: string
   label: string
   required?: boolean
   chip?: ReactNode
@@ -17,12 +18,12 @@ interface FieldBlockProps {
  * chip ("Rich text", "12 blocks") and, on the right, whatever actions the
  * editor places with <FieldActions>.
  */
-export default function FieldBlock({ id, label, required, chip, hint, hintId, children }: FieldBlockProps) {
+export default function FieldBlock({ id, labelId, label, required, chip, hint, hintId, children }: FieldBlockProps) {
   const [slot, setSlot] = useState<HTMLElement | null>(null)
   return (
     <div data-testid="field-block" data-layout="block">
       <div data-testid="field-label-row" className="flex items-center gap-2.5 mb-3 min-h-[34px]">
-        <label htmlFor={id} className="text-[15px] font-semibold text-ink leading-snug">
+        <label id={labelId} htmlFor={id} className="text-[15px] font-semibold text-ink leading-snug">
           {label}
           {required && (
             <span className="text-action ml-1" aria-hidden>

@@ -94,7 +94,8 @@ export default function LinkModal({
   onClose,
 }: Props) {
   // A link pointing into the uploads directory is a file link, so editing one
-  // reopens on that tab.
+  // reopens on that tab. (Local storage only: with PUBLIC_URL or S3 the href
+  // is absolute and is treated as a web address.)
   const initialTab: Tab = currentContentRef ? "internal" : currentHref?.startsWith("/uploads/") ? "file" : "external";
 
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -107,6 +108,7 @@ export default function LinkModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingSchemas, setLoadingSchemas] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Images are deliberately excluded: those belong in the editor's image button.
   const [files, setFiles] = useState<MediaItem[]>([]);
@@ -133,7 +135,7 @@ export default function LinkModal({
           if (collections.find((s) => s.name === schema)) setSelectedSchema(schema);
         }
       })
-      .catch(console.error)
+      .catch((err) => setLoadError(`Could not load the kinds of page: ${err instanceof Error ? err.message : 'request failed'}`))
       .finally(() => setLoadingSchemas(false));
   }, [currentContentRef]);
 
@@ -141,7 +143,7 @@ export default function LinkModal({
     api
       .getMedia()
       .then((res) => setFiles((res.data as MediaItem[]).filter((item) => item.kind !== "image")))
-      .catch(console.error)
+      .catch((err) => setLoadError(`Could not load the files: ${err instanceof Error ? err.message : 'request failed'}`))
       .finally(() => setLoadingFiles(false));
   }, []);
 
@@ -154,7 +156,7 @@ export default function LinkModal({
     api
       .getContent<ContentItem>(selectedSchema)
       .then((res) => setItems(res.data))
-      .catch(console.error)
+      .catch((err) => setLoadError(`Could not load the pages: ${err instanceof Error ? err.message : 'request failed'}`))
       .finally(() => setLoadingItems(false));
   }, [selectedSchema]);
 
@@ -217,11 +219,16 @@ export default function LinkModal({
       </div>
 
       <ModalBody className="flex flex-col gap-4">
+        {loadError && (
+          <p role="alert" className="m-0 text-[15px] text-danger-text">
+            {loadError}
+          </p>
+        )}
         {tab === "file" ? (
           loadingFiles ? (
             <p className="m-0 text-[15px] text-ink-2">Loading…</p>
           ) : files.length === 0 ? (
-            <EmptyState icon={<Paperclip />} title="No files in the library" description="Upload a PDF on the Media page first." />
+            loadError ? null : <EmptyState icon={<Paperclip />} title="No files in the library" description="Upload a PDF on the Media page first." />
           ) : (
             <>
               <SearchInput value={fileQuery} onChange={setFileQuery} placeholder="Search files..." />
@@ -243,7 +250,7 @@ export default function LinkModal({
         ) : loadingSchemas ? (
           <p className="m-0 text-[15px] text-ink-2">Loading…</p>
         ) : schemas.length === 0 ? (
-          <EmptyState icon={<FileText />} title="Nothing to link to yet" />
+          loadError ? null : <EmptyState icon={<FileText />} title="Nothing to link to yet" />
         ) : (
           <>
             <div className="flex flex-col gap-2">

@@ -89,6 +89,21 @@ describe("FileEditor", () => {
     expect(await screen.findByText(/can't be uploaded/i)).toBeInTheDocument();
   });
 
+  it("refuses a dropped image, since this field takes documents", async () => {
+    const onChange = vi.fn();
+    render(<FileEditor field={field} value={null} onChange={onChange} />);
+    fireEvent.drop(screen.getByTestId("dropzone"), {
+      dataTransfer: {
+        files: [new File(["x"], "photo.jpg", { type: "image/jpeg" })],
+        items: [],
+        types: ["Files"],
+      },
+    });
+    expect(await screen.findByText(/only documents/i)).toBeInTheDocument();
+    expect(api.uploadMedia).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("clears the field", async () => {
     const onChange = vi.fn();
     render(<FileEditor field={field} value="/uploads/essay.pdf" onChange={onChange} />);
