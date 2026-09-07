@@ -144,14 +144,52 @@ describe('SlugEditor', () => {
 })
 
 describe('DatetimeEditor', () => {
-  it('shows the stored instant in local time and stores what is typed as an instant', () => {
+  const field = { name: 'when', type: 'datetime' as const, label: 'When' }
+  const localMidnight = (day: string) => new Date(`${day}T00:00`).toISOString()
+
+  it('is a date picker; without a time the date alone is stored as local midnight', () => {
     const onChange = vi.fn()
-    render(<DatetimeEditor field={{ name: 'when', type: 'datetime' }} value="2026-08-22T09:30:00.000Z" onChange={onChange} />)
-    const input = screen.getByDisplayValue(/2026-08-22T\d{2}:\d{2}/) as HTMLInputElement
-    const shown = new Date(input.value)
-    // The local wall-clock value shown must denote the same instant.
-    expect(shown.toISOString()).toBe('2026-08-22T09:30:00.000Z')
-    fireEvent.change(input, { target: { value: '2026-08-22T10:00' } })
-    expect(onChange).toHaveBeenCalledWith(new Date('2026-08-22T10:00').toISOString())
+    render(<DatetimeEditor field={field} value={null} onChange={onChange} />)
+    const date = screen.getByLabelText('When') as HTMLInputElement
+    expect(date.type).toBe('date')
+    expect(screen.queryByLabelText('Time')).not.toBeInTheDocument()
+    fireEvent.change(date, { target: { value: '2026-08-22' } })
+    expect(onChange).toHaveBeenCalledWith(localMidnight('2026-08-22'))
+  })
+
+  it('shows a stored midnight as a date only, and offers to add a time', async () => {
+    const onChange = vi.fn()
+    render(<DatetimeEditor field={field} value={localMidnight('2026-08-22')} onChange={onChange} />)
+    expect(screen.getByLabelText('When')).toHaveValue('2026-08-22')
+    expect(screen.queryByLabelText('Time')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add time' }))
+    const time = screen.getByLabelText('Time')
+    fireEvent.change(time, { target: { value: '09:30' } })
+    expect(onChange).toHaveBeenLastCalledWith(new Date('2026-08-22T09:30').toISOString())
+  })
+
+  it('shows the time picker already when the stored value has a time, and can drop it', async () => {
+    const onChange = vi.fn()
+    render(<DatetimeEditor field={field} value={new Date('2026-08-22T09:30').toISOString()} onChange={onChange} />)
+    expect(screen.getByLabelText('When')).toHaveValue('2026-08-22')
+    expect(screen.getByLabelText('Time')).toHaveValue('09:30')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove time' }))
+    expect(onChange).toHaveBeenLastCalledWith(localMidnight('2026-08-22'))
+  })
+
+  it('keeps the time when the date changes', () => {
+    const onChange = vi.fn()
+    render(<DatetimeEditor field={field} value={new Date('2026-08-22T09:30').toISOString()} onChange={onChange} />)
+    fireEvent.change(screen.getByLabelText('When'), { target: { value: '2026-08-23' } })
+    expect(onChange).toHaveBeenLastCalledWith(new Date('2026-08-23T09:30').toISOString())
+  })
+
+  it('clearing the date stores nothing', () => {
+    const onChange = vi.fn()
+    render(<DatetimeEditor field={field} value={localMidnight('2026-08-22')} onChange={onChange} />)
+    fireEvent.change(screen.getByLabelText('When'), { target: { value: '' } })
+    expect(onChange).toHaveBeenLastCalledWith(null)
   })
 })
