@@ -1,6 +1,6 @@
 // src/admin/lib/blocks.test.ts
 import { describe, it, expect } from 'vitest'
-import { getBlockPreview, getBlockThumbnail, describeBlockType, makeBlock, iconForBlock, singularize, indefinite } from './blocks'
+import { getBlockPreview, getBlockThumbnail, describeBlockType, makeBlock, iconForBlock, normalizeBlocks, singularize, indefinite } from './blocks'
 import type { BlockDefinition } from '../types'
 
 const heading: BlockDefinition = { name: 'heading', label: 'Heading', fields: [{ name: 'text', type: 'string' }] }
@@ -48,6 +48,22 @@ describe('getBlockThumbnail', () => {
     expect(getBlockThumbnail({ _type: 'book', _id: '1', cover: '/uploads/hood.png' }, book)).toBe('/uploads/hood.png')
     expect(getBlockThumbnail({ _type: 'book', _id: '1', cover: '' }, book)).toBeNull()
     expect(getBlockThumbnail({ _type: 'heading', _id: '1', text: 'x' }, heading)).toBeNull()
+  })
+})
+
+describe('normalizeBlocks', () => {
+  it('returns an array of blocks each with its own id, keeping the ids that exist', () => {
+    const blocks = normalizeBlocks([{ _type: 'a' }, { _type: 'b', _id: 'keep' }, { _type: 'c', _id: 'keep' }])
+    expect(blocks).toHaveLength(3)
+    expect(blocks[1]._id).toBe('keep')
+    expect(new Set(blocks.map((b) => b._id)).size).toBe(3)
+    expect(blocks.every((b) => typeof b._id === 'string' && b._id.length > 0)).toBe(true)
+  })
+
+  it('treats anything that is not an array of blocks as empty', () => {
+    expect(normalizeBlocks(null)).toEqual([])
+    expect(normalizeBlocks('x')).toEqual([])
+    expect(normalizeBlocks([1, null, { _type: 'a', _id: '1' }])).toHaveLength(1)
   })
 })
 

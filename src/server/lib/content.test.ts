@@ -201,6 +201,72 @@ describe('content', () => {
     })
   })
 
+  describe('block ids on read', () => {
+    const pageSchema: SchemaDefinition = {
+      name: 'page',
+      label: 'Pages',
+      type: 'collection',
+      fields: [
+        {
+          name: 'sections',
+          type: 'blocks',
+          blocks: [
+            { name: 'heading', label: 'Heading', type: 'block', fields: [{ name: 'text', type: 'string' }] },
+            {
+              name: 'articles',
+              label: 'Articles',
+              type: 'block',
+              fields: [{ name: 'items', type: 'blocks', blocks: [{ name: 'article', label: 'Article', type: 'block', fields: [{ name: 'title', type: 'string' }] }] }],
+            },
+          ],
+        },
+        { name: 'featured', type: 'block', block: { name: 'heading', label: 'Heading', type: 'block', fields: [{ name: 'text', type: 'string' }] } },
+      ],
+    }
+
+    it('gives every block an id it lacks, nested ones too, and keeps the ids it has', () => {
+      mockGet.mockReturnValue({
+        id: 'p1',
+        sections: JSON.stringify([
+          { _type: 'heading', text: 'A' },
+          { _type: 'heading', _id: 'keep-me', text: 'B' },
+          { _type: 'articles', items: [{ _type: 'article', title: 'x' }, { _type: 'article', title: 'y' }] },
+        ]),
+        featured: JSON.stringify({ _type: 'heading', text: 'C' }),
+        draft: 0,
+        created_at: '2026-01-01',
+        updated_at: '2026-01-02',
+      })
+
+      const result = getItem(pageSchema, 'p1') as { sections: Array<Record<string, unknown>>; featured: Record<string, unknown> }
+      const ids = result.sections.map((b) => b._id)
+      expect(ids.every((id) => typeof id === 'string' && id.length > 0)).toBe(true)
+      expect(new Set(ids).size).toBe(3)
+      expect(ids[1]).toBe('keep-me')
+      const inner = (result.sections[2].items as Array<Record<string, unknown>>).map((b) => b._id)
+      expect(inner.every((id) => typeof id === 'string' && id.length > 0)).toBe(true)
+      expect(new Set(inner).size).toBe(2)
+      // A single block is one group of fields and needs no id.
+      expect(result.featured).toEqual({ _type: 'heading', text: 'C' })
+    })
+
+    it('makes duplicated ids unique, keeping the first', () => {
+      mockGet.mockReturnValue({
+        id: 'p1',
+        sections: JSON.stringify([
+          { _type: 'heading', _id: 'same', text: 'A' },
+          { _type: 'heading', _id: 'same', text: 'B' },
+        ]),
+        draft: 0,
+        created_at: '2026-01-01',
+        updated_at: '2026-01-02',
+      })
+      const result = getItem(pageSchema, 'p1') as { sections: Array<Record<string, unknown>> }
+      expect(result.sections[0]._id).toBe('same')
+      expect(result.sections[1]._id).not.toBe('same')
+    })
+  })
+
   describe('getSingleton', () => {
     it('returns deserialized singleton when found', () => {
       const mockRow = { id: '1', siteName: 'My Site', darkMode: 1, created_at: '2026-01-01', updated_at: '2026-01-02' }

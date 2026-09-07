@@ -104,6 +104,33 @@ describe('BlocksEditor: accordion', () => {
   })
 })
 
+describe('BlocksEditor with blocks that have no ids (older content)', () => {
+  const legacy = [
+    { _type: 'book', title: 'One' },
+    { _type: 'book', title: 'Two' },
+    { _type: 'book', title: 'Three' },
+  ]
+
+  it('opens only the block that was clicked', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={legacy} onChange={onChange} />)
+    const rows = screen.getAllByTestId('block-row')
+    await user.click(within(rows[1]).getByRole('button', { name: /two/i }))
+    expect(within(rows[1]).getByRole('button', { name: /two/i })).toHaveAttribute('aria-expanded', 'true')
+    expect(within(rows[0]).getByRole('button', { name: /one/i })).toHaveAttribute('aria-expanded', 'false')
+    expect(within(rows[2]).getByRole('button', { name: /three/i })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('writes ids into the data with the first change, so they stick', async () => {
+    const user = userEvent.setup()
+    render(<BlocksEditor field={field} value={legacy} onChange={onChange} />)
+    await user.click(within(screen.getAllByTestId('block-row')[0]).getByRole('button', { name: 'Move down' }))
+    const next = onChange.mock.calls[0][0] as Array<{ _id?: string; title: string }>
+    expect(next.map((b) => b.title)).toEqual(['Two', 'One', 'Three'])
+    expect(next.every((b) => typeof b._id === 'string' && b._id.length > 0)).toBe(true)
+  })
+})
+
 describe('BlocksEditor: reorder', () => {
   it('moves a block down with the arrow button without opening it', async () => {
     const user = userEvent.setup()

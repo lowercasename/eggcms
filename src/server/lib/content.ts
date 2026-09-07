@@ -17,6 +17,38 @@ function toSqlValue(value: unknown, field: FieldDefinition): SQLBindValue {
   return value as SQLBindValue
 }
 
+/**
+ * Every block in a list needs its own id: the admin keys the accordion, drag
+ * and drop and React on it. Content written before ids existed, or through the
+ * API without them, gets ids here on the way out, and keeps them once saved.
+ */
+function ensureBlockIds(value: unknown, field: FieldDefinition): unknown {
+  if (field.type === 'blocks' && Array.isArray(value)) {
+    const seen = new Set<string>()
+    return value.map((raw) => {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
+      const block = raw as Record<string, unknown>
+      let id = typeof block._id === 'string' && block._id ? block._id : ''
+      if (!id || seen.has(id)) id = randomUUID().slice(0, 8)
+      seen.add(id)
+      const def = field.blocks?.find((b) => b.name === block._type)
+      const inner: Record<string, unknown> = { ...block, _id: id }
+      for (const f of def?.fields ?? []) {
+        if (f.name in inner) inner[f.name] = ensureBlockIds(inner[f.name], f)
+      }
+      return inner
+    })
+  }
+  if (field.type === 'block' && value && typeof value === 'object' && !Array.isArray(value) && field.block) {
+    const group = { ...(value as Record<string, unknown>) }
+    for (const f of field.block.fields) {
+      if (f.name in group) group[f.name] = ensureBlockIds(group[f.name], f)
+    }
+    return group
+  }
+  return value
+}
+
 function fromSqlValue(value: unknown, field: FieldDefinition): unknown {
   if (value === null || value === undefined) return null
   if (JSON_FIELD_TYPES.includes(field.type) && typeof value === 'string') {
@@ -50,7 +82,7 @@ function deserializeRow(row: Record<string, unknown>, schema: SchemaDefinition):
   // Add schema fields
   for (const field of schema.fields) {
     if (field.name in row) {
-      result[field.name] = fromSqlValue(row[field.name], field)
+      result[field.name] = ensureBlockIds(fromSqlValue(row[field.name], field), field)
     }
   }
 

@@ -1,10 +1,10 @@
 // src/admin/editors/BlocksEditor.tsx
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
 import { Layers } from 'lucide-react'
 import type { BlockDefinition } from '../types'
 import { getFieldLabel } from '../types'
-import { describeBlockType, iconForBlock, makeBlock, moveItem, singularize, indefinite, type BlockValue } from '../lib/blocks'
+import { describeBlockType, iconForBlock, makeBlock, moveItem, normalizeBlocks, singularize, indefinite, type BlockValue } from '../lib/blocks'
 import { joinWords } from '../lib/words'
 import { useFlip } from '../components/motion/useFlip'
 import { pinElement } from '../components/motion/pin'
@@ -26,7 +26,8 @@ function listTypes(defs: BlockDefinition[]): string {
  * state. A field with exactly one block type is a plain numbered list instead.
  */
 export default function BlocksEditor({ field, value, onChange }: EditorProps) {
-  const blocks = (Array.isArray(value) ? value : []) as BlockValue[]
+  // Ids are filled in for older content; they reach the data with the first change.
+  const blocks = useMemo(() => normalizeBlocks(value), [value])
   const defs = field.blocks ?? []
   const label = getFieldLabel(field)
   const noun = singularize(label).toLowerCase()

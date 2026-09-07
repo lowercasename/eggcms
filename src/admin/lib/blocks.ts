@@ -25,6 +25,27 @@ export function makeBlock(def: BlockDefinition): BlockValue {
   return block
 }
 
+/**
+ * The blocks in a field's value as an array in which every block has its own
+ * id. Content from before ids existed has none; ids are generated here (and
+ * saved with the next change) so the accordion, drag and drop and React keys
+ * never confuse two blocks.
+ */
+export function normalizeBlocks(value: unknown): BlockValue[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const out: BlockValue[] = []
+  for (const raw of value) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue
+    const block = raw as Record<string, unknown>
+    let id = typeof block._id === 'string' && block._id ? block._id : ''
+    if (!id || seen.has(id)) id = generateId()
+    seen.add(id)
+    out.push({ ...block, _type: String(block._type ?? ''), _id: id })
+  }
+  return out
+}
+
 const TEXT_TYPES: ReadonlySet<FieldType> = new Set<FieldType>(['string', 'text', 'slug', 'select'])
 
 export function stripHtml(html: string): string {
