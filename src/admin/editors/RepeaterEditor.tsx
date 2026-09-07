@@ -1,13 +1,14 @@
 // src/admin/editors/RepeaterEditor.tsx
 import { useRef, useState } from 'react'
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd'
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical } from 'lucide-react'
+import { Plus, Trash2, GripVertical } from 'lucide-react'
 import type { BlockDefinition } from '../types'
-import { indefinite, makeBlock, type BlockValue } from '../lib/blocks'
+import { indefinite, makeBlock, moveItem, withBlockFields, type BlockValue } from '../lib/blocks'
 import Collapse from '../components/motion/Collapse'
 import { useFlip } from '../components/motion/useFlip'
 import FieldList from '../components/FieldList'
 import { Button } from '../components/ui'
+import MoveButtons from './MoveButtons'
 
 interface RepeaterEditorProps {
   def: BlockDefinition
@@ -31,11 +32,8 @@ export default function RepeaterEditor({ def, items, onChange }: RepeaterEditorP
 
   const move = (from: number, to: number, animate = true) => {
     if (to < 0 || to >= items.length) return
-    const next = [...items]
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
     flipEnabled.current = animate
-    onChange(next)
+    onChange(moveItem(items, from, to))
   }
 
   const onDragEnd = (result: DropResult) => {
@@ -84,33 +82,12 @@ export default function RepeaterEditor({ def, items, onChange }: RepeaterEditorP
                             <FieldList
                               fields={def.fields}
                               data={item}
-                              onChange={(next) =>
-                                onChange(items.map((x) => (x._id === item._id ? { ...x, ...next, _type: x._type, _id: x._id } : x)))
-                              }
+                              onChange={(next) => onChange(items.map((x) => (x._id === item._id ? withBlockFields(x, next) : x)))}
                               labelWidth={100}
                               className="!gap-0 [&>[data-testid=field-card]]:border-0 [&>[data-testid=field-card]]:rounded-none [&>[data-testid=field-card]]:bg-transparent [&>[data-field=tall]]:px-3 [&>[data-field=tall]]:py-3"
                             />
                             <div className="flex items-center justify-end gap-2 px-3 pb-3">
-                              <Button
-                                variant="icon"
-                                size="sm"
-                                aria-label="Move up"
-                                disabled={i === 0}
-                                onClick={() => move(i, i - 1)}
-                                className="disabled:opacity-40 disabled:bg-panel disabled:border-line-strong"
-                              >
-                                <ArrowUp aria-hidden />
-                              </Button>
-                              <Button
-                                variant="icon"
-                                size="sm"
-                                aria-label="Move down"
-                                disabled={i === items.length - 1}
-                                onClick={() => move(i, i + 1)}
-                                className="disabled:opacity-40 disabled:bg-panel disabled:border-line-strong"
-                              >
-                                <ArrowDown aria-hidden />
-                              </Button>
+                              <MoveButtons index={i} total={items.length} onMove={(delta) => move(i, i + delta)} />
                               <Button
                                 variant="destructive"
                                 size="sm"

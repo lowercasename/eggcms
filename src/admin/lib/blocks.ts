@@ -4,7 +4,7 @@
 import { icons, Layers, AlignLeft, Heading2, Image, Paperclip, Link, Square, type LucideIcon } from 'lucide-react'
 import type { BlockDefinition, FieldDefinition } from '../types'
 import { getFieldLabel } from '../types'
-import { singularize } from './words'
+import { joinWords, plural, singularize } from './words'
 
 export interface BlockValue {
   _type: string
@@ -42,10 +42,22 @@ export function stripHtml(html: string): string {
 
 export { singularize, indefinite } from './words'
 
-function pluralize(label: string, n: number): string {
-  const lower = label.toLowerCase()
-  if (n === 1) return singularize(lower)
-  return /s$/i.test(lower) ? lower : `${lower}s`
+/** A block schema's label as prose: "Article", 2 → "articles". */
+function nounFor(label: string, count: number): string {
+  return plural(singularize(label).toLowerCase(), count)
+}
+
+/** Field edits from a FieldList, merged back into a block without losing its identity. */
+export function withBlockFields(block: BlockValue, fields: Record<string, unknown>): BlockValue {
+  return { ...block, ...fields, _type: block._type, _id: block._id }
+}
+
+/** A copy of the list with the item at `from` put back at `to`. */
+export function moveItem<T>(list: T[], from: number, to: number): T[] {
+  const next = [...list]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
 }
 
 /**
@@ -63,7 +75,7 @@ export function getBlockPreview(block: BlockValue, def: BlockDefinition): string
     if (f.type === 'blocks' && Array.isArray(value) && value.length > 0) {
       const items = value as BlockValue[]
       const inner = f.blocks ?? []
-      const noun = pluralize(inner.length === 1 ? inner[0].label : 'item', items.length)
+      const noun = nounFor(inner.length === 1 ? inner[0].label : 'item', items.length)
       const titles = items
         .map((item) => {
           const itemDef = inner.find((d) => d.name === item._type)
@@ -88,10 +100,7 @@ export function getBlockThumbnail(block: BlockValue, def: BlockDefinition): stri
 /** The schema's description, or the field labels joined: "Title, Cover and Details". */
 export function describeBlockType(def: BlockDefinition): string {
   if (def.description) return def.description
-  const labels = def.fields.map((f) => getFieldLabel(f))
-  if (labels.length === 0) return ''
-  if (labels.length === 1) return labels[0]
-  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`
+  return joinWords(def.fields.map((f) => getFieldLabel(f)), 'and')
 }
 
 /** A Lucide icon by its kebab-case name, e.g. "book-open". */

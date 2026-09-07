@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Upload, SearchX, Trash2 } from 'lucide-react'
 import { api } from '../../lib/api'
+import { errorMessage } from '../../lib/errors'
 import { KIND_LABELS, KIND_ORDER, describeKinds, rejectWrongKinds, sortMedia, type MediaItem, type MediaKind, type MediaSort } from '../../lib/media'
 import Dropzone from '../Dropzone'
 import MediaCard from './MediaCard'
@@ -26,18 +27,27 @@ const SORT_OPTIONS: Array<{ value: MediaSort; label: string }> = [
   { value: 'name', label: 'Name A–Z' },
 ]
 
-/** "2 files selected. One of them is used on a page." */
-function describeSelection(selected: MediaItem[]): string {
-  const used = selected.filter((i) => (i.references?.length ?? 0) > 0)
+/** Where the one selected file is used: "It is used on 2 pages." */
+function describeOneFile(references: number): string {
+  if (references === 0) return 'It is not used yet.'
+  if (references === 1) return 'It is used on a page.'
+  return `It is used on ${references} pages.`
+}
+
+/**
+ * What the selection bar says, in two parts: the count in bold ("2 files
+ * selected.") and what that means for the website ("One of them is used on a
+ * page.").
+ */
+function describeSelection(selected: MediaItem[]): { count: string; usage: string } {
   if (selected.length === 1) {
-    const refs = selected[0].references?.length ?? 0
-    const tail = refs === 0 ? 'It is not used yet.' : refs === 1 ? 'It is used on a page.' : `It is used on ${refs} pages.`
-    return `1 file selected. ${tail}`
+    return { count: '1 file selected.', usage: describeOneFile(selected[0].references?.length ?? 0) }
   }
-  const head = `${selected.length} files selected.`
-  if (used.length === 0) return `${head} None of them is used on a page.`
-  if (used.length === 1) return `${head} One of them is used on a page.`
-  return `${head} ${used.length} of them are used on pages.`
+  const count = `${selected.length} files selected.`
+  const used = selected.filter((i) => (i.references?.length ?? 0) > 0).length
+  if (used === 0) return { count, usage: 'None of them is used on a page.' }
+  if (used === 1) return { count, usage: 'One of them is used on a page.' }
+  return { count, usage: `${used} of them are used on pages.` }
 }
 
 /**
@@ -71,7 +81,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
       // everything, including files whose type was not recognised, so they can
       // still be found and deleted.
       .then((res) => setItems((res.data as MediaItem[]).filter((i) => !restricted || (i.kind !== null && allowedKinds.includes(i.kind)))))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load the library'))
+      .catch((err) => setError(errorMessage(err, 'Could not load the library')))
       .finally(() => setLoading(false))
   }
 
@@ -106,7 +116,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
         const result = await api.uploadMedia(file)
         lastPath = result.data.path
       } catch (err) {
-        failed.push({ name: file.name, message: err instanceof Error ? err.message : 'Upload failed' })
+        failed.push({ name: file.name, message: errorMessage(err, 'Upload failed') })
       }
       setProgress({ done: index + 1, total: files.length })
     }
@@ -128,7 +138,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
       try {
         await api.deleteMedia(item.id)
       } catch (err) {
-        failed.push({ name: item.filename, message: err instanceof Error ? err.message : 'Delete failed' })
+        failed.push({ name: item.filename, message: errorMessage(err, 'Delete failed') })
       }
     }
     setFailures({ op: 'delete', items: failed })
@@ -151,6 +161,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
   }, [items, filter, query, sort])
 
   const selectedItems = items.filter((i) => selected.has(i.id))
+  const selection = describeSelection(selectedItems)
   const showFilter = allowedKinds.length > 1
 
   const filterOptions = [
@@ -209,16 +220,7 @@ export default function MediaBrowser({ mode, kinds, onPick, header, className = 
             )
           }
         >
-          {(() => {
-            const text = describeSelection(selectedItems)
-            const dot = text.indexOf('.') + 1
-            return (
-              <>
-                <b>{text.slice(0, dot)}</b>
-                {text.slice(dot)}
-              </>
-            )
-          })()}
+          <b>{selection.count}</b> {selection.usage}
         </NoticeBar>
       )}
 

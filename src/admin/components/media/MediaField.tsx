@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { FolderOpen, Trash2 } from 'lucide-react'
 import { api } from '../../lib/api'
+import { errorMessage } from '../../lib/errors'
 import { formatSize, iconForKind, rejectWrongKinds, type MediaItem, type MediaKind } from '../../lib/media'
 import Dropzone from '../Dropzone'
 import MediaPickerDialog from './MediaPickerDialog'
@@ -71,7 +72,7 @@ export default function MediaField({ value, onChange, kinds, noun, preview, plac
       const result = await api.uploadMedia(file)
       onChange(result.data.path)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(errorMessage(err, 'Upload failed'))
     } finally {
       setUploading(false)
     }

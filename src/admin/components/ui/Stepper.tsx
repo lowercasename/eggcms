@@ -17,11 +17,15 @@ interface StepperProps {
 /** A number control with big − and + buttons and a typeable mono value. */
 export default function Stepper({ value, onChange, min, max, step = 1, id, placeholder, disabled, ...props }: StepperProps) {
   const current = typeof value === 'number' && !Number.isNaN(value) ? value : null
-  // What is in the box while typing: "2." and "-" are on the way to a number
-  // and must not be corrected under the person's fingers.
   const [text, setText] = useState(current === null ? '' : String(current))
   useEffect(() => {
-    setText((t) => (Number(t) === current || (t.trim() === '' && current === null) || t === '-' ? t : current === null ? '' : String(current)))
+    setText((typed) => {
+      // "2." and "-" are on the way to a number and must not be corrected
+      // under the person's fingers; only a value from elsewhere rewrites the box.
+      const saysCurrent = Number(typed) === current || (typed.trim() === '' && current === null) || typed === '-'
+      if (saysCurrent) return typed
+      return current === null ? '' : String(current)
+    })
   }, [current])
   const clamp = (n: number) => {
     if (min !== undefined && n < min) return min

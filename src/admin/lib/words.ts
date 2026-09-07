@@ -36,3 +36,14 @@ export function plural(noun: string, count: number): string {
   if (/[^aeiou]y$/i.test(noun)) return `${noun.slice(0, -1)}ies`
   return `${noun}s`
 }
+
+/** "Article", "Article or Book", "Article, Book or Heading". */
+export function joinWords(items: string[], conjunction: 'and' | 'or'): string {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} ${conjunction} ${items[items.length - 1]}`
+}
+
+/** The count the unsaved bar leads with: "1 unsaved change", "3 unsaved changes". */
+export function unsavedChanges(count: number): string {
+  return `${count} unsaved ${plural('change', count)}`
+}

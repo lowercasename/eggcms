@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useLocation } from 'wouter'
 import { Egg } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { errorMessage } from '../lib/errors'
 import { Card, Alert, Input, Label, Button } from '../components/ui'
 
 export default function Login() {
@@ -21,7 +22,7 @@ export default function Login() {
       await login(email, password)
       navigate('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed')
+      setError(errorMessage(err, 'Sign in failed'))
     } finally {
       setLoading(false)
     }

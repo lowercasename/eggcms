@@ -8,6 +8,7 @@ import ItemEdit from './ItemEdit'
 import { useSchemas } from '../App'
 import { Button, EmptyState, NoticeBar } from '../components/ui'
 import { entryNoun } from '../lib/words'
+import { errorMessage } from '../lib/errors'
 import type { Schema } from '../types'
 
 // Resolve label field: explicit labelField > slug's from fields > 'title'
@@ -29,25 +30,21 @@ export default function Collection() {
   const schema = schemas.find((s) => s.name === params.schema && s.type === 'collection')
 
   const refreshList = () => {
-    if (!schema) return
-    api
+    if (!schema) return Promise.resolve()
+    return api
       .getContent<{ id: string }>(schema.name)
       .then((res) => {
         setItems(res.data)
         setListError('')
       })
-      .catch((err) => setListError(err instanceof Error ? err.message : 'Request failed'))
+      .catch((err) => setListError(errorMessage(err, 'Request failed')))
   }
 
   useEffect(() => {
     if (!schema) return
     setLoading(true)
     setListError('')
-    api
-      .getContent<{ id: string }>(schema.name)
-      .then((res) => setItems(res.data))
-      .catch((err) => setListError(err instanceof Error ? err.message : 'Request failed'))
-      .finally(() => setLoading(false))
+    refreshList().finally(() => setLoading(false))
   }, [schema?.name])
 
   if (!schema) {

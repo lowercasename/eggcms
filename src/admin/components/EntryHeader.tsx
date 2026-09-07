@@ -1,7 +1,6 @@
 // src/admin/components/EntryHeader.tsx
 import { type ReactNode } from 'react'
-import { PanelLeftOpen } from 'lucide-react'
-import { Button, Chip, type OverflowItem, OverflowMenu } from './ui'
+import { Chip, type OverflowItem, OverflowMenu } from './ui'
 
 interface EntryHeaderProps {
   title: string
@@ -10,18 +9,12 @@ interface EntryHeaderProps {
   status: 'published' | 'edited' | 'draft' | null
   actions?: ReactNode
   menu?: OverflowItem[]
-  onShowList?: () => void
 }
 
 /** The editor's top bar: title, status chip, and the rarer actions on the right. */
-export default function EntryHeader({ title, untitled, status, actions, menu, onShowList }: EntryHeaderProps) {
+export default function EntryHeader({ title, untitled, status, actions, menu }: EntryHeaderProps) {
   return (
     <div className="flex items-center gap-3.5 px-6 py-3.5 bg-panel border-b border-line-strong">
-      {onShowList && (
-        <Button variant="icon" size="sm" aria-label="Show the list" title="Show the list" onClick={onShowList}>
-          <PanelLeftOpen aria-hidden />
-        </Button>
-      )}
       <h1 className={`m-0 text-[19px] font-bold truncate ${untitled ? 'italic text-ink-2' : 'text-ink'}`}>{title}</h1>
       {status && <Chip variant={status} />}
       <div className="flex-1" />

@@ -1,6 +1,7 @@
 // src/admin/lib/media.ts
 // Shared shape of a media library item and the little rules for describing one.
 import { Image, FileText, Music, Video, File as FileIcon, type LucideIcon } from 'lucide-react'
+import { joinWords, plural, singularize } from './words'
 
 export type MediaKind = 'image' | 'document' | 'audio' | 'video'
 
@@ -62,9 +63,7 @@ export function extensionOf(item: Pick<MediaItem, 'filename' | 'mimetype'>): str
 
 /** Lower-case singular / plural of a schema label: "Pages" → "page" / "pages". */
 function nounFor(label: string, count: number): string {
-  const lower = label.toLowerCase()
-  if (count === 1) return lower.endsWith('s') && !lower.endsWith('ss') ? lower.slice(0, -1) : lower
-  return lower.endsWith('s') ? lower : `${lower}s`
+  return plural(singularize(label).toLowerCase(), count)
 }
 
 /**
@@ -99,9 +98,7 @@ export function kindOfFile(file: File): MediaKind {
 
 /** "only images", "only documents or audio" – what a field will take. */
 export function describeKinds(kinds: MediaKind[]): string {
-  const words = kinds.map((k) => KIND_LABELS[k].toLowerCase())
-  if (words.length === 1) return `only ${words[0]}`
-  return `only ${words.slice(0, -1).join(', ')} or ${words[words.length - 1]}`
+  return `only ${joinWords(kinds.map((k) => KIND_LABELS[k].toLowerCase()), 'or')}`
 }
 
 const KIND_NOUN: Record<MediaKind, string> = { image: 'an image', document: 'a document', audio: 'an audio file', video: 'a video' }

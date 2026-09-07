@@ -84,7 +84,7 @@ export const Headers: Story = {
           { label: 'Delete page', icon: <Trash2 />, destructive: true, onSelect: () => {} },
         ]}
       />
-      <EntryHeader title="South Pacific" status="edited" onShowList={() => {}} />
+      <EntryHeader title="South Pacific" status="edited" />
       <EntryHeader title="Untitled page" untitled status="draft" />
     </div>
   ),

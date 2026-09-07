@@ -1,5 +1,5 @@
 // src/admin/pages/Singleton.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useParams } from 'wouter'
 import { AlertCircle } from 'lucide-react'
 import { api } from '../lib/api'
@@ -7,6 +7,9 @@ import { useSchemas } from '../App'
 import { useDirtyState } from '../hooks/useDirtyState'
 import { useJustSaved } from '../hooks/useJustSaved'
 import { useDirtyStateContext } from '../contexts/DirtyStateContext'
+import { fieldsOf } from '../lib/entries'
+import { errorMessage } from '../lib/errors'
+import { unsavedChanges } from '../lib/words'
 import EntryHeader from '../components/EntryHeader'
 import FieldList from '../components/FieldList'
 import { Button, EmptyState, NoticeBar } from '../components/ui'
@@ -41,15 +44,12 @@ export default function Singleton() {
     setError('')
     api
       .getSingleton(schema.name)
-      .then((res) => {
-        const { _meta, ...fields } = (res.data as Record<string, unknown>) || {}
-        setData(fields)
-      })
+      .then((res) => setData(fieldsOf((res.data as Record<string, unknown>) || {})))
       .catch((err) => {
         // Settings that have never been saved start empty; anything else is a real failure.
         const status = (err as { status?: number } | null)?.status
         if (status === 404) setData({})
-        else setLoadError(err instanceof Error ? err.message : 'Request failed')
+        else setLoadError(errorMessage(err, 'Request failed'))
       })
       .finally(() => setLoading(false))
   }, [schema?.name, loadAttempt])
@@ -63,7 +63,7 @@ export default function Singleton() {
       markClean()
       showJustSaved('Saved just now.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(errorMessage(err, 'Save failed'))
     } finally {
       setSaving(false)
     }
@@ -92,63 +92,71 @@ export default function Singleton() {
     )
   }
 
+  /** The one bar under the header: saved just now, about to discard, or unsaved. */
+  function statusBar(): ReactNode {
+    if (justSaved && !isDirty) {
+      return (
+        <NoticeBar variant="published" sticky>
+          <b>{justSaved}</b>
+        </NoticeBar>
+      )
+    }
+    if (isDirty && confirmingDiscard) {
+      return (
+        <NoticeBar
+          variant="unsaved"
+          sticky
+          actions={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmingDiscard(false)}>
+                Keep editing
+              </Button>
+              <Button
+                variant="destructive-solid"
+                onClick={() => {
+                  if (savedData) setData(savedData)
+                  setConfirmingDiscard(false)
+                }}
+              >
+                Yes, discard
+              </Button>
+            </>
+          }
+        >
+          <b>Throw away {unsavedChanges(changedCount)}?</b> Everything goes back to how it was last saved.
+        </NoticeBar>
+      )
+    }
+    if (isDirty) {
+      return (
+        <NoticeBar
+          variant="unsaved"
+          sticky
+          animate
+          actions={
+            <>
+              <Button variant="secondary" className="!border-draft-2 !text-draft" onClick={() => setConfirmingDiscard(true)}>
+                Discard
+              </Button>
+              <Button onClick={save} loading={saving}>
+                Save changes
+              </Button>
+            </>
+          }
+        >
+          <b>{unsavedChanges(changedCount)}.</b> The website still shows the last saved version.
+        </NoticeBar>
+      )
+    }
+    return null
+  }
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <EntryHeader title={schema.label} status={isDirty ? 'edited' : null} />
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {justSaved && !isDirty ? (
-          <NoticeBar variant="published" sticky>
-            <b>{justSaved}</b>
-          </NoticeBar>
-        ) : isDirty && confirmingDiscard ? (
-          <NoticeBar
-            variant="unsaved"
-            sticky
-            actions={
-              <>
-                <Button variant="secondary" onClick={() => setConfirmingDiscard(false)}>
-                  Keep editing
-                </Button>
-                <Button
-                  variant="destructive-solid"
-                  onClick={() => {
-                    if (savedData) setData(savedData)
-                    setConfirmingDiscard(false)
-                  }}
-                >
-                  Yes, discard
-                </Button>
-              </>
-            }
-          >
-            <b>
-              Throw away {changedCount} unsaved change{changedCount === 1 ? '' : 's'}?
-            </b>{' '}
-            Everything goes back to how it was last saved.
-          </NoticeBar>
-        ) : isDirty ? (
-          <NoticeBar
-            variant="unsaved"
-            sticky
-            animate
-            actions={
-              <>
-                <Button variant="secondary" className="!border-draft-2 !text-draft" onClick={() => setConfirmingDiscard(true)}>
-                  Discard
-                </Button>
-                <Button onClick={save} loading={saving}>
-                  Save changes
-                </Button>
-              </>
-            }
-          >
-            <b>
-              {changedCount} unsaved change{changedCount === 1 ? '' : 's'}.
-            </b>{' '}
-            The website still shows the last saved version.
-          </NoticeBar>
-        ) : null}
+        {statusBar()}
 
         {error && <NoticeBar variant="error">{error}</NoticeBar>}
 

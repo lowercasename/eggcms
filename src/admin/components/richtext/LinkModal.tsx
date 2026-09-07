@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { ExternalLink, FileText, Paperclip } from "lucide-react";
 import Modal, { ModalBody, ModalFooter } from "../Modal";
 import { api } from "../../lib/api";
+import { errorMessage } from "../../lib/errors";
 import { Button, EmptyState, Input, Label, SearchInput, Select } from "../ui";
 
 interface Schema {
@@ -135,7 +136,7 @@ export default function LinkModal({
           if (collections.find((s) => s.name === schema)) setSelectedSchema(schema);
         }
       })
-      .catch((err) => setLoadError(`Could not load the kinds of page: ${err instanceof Error ? err.message : 'request failed'}`))
+      .catch((err) => setLoadError(`Could not load the kinds of page: ${errorMessage(err, "request failed")}`))
       .finally(() => setLoadingSchemas(false));
   }, [currentContentRef]);
 
@@ -143,7 +144,7 @@ export default function LinkModal({
     api
       .getMedia()
       .then((res) => setFiles((res.data as MediaItem[]).filter((item) => item.kind !== "image")))
-      .catch((err) => setLoadError(`Could not load the files: ${err instanceof Error ? err.message : 'request failed'}`))
+      .catch((err) => setLoadError(`Could not load the files: ${errorMessage(err, "request failed")}`))
       .finally(() => setLoadingFiles(false));
   }, []);
 
@@ -156,7 +157,7 @@ export default function LinkModal({
     api
       .getContent<ContentItem>(selectedSchema)
       .then((res) => setItems(res.data))
-      .catch((err) => setLoadError(`Could not load the pages: ${err instanceof Error ? err.message : 'request failed'}`))
+      .catch((err) => setLoadError(`Could not load the pages: ${errorMessage(err, "request failed")}`))
       .finally(() => setLoadingItems(false));
   }, [selectedSchema]);
 
@@ -193,6 +194,76 @@ export default function LinkModal({
   const canSave =
     (tab === "external" && url.trim()) || (tab === "internal" && selectedSchema && selectedItem) || (tab === "file" && selectedFile);
 
+  /** The body of the tab that is open: one list of things to link to. */
+  function tabPanel() {
+    if (tab === "file") {
+      if (loadingFiles) return <p className="m-0 text-[15px] text-ink-2">Loading…</p>;
+      if (files.length === 0) {
+        return loadError ? null : <EmptyState icon={<Paperclip />} title="No files in the library" description="Upload a PDF on the Media page first." />;
+      }
+      return (
+        <>
+          <SearchInput value={fileQuery} onChange={setFileQuery} placeholder="Search files..." />
+          <ChoiceList
+            items={filteredFiles.map((f) => ({ key: f.path, label: f.filename }))}
+            selected={selectedFile}
+            onSelect={setSelectedFile}
+            empty="No matching files"
+            icon={Paperclip}
+          />
+        </>
+      );
+    }
+
+    if (tab === "external") {
+      return (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="link-url">Web address</Label>
+          <Input id="link-url" mono value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com" autoFocus />
+          <p className="m-0 text-[14px] text-ink-2">A full address, or a path on this site starting with /</p>
+        </div>
+      );
+    }
+
+    if (loadingSchemas) return <p className="m-0 text-[15px] text-ink-2">Loading…</p>;
+    if (schemas.length === 0) return loadError ? null : <EmptyState icon={<FileText />} title="Nothing to link to yet" />;
+    return (
+      <>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="link-collection">Kind of page</Label>
+          <Select
+            id="link-collection"
+            value={selectedSchema}
+            onChange={(e) => {
+              setSelectedSchema(e.target.value);
+              setSelectedItem("");
+              setSearchQuery("");
+            }}
+            options={schemas.map((s) => ({ value: s.name, label: s.label }))}
+            placeholder="Choose…"
+          />
+        </div>
+
+        {selectedSchema && (
+          <div className="flex flex-col gap-2">
+            <Label>Which one</Label>
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="Search items..." />
+            {loadingItems ? (
+              <p className="m-0 text-[15px] text-ink-2">Loading…</p>
+            ) : (
+              <ChoiceList
+                items={filteredItems.map((i) => ({ key: i.id, label: getItemLabel(i) }))}
+                selected={selectedItem}
+                onSelect={setSelectedItem}
+                empty={searchQuery ? "No matching items" : "Nothing in this collection yet"}
+              />
+            )}
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <Modal title={hasExistingLink ? "Edit link" : "Add a link"} onClose={onClose} maxWidth="xl">
       <div role="tablist" aria-label="Link to" className="flex border-b border-line-strong bg-page">
@@ -224,68 +295,7 @@ export default function LinkModal({
             {loadError}
           </p>
         )}
-        {tab === "file" ? (
-          loadingFiles ? (
-            <p className="m-0 text-[15px] text-ink-2">Loading…</p>
-          ) : files.length === 0 ? (
-            loadError ? null : <EmptyState icon={<Paperclip />} title="No files in the library" description="Upload a PDF on the Media page first." />
-          ) : (
-            <>
-              <SearchInput value={fileQuery} onChange={setFileQuery} placeholder="Search files..." />
-              <ChoiceList
-                items={filteredFiles.map((f) => ({ key: f.path, label: f.filename }))}
-                selected={selectedFile}
-                onSelect={setSelectedFile}
-                empty="No matching files"
-                icon={Paperclip}
-              />
-            </>
-          )
-        ) : tab === "external" ? (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="link-url">Web address</Label>
-            <Input id="link-url" mono value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com" autoFocus />
-            <p className="m-0 text-[14px] text-ink-2">A full address, or a path on this site starting with /</p>
-          </div>
-        ) : loadingSchemas ? (
-          <p className="m-0 text-[15px] text-ink-2">Loading…</p>
-        ) : schemas.length === 0 ? (
-          loadError ? null : <EmptyState icon={<FileText />} title="Nothing to link to yet" />
-        ) : (
-          <>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="link-collection">Kind of page</Label>
-              <Select
-                id="link-collection"
-                value={selectedSchema}
-                onChange={(e) => {
-                  setSelectedSchema(e.target.value);
-                  setSelectedItem("");
-                  setSearchQuery("");
-                }}
-                options={schemas.map((s) => ({ value: s.name, label: s.label }))}
-                placeholder="Choose…"
-              />
-            </div>
-
-            {selectedSchema && (
-              <div className="flex flex-col gap-2">
-                <Label>Which one</Label>
-                <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder="Search items..." />
-                {loadingItems ? (
-                  <p className="m-0 text-[15px] text-ink-2">Loading…</p>
-                ) : (
-                  <ChoiceList
-                    items={filteredItems.map((i) => ({ key: i.id, label: getItemLabel(i) }))}
-                    selected={selectedItem}
-                    onSelect={setSelectedItem}
-                    empty={searchQuery ? "No matching items" : "Nothing in this collection yet"}
-                  />
-                )}
-              </div>
-            )}
-          </>
-        )}
+        {tabPanel()}
       </ModalBody>
 
       <ModalFooter>

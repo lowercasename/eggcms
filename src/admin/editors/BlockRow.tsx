@@ -1,13 +1,14 @@
 // src/admin/editors/BlockRow.tsx
 import { useRef } from 'react'
 import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
-import { GripVertical, ArrowUp, ArrowDown, ChevronDown, Trash2 } from 'lucide-react'
+import { GripVertical, ChevronDown, Trash2 } from 'lucide-react'
 import type { BlockDefinition } from '../types'
-import { getBlockPreview, getBlockThumbnail, iconForBlock, type BlockValue } from '../lib/blocks'
+import { getBlockPreview, getBlockThumbnail, iconForBlock, withBlockFields, type BlockValue } from '../lib/blocks'
 import { SectionProvider } from '../contexts/SectionContext'
 import Collapse from '../components/motion/Collapse'
 import FieldList from '../components/FieldList'
 import { Button } from '../components/ui'
+import MoveButtons from './MoveButtons'
 
 export interface BlockRowProps {
   block: BlockValue
@@ -110,32 +111,7 @@ export default function BlockRow(props: BlockRowProps) {
               </span>
             )}
           </button>
-          <Button
-            variant="icon"
-            size="sm"
-            aria-label="Move up"
-            disabled={index === 0}
-            onClick={(e) => {
-              e.stopPropagation()
-              props.onMove(-1)
-            }}
-            className="disabled:opacity-40 disabled:bg-panel disabled:border-line-strong"
-          >
-            <ArrowUp aria-hidden />
-          </Button>
-          <Button
-            variant="icon"
-            size="sm"
-            aria-label="Move down"
-            disabled={index === total - 1}
-            onClick={(e) => {
-              e.stopPropagation()
-              props.onMove(1)
-            }}
-            className="disabled:opacity-40 disabled:bg-panel disabled:border-line-strong"
-          >
-            <ArrowDown aria-hidden />
-          </Button>
+          <MoveButtons index={index} total={total} onMove={props.onMove} />
           <ChevronDown className={`w-5 h-5 text-ink-nav shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden />
         </div>
 
@@ -145,7 +121,7 @@ export default function BlockRow(props: BlockRowProps) {
               <FieldList
                 fields={def.fields}
                 data={block}
-                onChange={(next) => props.onChange({ ...block, ...next, _type: block._type, _id: block._id })}
+                onChange={(next) => props.onChange(withBlockFields(block, next))}
                 labelWidth={140}
                 className="!gap-0 [&>[data-testid=field-card]]:border-0 [&>[data-testid=field-card]]:rounded-none [&>[data-field=tall]]:px-4 [&>[data-field=tall]]:py-3.5"
               />

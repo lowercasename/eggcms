@@ -1,5 +1,5 @@
 // src/admin/pages/ItemEdit.tsx
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { useLocation } from 'wouter'
 import { Trash2, EyeOff } from 'lucide-react'
 import { api } from '../lib/api'
@@ -8,7 +8,9 @@ import { useDirtyState } from '../hooks/useDirtyState'
 import { useJustSaved } from '../hooks/useJustSaved'
 import { useDirtyStateContext } from '../contexts/DirtyStateContext'
 import { EntryProvider } from '../contexts/EntryContext'
-import { entryNoun } from '../lib/words'
+import { fieldsOf } from '../lib/entries'
+import { errorMessage } from '../lib/errors'
+import { entryNoun, unsavedChanges } from '../lib/words'
 import { getItemLabel } from '../components/ItemList'
 import { resolveLabelField } from './Collection'
 import EntryHeader from '../components/EntryHeader'
@@ -19,7 +21,6 @@ interface ItemEditProps {
   schema: Schema
   itemId: string
   refreshList: () => void
-  onShowList?: () => void
 }
 
 /**
@@ -27,7 +28,7 @@ interface ItemEditProps {
  * status; a notice bar under the header says whether it is saved, live, or
  * neither, and carries the one or two things to do about that.
  */
-export default function ItemEdit({ schema, itemId, refreshList, onShowList }: ItemEditProps) {
+export default function ItemEdit({ schema, itemId, refreshList }: ItemEditProps) {
   const [, navigate] = useLocation()
   const [data, setData] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
@@ -44,10 +45,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
   const titleField = Array.isArray(labelField) ? labelField[0] : labelField
 
   // Only user-editable fields count for dirty state (exclude server metadata)
-  const editableData = useMemo(() => {
-    const { _meta, ...fields } = data
-    return fields
-  }, [data])
+  const editableData = useMemo(() => fieldsOf(data), [data])
   const { isDirty, markClean, savedData, changedCount } = useDirtyState(editableData, loading, itemId)
   const { setDirty, setItemDirty } = useDirtyStateContext()
 
@@ -81,7 +79,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
     api
       .getItem(schema.name, itemId)
       .then((res) => setData(res.data as Record<string, unknown>))
-      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Request failed'))
+      .catch((err) => setLoadError(errorMessage(err, 'Request failed')))
       .finally(() => setLoading(false))
   }, [itemId, schema.name, schema.fields, isNew, loadAttempt])
 
@@ -89,8 +87,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
     setSaving(true)
     setError('')
     try {
-      const { _meta, ...fields } = source
-      const payload = { ...fields, draft: asDraft ? 1 : 0 }
+      const payload = { ...fieldsOf(source), draft: asDraft ? 1 : 0 }
       if (isNew) {
         const result = await api.createItem(schema.name, payload)
         const created = result.data as { id: string }
@@ -100,30 +97,31 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       } else {
         const result = await api.updateItem(schema.name, itemId, payload)
         const saved = result.data as Record<string, unknown>
-        const { _meta: _savedMeta, ...savedFields } = saved
         if (source === data) {
           setData(saved)
         } else {
           // Unpublishing writes the saved content, so unsaved edits stay unsaved.
           setData((current) => ({ ...current, _meta: saved._meta }))
         }
-        markClean(savedFields)
+        markClean(fieldsOf(saved))
         refreshList()
         showJustSaved(asDraft ? 'Draft saved just now.' : 'Published just now.')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(errorMessage(err, 'Save failed'))
     } finally {
       setSaving(false)
     }
   }
 
+  // The last saved fields under the metadata the entry has now: what Discard
+  // goes back to, and what taking it off the website re-saves as a draft.
+  const lastSaved = savedData ? { ...savedData, _meta: data._meta } : data
+
   const discard = () => {
-    if (savedData) setData((current) => ({ ...savedData, _meta: current._meta }))
+    setData(lastSaved)
     setConfirmingDiscard(false)
   }
-
-  const changes = `${changedCount} unsaved change${changedCount === 1 ? '' : 's'}`
 
   const remove = async () => {
     try {
@@ -132,7 +130,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       refreshList()
       navigate(`/collections/${schema.name}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed')
+      setError(errorMessage(err, 'Delete failed'))
     }
   }
 
@@ -154,17 +152,39 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
   const title = getItemLabel(data as { id: string }, labelField)
   const hasTitle = title.trim().length > 0
   const status = isDirty ? 'edited' : isDraft ? 'draft' : 'published'
+  const changes = unsavedChanges(changedCount)
 
   const menu = isNew
     ? []
     : [
-        ...(!isDraft
-          ? [{ label: 'Take off the website', icon: <EyeOff aria-hidden />, onSelect: () => save(true, savedData ? { ...savedData, _meta: data._meta } : data) }]
-          : []),
+        ...(!isDraft ? [{ label: 'Take off the website', icon: <EyeOff aria-hidden />, onSelect: () => save(true, lastSaved) }] : []),
         { label: `Delete ${noun}`, icon: <Trash2 aria-hidden />, destructive: true, onSelect: () => setConfirmingDelete(true) },
       ]
 
-  const bar = (() => {
+  /** Both bars for an entry that is not on the website yet; only the sentence differs. */
+  function notPublishedBar(message: string): ReactNode {
+    return (
+      <NoticeBar
+        variant="info"
+        sticky
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => save(true)} loading={saving}>
+              Save draft
+            </Button>
+            <Button onClick={() => save(false)} disabled={!hasTitle || saving}>
+              Publish
+            </Button>
+          </>
+        }
+      >
+        {message}
+      </NoticeBar>
+    )
+  }
+
+  /** The one bar under the header: whatever the entry most needs said about it. */
+  function statusBar(): ReactNode {
     if (confirmingDelete) {
       return (
         <NoticeBar
@@ -193,24 +213,7 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       )
     }
     if (isNew) {
-      return (
-        <NoticeBar
-          variant="info"
-          sticky
-          actions={
-            <>
-              <Button variant="secondary" onClick={() => save(true)} loading={saving}>
-                Save draft
-              </Button>
-              <Button onClick={() => save(false)} disabled={!hasTitle || saving}>
-                Publish
-              </Button>
-            </>
-          }
-        >
-          Not on the website yet — give it a title, then publish.
-        </NoticeBar>
-      )
+      return notPublishedBar('Not on the website yet — give it a title, then publish.')
     }
     if (isDirty && confirmingDiscard) {
       return (
@@ -259,41 +262,18 @@ export default function ItemEdit({ schema, itemId, refreshList, onShowList }: It
       )
     }
     if (isDraft) {
-      return (
-        <NoticeBar
-          variant="info"
-          sticky
-          actions={
-            <>
-              <Button variant="secondary" onClick={() => save(true)} loading={saving}>
-                Save draft
-              </Button>
-              <Button onClick={() => save(false)} disabled={!hasTitle || saving}>
-                Publish
-              </Button>
-            </>
-          }
-        >
-          Not on the website yet — publish when it is ready.
-        </NoticeBar>
-      )
+      return notPublishedBar('Not on the website yet — publish when it is ready.')
     }
     return null
-  })()
+  }
 
   return (
     <EntryProvider value={{ isNew }}>
       <div className="flex-1 min-h-0 flex flex-col">
-        <EntryHeader
-          title={hasTitle ? title : `Untitled ${noun}`}
-          untitled={!hasTitle}
-          status={status}
-          menu={menu}
-          onShowList={onShowList}
-        />
+        <EntryHeader title={hasTitle ? title : `Untitled ${noun}`} untitled={!hasTitle} status={status} menu={menu} />
 
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {bar}
+          {statusBar()}
 
           {error && <NoticeBar variant="error">{error}</NoticeBar>}
 

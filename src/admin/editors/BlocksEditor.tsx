@@ -4,7 +4,8 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import { Layers } from 'lucide-react'
 import type { BlockDefinition } from '../types'
 import { getFieldLabel } from '../types'
-import { describeBlockType, iconForBlock, makeBlock, singularize, indefinite, type BlockValue } from '../lib/blocks'
+import { describeBlockType, iconForBlock, makeBlock, moveItem, singularize, indefinite, type BlockValue } from '../lib/blocks'
+import { joinWords } from '../lib/words'
 import { useFlip } from '../components/motion/useFlip'
 import { pinElement } from '../components/motion/pin'
 import FieldActions from '../components/ui/FieldActions'
@@ -16,9 +17,7 @@ import type { EditorProps } from './types'
 
 /** "Heading, Text or Book" */
 function listTypes(defs: BlockDefinition[]): string {
-  const labels = defs.map((d) => d.label)
-  if (labels.length <= 1) return labels.join('')
-  return `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}`
+  return joinWords(defs.map((d) => d.label), 'or')
 }
 
 /**
@@ -84,13 +83,11 @@ export default function BlocksEditor({ field, value, onChange }: EditorProps) {
 
   const move = (from: number, to: number, animate = true) => {
     if (to < 0 || to >= blocks.length || from === to) return
-    const next = [...blocks]
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
+    const moved = blocks[from]
     flipEnabled.current = animate
     setFlashId(moved._id)
     window.setTimeout(() => setFlashId((id) => (id === moved._id ? null : id)), 650)
-    onChange(next)
+    onChange(moveItem(blocks, from, to))
   }
 
   const onDragEnd = (result: DropResult) => {
@@ -110,10 +107,11 @@ export default function BlocksEditor({ field, value, onChange }: EditorProps) {
     return { value: d.name, label: d.label, description: describeBlockType(d), icon: <Icon aria-hidden /> }
   })
 
-  const menuHeading = (at: number) =>
-    at === 0
-      ? `Insert ${noun === 'section' ? 'a' : 'a'} ${noun} at the top`
-      : `Insert a ${noun} after “${defFor(blocks[at - 1]._type)?.label ?? blocks[at - 1]._type}”`
+  const menuHeading = (at: number) => {
+    if (at === 0) return `Insert a ${noun} at the top`
+    const previous = blocks[at - 1]
+    return `Insert a ${noun} after “${defFor(previous._type)?.label ?? previous._type}”`
+  }
 
   const insertPoint = (at: number) => (
     <div key={`insert-${at}`}>
