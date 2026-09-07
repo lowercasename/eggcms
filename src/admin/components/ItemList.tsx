@@ -75,9 +75,13 @@ export default function ItemList({ items, schemaName, schemaLabel, labelField = 
     })
   }, [items, filter, query, labelField, untitled])
 
+  // Published is the norm, so it gets only its tick. A draft or an edited entry
+  // says so in a word as well as an icon, so the two are never told apart by
+  // shape alone.
   const row = (key: string, href: string, label: string, status: Status, active: boolean) => {
     const { Icon, word, color } = STATUS[status]
     const isUntitled = !label
+    const spoken = status === 'published'
     return (
       <NavLink
         key={key}
@@ -88,10 +92,16 @@ export default function ItemList({ items, schemaName, schemaLabel, labelField = 
           active ? 'bg-page border-2 border-ink font-bold' : 'border border-transparent hover:bg-page',
         ].join(' ')}
       >
-        <span role="img" aria-label={word} className={`shrink-0 flex ${color}`}>
+        <span role={spoken ? 'img' : undefined} aria-label={spoken ? word : undefined} aria-hidden={spoken ? undefined : true} className={`shrink-0 flex ${color}`}>
           <Icon className="w-4 h-4" aria-hidden />
         </span>{' '}
         <span className={`flex-1 min-w-0 truncate ${isUntitled ? 'italic text-ink-2' : 'text-ink'}`}>{label || untitled}</span>
+        {!spoken && (
+          <>
+            {' '}
+            <span className={`shrink-0 text-[13px] font-bold ${color}`}>{word}</span>
+          </>
+        )}
       </NavLink>
     )
   }

@@ -47,7 +47,10 @@ describe('ItemList', () => {
     const rows = screen.getAllByRole('link', { name: /Published|Draft/ })
     expect(rows).toHaveLength(3)
     expect(screen.getByRole('link', { name: 'Published South Pacific' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: 'Draft Talks and media' })).toBeInTheDocument()
+    // Published is the norm and gets only its tick; anything else says its word out loud.
+    const draft = screen.getByRole('link', { name: 'Talks and media Draft' })
+    expect(within(draft).getByText('Draft')).toBeVisible()
+    expect(within(screen.getByRole('link', { name: 'Published South Pacific' })).queryByText('Published')).not.toBeInTheDocument()
     // No dates on rows.
     expect(screen.queryByText(/Aug|Jan|\d{4}/)).not.toBeInTheDocument()
   })
@@ -97,6 +100,7 @@ describe('ItemList', () => {
     render(<ItemList {...base} creating />)
     const rows = screen.getAllByRole('link', { name: /Published|Draft/ })
     expect(rows[0]).toHaveTextContent('Untitled page')
+    expect(rows[0]).toHaveTextContent('Draft')
     expect(rows[0]).toHaveAttribute('aria-current', 'page')
   })
 
@@ -128,7 +132,8 @@ describe('ItemList', () => {
       </DirtyStateProvider>
     )
     act(() => markDirty())
-    expect(screen.getByRole('link', { name: 'Edited South Pacific' })).toBeInTheDocument()
+    const edited = screen.getByRole('link', { name: 'South Pacific Edited' })
+    expect(within(edited).getByText('Edited')).toBeVisible()
   })
 })
 
