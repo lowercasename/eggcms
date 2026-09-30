@@ -13,7 +13,7 @@ interface LinkValue {
   label?: string
 }
 
-export default function LinkFieldEditor({ value, onChange }: EditorProps) {
+export default function LinkFieldEditor({ field, value, onChange }: EditorProps) {
   const [showModal, setShowModal] = useState(false)
   const { id } = useFieldControl()
   const linkValue = value as LinkValue | null
@@ -47,6 +47,7 @@ export default function LinkFieldEditor({ value, onChange }: EditorProps) {
         <LinkModal
           currentHref={linkValue?.type === 'external' ? linkValue.url : undefined}
           currentContentRef={linkValue?.type === 'internal' ? linkValue.ref : undefined}
+          collections={field.collections}
           onSaveExternal={(url) => {
             onChange({ type: 'external', url })
             setShowModal(false)

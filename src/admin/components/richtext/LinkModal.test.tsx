@@ -173,3 +173,33 @@ describe("LinkModal file links", () => {
     expect(card).toHaveAttribute("aria-pressed", "true");
   });
 });
+
+describe("LinkModal page on this site", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSchemas).mockResolvedValue({
+      data: [
+        { name: "page", label: "Pages", type: "collection", fields: [] },
+        { name: "post", label: "Posts", type: "collection", fields: [] },
+      ],
+    } as never);
+    vi.mocked(api.getContent).mockImplementation(
+      async (name: string) => ({ data: name === "page" ? [{ id: "p1", title: "About" }] : [{ id: "b1", title: "News" }], meta: { total: 1 } }) as never,
+    );
+  });
+
+  it("offers only the collections the field allows", async () => {
+    render(<LinkModal collections={["page"]} onSaveExternal={() => {}} onSaveInternal={() => {}} onRemove={() => {}} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole("tab", { name: /page on this site/i }));
+    expect(await screen.findByRole("button", { name: "About" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Kind of page")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "News" })).not.toBeInTheDocument();
+  });
+
+  it("saves the current label when an existing link is updated without choosing again", async () => {
+    const onSaveInternal = vi.fn();
+    render(<LinkModal currentContentRef="page:p1" onSaveExternal={() => {}} onSaveInternal={onSaveInternal} onRemove={() => {}} onClose={() => {}} />);
+    await screen.findByRole("button", { name: "About" });
+    fireEvent.click(screen.getByText("Update"));
+    await waitFor(() => expect(onSaveInternal).toHaveBeenCalledWith("page:p1", "About"));
+  });
+});

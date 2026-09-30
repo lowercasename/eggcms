@@ -133,6 +133,28 @@ Files modified when adding `link`:
 - `src/admin/editors/LinkFieldEditor.tsx` - Created editor component (reuses LinkModal)
 - `src/admin/editors/index.ts` - Added to `editorMap`
 
+### Example: The `relation` field type
+
+The `relation` field stores a list of other items on the site: plain cross-references, with nothing attached to each one. To annotate a relation (a role, a note), put a `relation` inside a block and give the block the extra fields.
+
+```typescript
+f.relation('related')                                     // Any collection
+f.relation('related', { collections: ['person', 'place'] }) // Restricted
+
+// Stores as JSON, in the order the editor arranged them:
+// [{ "ref": "person:abc-123", "label": "Ada" }, { "ref": "place:def-456", "label": "Paris" }]
+```
+
+`label` is a snapshot taken when the item was chosen. The admin shows each item's current label (and flags deleted ones); a site build should look items up by `ref`. There are no reverse links stored: compute them at build time.
+
+Files modified when adding `relation`:
+- `src/lib/schema.ts` - Added 'relation' to `FIELD_TYPES`, `f.relation()` helper (reuses `collections`)
+- `src/server/lib/content.ts` - Added 'relation' to `JSON_FIELD_TYPES`
+- `src/admin/components/ContentPicker.tsx` - Created: the collection menu, search and item list, extracted from `LinkModal` so both use it
+- `src/admin/editors/RelationEditor.tsx` - Created editor component (list with ↑/↓ and remove, "Choose items" dialog)
+- `src/admin/editors/index.ts` - Added to `editorMap`
+- `src/admin/components/ui/FormField.tsx` - Added to `TALL_TYPES` and the type chips
+
 ## Admin design system
 
 The admin follows the design handoff in `docs/plans/2026-09-06-admin-redesign.md` (a snapshot; the note at its top lists where the build differs). The rules that matter when adding UI:

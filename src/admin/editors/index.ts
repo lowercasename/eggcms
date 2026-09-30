@@ -16,6 +16,7 @@ import BlocksEditor from './BlocksEditor'
 import BlockEditor from './BlockEditor'
 import LinkFieldEditor from './LinkFieldEditor'
 import FileEditor from './FileEditor'
+import RelationEditor from './RelationEditor'
 
 export const editorMap: EditorMap = {
   string: StringEditor,
@@ -31,6 +32,7 @@ export const editorMap: EditorMap = {
   block: BlockEditor,
   link: LinkFieldEditor,
   file: FileEditor,
+  relation: RelationEditor,
 }
 
 export type { EditorProps, EditorMap } from './types'

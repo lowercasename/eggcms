@@ -12,6 +12,7 @@ vi.mock("../lib/api", () => ({
     findMedia: vi.fn().mockResolvedValue(null),
     uploadMedia: vi.fn().mockResolvedValue({ data: { path: "/uploads/test.jpg" } }),
     getSchemas: vi.fn().mockResolvedValue({ data: [] }),
+    getContent: vi.fn().mockResolvedValue({ data: [], meta: { total: 0 } }),
   },
 }));
 

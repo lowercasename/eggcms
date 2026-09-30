@@ -72,6 +72,7 @@ describe('content', () => {
       { name: 'title', type: 'string', required: true },
       { name: 'blocks', type: 'blocks' },
       { name: 'featuredImage', type: 'block' },
+      { name: 'related', type: 'relation' },
     ],
   }
 
@@ -453,6 +454,16 @@ describe('content', () => {
       const result = listItems(schemaWithBlocks, true) as Array<Record<string, unknown>>
 
       expect(result[0].featuredImage).toEqual(blockData)
+    })
+
+    it('stores a relation as JSON and reads it back as a list', () => {
+      const related = [{ ref: 'person:abc', label: 'Лазарь Михельс' }, { ref: 'place:def', label: 'Куба' }]
+      mockGet.mockReturnValue({ id: 'test-uuid-123', title: 'Test', related: JSON.stringify(related), draft: 1, created_at: '', updated_at: '' })
+
+      const result = createItem(schemaWithBlocks, { title: 'Test', related }) as Record<string, unknown>
+
+      expect(mockRun.mock.calls[0]).toContain(JSON.stringify(related))
+      expect(result.related).toEqual(related)
     })
 
     it('handles invalid JSON gracefully', () => {

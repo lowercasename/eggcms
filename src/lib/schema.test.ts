@@ -41,6 +41,25 @@ describe('validateSchema', () => {
     expect(() => validateSchema(schema)).not.toThrow()
   })
 
+  describe('relation field', () => {
+    it('creates a relation field restricted to collections', () => {
+      expect(f.relation('related', { collections: ['person', 'place'] })).toEqual({
+        name: 'related',
+        type: 'relation',
+        collections: ['person', 'place'],
+      })
+    })
+
+    it('accepts relation field in schema validation', () => {
+      const schema = defineCollection({
+        name: 'letter',
+        label: 'Letters',
+        fields: [f.string('title'), f.relation('author', { collections: ['person'] })],
+      })
+      expect(() => validateSchema(schema)).not.toThrow()
+    })
+  })
+
   describe('link field', () => {
     it('creates a valid link field definition', () => {
       const field = f.link('cta')

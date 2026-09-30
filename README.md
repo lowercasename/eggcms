@@ -473,6 +473,7 @@ The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Use `SCHEMAS_
 | `select` | Dropdown select | `options` (string array), `required`, `default`, `label` |
 | `blocks` | Page builder blocks | `blocks` (array of block names) |
 | `link` | Internal or external link | `collections` (restrict to specific collections) |
+| `relation` | A list of other items on the site | `collections` (restrict to specific collections) |
 | `block` | Single block instance | `block` (block name) |
 
 ### Field Options
@@ -493,6 +494,13 @@ The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Use `SCHEMAS_
 // Link (internal ref or external URL)
 { name: 'cta', type: 'link' }
 { name: 'cta', type: 'link', collections: ['pages', 'posts'] }  // restrict targets
+
+// Relation (a list of other items, for cross-references)
+{ name: 'related', type: 'relation' }
+{ name: 'related', type: 'relation', collections: ['person', 'place'] }  // restrict targets
+// Stores: [{ "ref": "person:abc-123", "label": "Ada" }, ...]
+// `ref` is "collection:id"; `label` is the item's name when it was chosen.
+// Look items up by `ref` when building, and compute reverse links there too.
 
 // Page builder with specific blocks
 { name: 'content', type: 'blocks', blocks: ['heroBlock', 'textBlock', 'imageBlock'] }

@@ -16,6 +16,7 @@ import TextEditor from './TextEditor'
 import LinkFieldEditor from './LinkFieldEditor'
 import ImageEditor from './ImageEditor'
 import FileEditor from './FileEditor'
+import RelationEditor from './RelationEditor'
 
 const meta = { title: 'Editors/Scalar and media' } satisfies Meta
 export default meta
@@ -42,6 +43,23 @@ export const ScalarRows: Story = {
       <Field Editor={DatetimeEditor} field={{ name: 'publishedAt', type: 'datetime' }} initial="2026-08-22T09:00:00.000Z" />
       <Field Editor={LinkFieldEditor} field={{ name: 'cta', type: 'link', label: 'Read more link' }} initial={{ type: 'external', url: 'https://doi.org/10.1080/00223344.2025' }} />
       <Field Editor={LinkFieldEditor} field={{ name: 'cta2', type: 'link', label: 'Empty link' }} initial={null} />
+    </Card>
+  ),
+}
+
+export const Relation: Story = {
+  render: () => (
+    <Card divided className="w-[780px]">
+      <Field
+        Editor={RelationEditor}
+        field={{ name: 'related', type: 'relation', label: 'Related pages', collections: ['page'] }}
+        initial={[
+          { ref: 'page:p2', label: 'Genealogy' },
+          { ref: 'page:p4', label: 'Australia' },
+          { ref: 'page:gone', label: 'A page since deleted' },
+        ]}
+      />
+      <Field Editor={RelationEditor} field={{ name: 'empty', type: 'relation', label: 'Nothing chosen yet' }} initial={null} />
     </Card>
   ),
 }
