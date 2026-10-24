@@ -6,6 +6,7 @@ import {
   kindForMimeType,
   resolveMimeType,
   maxUploadBytes,
+  maxRequestBodyBytes,
 } from './mediaTypes'
 
 describe('kindForMimeType', () => {
@@ -82,5 +83,15 @@ describe('maxUploadBytes', () => {
     expect(maxUploadBytes({ MAX_UPLOAD_MB: 'lots' })).toBe(100 * 1024 * 1024)
     expect(maxUploadBytes({ MAX_UPLOAD_MB: '0' })).toBe(100 * 1024 * 1024)
     expect(maxUploadBytes({ MAX_UPLOAD_MB: '-5' })).toBe(100 * 1024 * 1024)
+  })
+})
+
+describe('maxRequestBodyBytes', () => {
+  it('keeps Bun\'s 128 MB when the upload limit is below it', () => {
+    expect(maxRequestBodyBytes({})).toBe(128 * 1024 * 1024)
+  })
+
+  it('raises it above an upload limit of more than 128 MB', () => {
+    expect(maxRequestBodyBytes({ MAX_UPLOAD_MB: '300' })).toBe(301 * 1024 * 1024)
   })
 })

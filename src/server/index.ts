@@ -9,6 +9,7 @@ import auth from './routes/auth'
 import { createContentRoutes } from './routes/content'
 import { createSchemasRoute } from './routes/schemas'
 import { createMediaRoutes } from './routes/media'
+import { maxRequestBodyBytes } from './lib/mediaTypes'
 
 // Refuse to start rather than sign sessions with a missing or weak secret.
 // (Throwing here exits Bun with the message; there is no fallback secret.)
@@ -76,4 +77,5 @@ initialize().catch(console.error)
 export default {
   port: parseInt(process.env.PORT || '3000'),
   fetch: app.fetch,
+  maxRequestBodySize: maxRequestBodyBytes(),
 }

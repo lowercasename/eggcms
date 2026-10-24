@@ -106,6 +106,21 @@ export function maxUploadBytes(env: Record<string, string | undefined> = process
   return mb * 1024 * 1024
 }
 
+/** Bun's own ceiling on a request body, when the server does not set one. */
+const BUN_DEFAULT_BODY_BYTES = 128 * 1024 * 1024
+
+/**
+ * The request body ceiling to give Bun. Bun turns away a larger body before
+ * the app sees it, with an empty 413, so with MAX_UPLOAD_MB above 128 every
+ * upload over 128 MB failed. This raises Bun's ceiling to the upload limit,
+ * with a megabyte to spare for the multipart wrapping, and never lowers it, so
+ * a file a little over a smaller limit still reaches the media route and gets
+ * its message.
+ */
+export function maxRequestBodyBytes(env: Record<string, string | undefined> = process.env): number {
+  return Math.max(BUN_DEFAULT_BODY_BYTES, maxUploadBytes(env) + 1024 * 1024)
+}
+
 /** Human-readable file size, shared by the API error messages and the admin UI. */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
