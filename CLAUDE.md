@@ -36,7 +36,10 @@ Blocks support two optional presentation hints, used only by the admin:
 - `icon` - a Lucide icon name (e.g. `book-open`) shown on the block's row and in the insert menu. Without it the admin guesses from the block's field types.
 - `description` - one sentence shown in the insert menu. Without it the admin lists the block's field labels.
 
-Rich text fields accept `toolbar: 'minimal'` to show only Bold, Italic and Link (for single-paragraph fields such as publication details).
+Rich text fields accept `toolbar: 'minimal'` to show only Bold, Italic and Link (for single-paragraph fields such as publication details), and three options that add to the editor (`src/admin/extensions/richtext.ts` builds the extensions from them):
+- `headings` - the heading levels offered, default `[2, 3]`. The toolbar names them by rank: Heading, Sub-heading, Minor heading.
+- `footnotes: true` - a Footnote button. References are inline atoms and the notes one `<ol class="footnotes">` at the end, kept in step by a plugin (`src/admin/extensions/Footnotes.ts`). Back links from a note to its reference are the site's to render.
+- `styles` - paragraph styles as `[{ name, label }]`, offered in a Text style menu and saved as `<p class="name">`. The site's stylesheet defines how each looks.
 
 **Important:** When adding new schema properties, update `src/lib/schema.ts` in two places: the definition (`FieldDefinition` / `BlockDefinition` / `SchemaDefinition`) and the wire shape (`PublicField` / `PublicBlock` / `PublicSchema`). The admin's types (`src/admin/types/index.ts`) are re-exports of the wire shape, and the `/schemas` route (`src/server/routes/schemas.ts`) maps into it, so the compiler points at the mapping if you forget it. Field types live in `FIELD_TYPES`; `validateSchema` refuses a schema that uses any other type, an unknown `toolbar`, or an unknown media `kind`.
 

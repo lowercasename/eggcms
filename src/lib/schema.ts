@@ -28,6 +28,8 @@ export function validateSchema(schema: SchemaDefinition): void {
       throw new SchemaValidationError(`Richtext field '${field.name}' has unknown toolbar '${field.toolbar}'. Use one of: ${TOOLBARS.join(', ')}`)
     }
 
+    if (field.type === 'richtext') validateRichtextOptions(field)
+
     for (const kind of field.kinds ?? []) {
       if (!isMediaKind(kind)) {
         throw new SchemaValidationError(`File field '${field.name}' has unknown kind '${kind}'`)
@@ -62,6 +64,39 @@ export function validateSchema(schema: SchemaDefinition): void {
   }
 }
 
+function validateRichtextOptions(field: FieldDefinition): void {
+  const { headings, styles, footnotes } = field
+  if (headings !== undefined) {
+    const levels = Array.isArray(headings) ? headings : []
+    if (!levels.length || levels.some((l) => !Number.isInteger(l) || l < 1 || l > 6) || new Set(levels).size !== levels.length) {
+      throw new SchemaValidationError(`Richtext field '${field.name}' needs 'headings' to be a list of different levels from 1 to 6, such as [2, 3]`)
+    }
+  }
+  if (styles !== undefined) {
+    const list = Array.isArray(styles) ? styles : []
+    const names = new Set<string>()
+    for (const style of list) {
+      if (!style || typeof style.name !== 'string' || !STYLE_NAME.test(style.name)) {
+        throw new SchemaValidationError(`Richtext field '${field.name}' has a style whose name is not a CSS class such as 'epigraph'`)
+      }
+      if (typeof style.label !== 'string' || !style.label.trim()) {
+        throw new SchemaValidationError(`Style '${style.name}' in richtext field '${field.name}' needs a label`)
+      }
+      if (names.has(style.name)) {
+        throw new SchemaValidationError(`Style '${style.name}' is defined twice in richtext field '${field.name}'`)
+      }
+      names.add(style.name)
+    }
+    if (!list.length) throw new SchemaValidationError(`Richtext field '${field.name}' has an empty 'styles' list`)
+  }
+  if (footnotes !== undefined && typeof footnotes !== 'boolean') {
+    throw new SchemaValidationError(`Richtext field '${field.name}' needs 'footnotes' to be true or false`)
+  }
+}
+
+/** A paragraph style's name becomes its CSS class. */
+const STYLE_NAME = /^[a-z][a-z0-9-]*$/
+
 /** Every field type the admin can edit, in one place; validateSchema enforces it. */
 export const FIELD_TYPES = [
   'string',
@@ -84,6 +119,15 @@ export type FieldType = (typeof FIELD_TYPES)[number]
 export const TOOLBARS = ['full', 'minimal'] as const
 export type RichtextToolbar = (typeof TOOLBARS)[number]
 
+/** The heading levels a rich text field offers unless its schema says otherwise. */
+export const DEFAULT_HEADINGS = [2, 3]
+
+/** A paragraph style a site defines for a rich text field: saved as <p class="name">. */
+export interface RichtextStyle {
+  name: string
+  label: string
+}
+
 export interface FieldDefinition {
   name: string
   type: FieldType
@@ -98,6 +142,9 @@ export interface FieldDefinition {
   collections?: string[]  // For link and relation fields - restrict to specific collections
   kinds?: MediaKind[]  // For file fields - which media kinds may be attached (default: document)
   toolbar?: RichtextToolbar  // For richtext fields - 'minimal' shows only bold, italic and link
+  headings?: number[]  // For richtext fields - the heading levels offered (default [2, 3])
+  footnotes?: boolean  // For richtext fields - adds footnotes, listed at the end of the text
+  styles?: RichtextStyle[]  // For richtext fields - paragraph styles, saved as a class on <p>
 }
 
 /**
@@ -153,7 +200,10 @@ export function defineBlock(config: Omit<BlockDefinition, 'type'>): BlockDefinit
 export const f = {
   string: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'string', ...opts }),
   text: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'text', ...opts }),
-  richtext: (name: string, opts?: { toolbar?: RichtextToolbar } & Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'richtext', ...opts }),
+  richtext: (
+    name: string,
+    opts?: { toolbar?: RichtextToolbar; headings?: number[]; footnotes?: boolean; styles?: RichtextStyle[] } & Partial<FieldDefinition>
+  ): FieldDefinition => ({ name, type: 'richtext', ...opts }),
   number: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'number', ...opts }),
   boolean: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'boolean', ...opts }),
   datetime: (name: string, opts?: Partial<FieldDefinition>): FieldDefinition => ({ name, type: 'datetime', ...opts }),
@@ -195,6 +245,9 @@ export interface PublicField {
   collections?: string[]
   kinds?: MediaKind[]
   toolbar?: RichtextToolbar
+  headings?: number[]
+  footnotes?: boolean
+  styles?: RichtextStyle[]
 }
 
 export interface PublicSchema {

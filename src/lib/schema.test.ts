@@ -116,6 +116,68 @@ describe('validateSchema checks what the admin can actually edit', () => {
     expect(() => validateSchema(schema)).toThrow("Richtext field 'body' has unknown toolbar 'compact'")
   })
 
+  it('accepts heading levels, footnotes and paragraph styles on a rich text field', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [
+        f.richtext('body', {
+          headings: [2, 3, 4],
+          footnotes: true,
+          styles: [
+            { name: 'epigraph', label: 'Epigraph' },
+            { name: 'signature', label: 'Signature' },
+          ],
+        }),
+      ],
+    })
+    expect(() => validateSchema(schema)).not.toThrow()
+  })
+
+  it.each([[[]], [[0]], [[2, 7]], [[2, 2]], [[2.5]], ['2' as any]])('rejects heading levels %j', (headings) => {
+    const schema = defineCollection({ name: 'post', label: 'Posts', fields: [f.richtext('body', { headings })] })
+    expect(() => validateSchema(schema)).toThrow("Richtext field 'body' needs 'headings' to be a list of different levels from 1 to 6")
+  })
+
+  it('rejects a paragraph style whose name is not a CSS class', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [f.richtext('body', { styles: [{ name: 'Big Quote', label: 'Big quote' }] })],
+    })
+    expect(() => validateSchema(schema)).toThrow("Richtext field 'body' has a style whose name is not a CSS class")
+  })
+
+  it('rejects a paragraph style without a label', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [f.richtext('body', { styles: [{ name: 'epigraph' } as any] })],
+    })
+    expect(() => validateSchema(schema)).toThrow("Style 'epigraph' in richtext field 'body' needs a label")
+  })
+
+  it('rejects a paragraph style defined twice', () => {
+    const schema = defineCollection({
+      name: 'post',
+      label: 'Posts',
+      fields: [
+        f.richtext('body', {
+          styles: [
+            { name: 'epigraph', label: 'Epigraph' },
+            { name: 'epigraph', label: 'Motto' },
+          ],
+        }),
+      ],
+    })
+    expect(() => validateSchema(schema)).toThrow("Style 'epigraph' is defined twice in richtext field 'body'")
+  })
+
+  it('rejects footnotes that are not true or false', () => {
+    const schema = defineCollection({ name: 'post', label: 'Posts', fields: [f.richtext('body', { footnotes: 'yes' as any })] })
+    expect(() => validateSchema(schema)).toThrow("Richtext field 'body' needs 'footnotes' to be true or false")
+  })
+
   it('rejects an unknown media kind on a file field', () => {
     const schema = defineCollection({
       name: 'post',

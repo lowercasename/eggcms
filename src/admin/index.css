@@ -238,6 +238,12 @@ button:disabled {
   line-height: 1.35;
   margin-top: 1em;
 }
+.richtext-editor .ProseMirror h4 {
+  font-size: 1.05em;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 1em;
+}
 .richtext-editor .ProseMirror ul,
 .richtext-editor .ProseMirror ol {
   padding-left: 1.5em;
@@ -265,6 +271,81 @@ button:disabled {
   color: var(--color-ink-2);
   font-style: italic;
 }
+/* A paragraph with one of the site's styles. The site decides how it looks;
+   the editor only shows which style it has, with the label above it. */
+.richtext-editor .ProseMirror p[data-style-label] {
+  position: relative;
+  margin-top: 1.9em;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--color-structure-border);
+}
+.richtext-editor .ProseMirror p[data-style-label]::before {
+  content: attr(data-style-label);
+  position: absolute;
+  top: -1.55em;
+  left: 0.9rem;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-structure);
+  pointer-events: none;
+}
+
+/* Footnotes: a reference is a number in the text, which goes to its note
+   when clicked; the notes sit in one list at the end, each with a button
+   back to its reference. */
+.richtext-editor .ProseMirror sup.footnote-ref {
+  padding: 0 0.15em;
+  font-size: 0.72em;
+  font-weight: 700;
+  color: var(--color-action);
+  cursor: pointer;
+}
+.richtext-editor .ProseMirror sup.footnote-ref.ProseMirror-selectednode {
+  outline: 2px solid var(--color-action);
+  border-radius: 3px;
+}
+.richtext-editor .ProseMirror ol.footnotes {
+  position: relative;
+  margin-top: 2em;
+  padding-top: 2.1em;
+  border-top: 2px solid var(--color-line-hair);
+  font-size: 0.85em;
+}
+.richtext-editor .ProseMirror ol.footnotes::before {
+  content: "Footnotes";
+  position: absolute;
+  top: 0.75rem;
+  left: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-2);
+}
+.richtext-editor .ProseMirror ol.footnotes > li {
+  position: relative;
+  padding-right: 2.5em;
+}
+.richtext-editor .footnote-back {
+  position: absolute;
+  top: 0.2em;
+  right: 0;
+  padding: 0.25em 0.5em;
+  border: 1.5px solid var(--color-line-strong);
+  border-radius: var(--radius-chip);
+  background: var(--color-panel);
+  color: var(--color-ink-2);
+  font-size: 13px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.richtext-editor .footnote-back:hover {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
 .richtext-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--color-ink-3);

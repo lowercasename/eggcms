@@ -13,9 +13,9 @@ type Story = StoryObj<typeof meta>
 const body =
   '<h2>Media and talks</h2><p><a href="#">Знакомьтесь, ваш сосед Папуа-Новая Гвинея</a>: SBS Russian, 2024.</p><p><a href="#">The story of a Russian visit to Australia 200 years ago</a>: ABC Radio National.</p><ul><li>One thing</li><li>Another thing</li></ul>'
 
-function Demo({ toolbar, initial, label }: { toolbar?: 'full' | 'minimal'; initial: string; label: string }) {
+function Demo({ toolbar, initial, label, options }: { toolbar?: 'full' | 'minimal'; initial: string; label: string; options?: Partial<FieldDefinition> }) {
   const [value, setValue] = useState(initial)
-  const field: FieldDefinition = { name: 'body', type: 'richtext', label, toolbar }
+  const field: FieldDefinition = { name: 'body', type: 'richtext', label, toolbar, ...options }
   return (
     <div className="w-[780px]">
       <SectionProvider value={{ typeLabel: 'Book', index: 2, total: 12 }}>
@@ -33,3 +33,29 @@ export const Minimal: Story = {
   render: () => <Demo toolbar="minimal" initial="<p>Canberra, Australian National University, 2014, 200 pp., ills. (with Chris Ballard)</p>" label="Publication details" />,
 }
 export const Empty: Story = { args: { field: { name: 'body', type: 'richtext' }, value: '', onChange: () => {} }, render: () => <Demo initial="" label="Text" /> }
+
+const essay =
+  '<p class="epigraph">Что было, то и будет; и что делалось, то и будет делаться.<br><br>Еккл. 1:9</p>' +
+  '<h2>The Arbat</h2><p>The Arbat spirit which Okudzhava<sup id="fnref:1"><a class="footnote-ref" href="#fn:1" data-footnote="a">1</a></sup> celebrated in song has gone.</p>' +
+  '<h3>Moscow</h3><h4>Stoleshnikov Lane</h4><p>It is now a shout-filled bazaar<sup id="fnref:2"><a class="footnote-ref" href="#fn:2" data-footnote="b">2</a></sup>.</p>' +
+  '<p class="signature">Канберра, 2003</p>' +
+  '<ol class="footnotes"><li id="fn:1" data-footnote="a"><p>Bulat Okudzhava (1924-97): singer-poet known for his <em>chanson</em> style.</p></li>' +
+  '<li id="fn:2" data-footnote="b"><p>An exultant “victors\' feast”.</p></li></ol>'
+
+export const FootnotesAndStyles: Story = {
+  args: { field: { name: 'body', type: 'richtext' }, value: '', onChange: () => {} },
+  render: () => (
+    <Demo
+      initial={essay}
+      label="Text"
+      options={{
+        headings: [2, 3, 4],
+        footnotes: true,
+        styles: [
+          { name: 'epigraph', label: 'Epigraph' },
+          { name: 'signature', label: 'Signature' },
+        ],
+      }}
+    />
+  ),
+}

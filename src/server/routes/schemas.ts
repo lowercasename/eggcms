@@ -22,6 +22,9 @@ function mapField(f: FieldDefinition, seen: ReadonlySet<string>): PublicField {
     collections: f.collections,
     kinds: f.kinds,
     toolbar: f.toolbar,
+    headings: f.headings,
+    footnotes: f.footnotes,
+    styles: f.styles,
   }
 }
 

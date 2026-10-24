@@ -231,4 +231,21 @@ describe('GET /schemas - a block that contains itself', () => {
     expect(outer.fields[1].blocks[0].name).toBe('article')
     expect(outer.fields[1].blocks[0].fields).toEqual([])
   })
+
+  it('passes a rich text field\'s headings, footnotes and styles through to the admin', async () => {
+    const styles = [{ name: 'epigraph', label: 'Epigraph' }]
+    const schemas: SchemaDefinition[] = [
+      {
+        name: 'page',
+        label: 'Pages',
+        type: 'collection',
+        fields: [{ name: 'text', type: 'richtext', headings: [2, 3, 4], footnotes: true, styles }],
+      },
+    ]
+    const app = createSchemasRoute(schemas)
+    const res = await app.request('/schemas')
+    const json = await res.json()
+
+    expect(json.data[0].fields[0]).toMatchObject({ headings: [2, 3, 4], footnotes: true, styles })
+  })
 })

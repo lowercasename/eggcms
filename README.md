@@ -464,7 +464,7 @@ The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Use `SCHEMAS_
 |------|-------------|---------|
 | `string` | Single-line text | `required`, `default`, `placeholder`, `label` |
 | `text` | Multi-line text | `required`, `default`, `placeholder`, `label` |
-| `richtext` | Rich text editor (HTML) | `required`, `label` |
+| `richtext` | Rich text editor (HTML) | `required`, `label`, `toolbar`, `headings`, `footnotes`, `styles` |
 | `number` | Numeric input | `required`, `default`, `placeholder`, `label` |
 | `boolean` | Toggle switch | `default`, `label` |
 | `datetime` | Date and time picker | `required`, `default`, `label` |
@@ -494,6 +494,16 @@ The loader tries `/app/schemas.yaml`, `.yml`, then `.js` in order. Use `SCHEMAS_
 // Link (internal ref or external URL)
 { name: 'cta', type: 'link' }
 { name: 'cta', type: 'link', collections: ['pages', 'posts'] }  // restrict targets
+
+// Rich text: the heading levels it offers (default [2, 3]), footnotes, and
+// paragraph styles the site's stylesheet defines (saved as <p class="epigraph">)
+{
+  name: 'text',
+  type: 'richtext',
+  headings: [2, 3, 4],
+  footnotes: true,
+  styles: [{ name: 'epigraph', label: 'Epigraph' }],
+}
 
 // Relation (a list of other items, for cross-references)
 { name: 'related', type: 'relation' }

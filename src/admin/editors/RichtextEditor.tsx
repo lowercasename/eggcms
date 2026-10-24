@@ -1,10 +1,8 @@
 // src/admin/editors/RichtextEditor.tsx
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
 import { Maximize2, AlignLeft } from 'lucide-react'
-import { LinkWithRef } from '../extensions/LinkWithRef'
-import { ImageWithControls } from '../extensions/ImageWithControls'
+import { richtextExtensions } from '../extensions/richtext'
 import LinkModal from '../components/richtext/LinkModal'
 import ImageInsertModal from '../components/richtext/ImageInsertModal'
 import RichtextToolbar from '../components/richtext/RichtextToolbar'
@@ -19,7 +17,8 @@ import type { EditorProps } from './types'
 /**
  * Rich text on TipTap. One document instance is shown either inline (bordered
  * box, 38px toolbar) or full screen (overlay, 42px toolbar, 21px text); the
- * field's schema `toolbar` option picks the full or minimal button set.
+ * field's schema `toolbar` option picks the full or minimal button set, and
+ * `headings`, `styles` and `footnotes` add to it (see richtextExtensions).
  */
 export default function RichtextEditor({ field, value, onChange }: EditorProps) {
   const [showImagePicker, setShowImagePicker] = useState(false)
@@ -33,11 +32,7 @@ export default function RichtextEditor({ field, value, onChange }: EditorProps) 
   const lastValue = useRef<string>((value as string) || '')
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: { levels: [2, 3] } }),
-      LinkWithRef.configure({ openOnClick: false }),
-      ImageWithControls,
-    ],
+    extensions: richtextExtensions(field),
     content: (value as string) || '',
     // The editable element is the field's control: give it the label's id and a name.
     editorProps: { attributes: { ...(id ? { id } : {}), role: 'textbox', 'aria-multiline': 'true', 'aria-label': getFieldLabel(field) } },
@@ -82,6 +77,9 @@ export default function RichtextEditor({ field, value, onChange }: EditorProps) 
       size={size}
       onLink={() => setShowLinkModal(true)}
       onImage={() => setShowImagePicker(true)}
+      headings={field.headings}
+      styles={field.styles}
+      footnotes={field.footnotes}
     />
   )
 
