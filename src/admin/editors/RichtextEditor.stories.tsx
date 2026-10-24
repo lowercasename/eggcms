@@ -1,6 +1,7 @@
 // src/admin/editors/RichtextEditor.stories.tsx
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import RichtextEditor from './RichtextEditor'
 import FormField from '../components/ui/FormField'
 import { SectionProvider } from '../contexts/SectionContext'
@@ -58,4 +59,20 @@ export const FootnotesAndStyles: Story = {
       }}
     />
   ),
+}
+
+const longText = Array.from(
+  { length: 40 },
+  (_, i) => `<p>${i + 1}. Студенческие аттестаты обычно хранятся в деканате, но мой почему-то лежал у меня дома среди других бумаг.</p>`
+).join('')
+
+/** Text longer than the screen stays on the page in full screen. */
+export const FullScreenLongText: Story = {
+  args: { field: { name: 'body', type: 'richtext' }, value: '', onChange: () => {} },
+  render: () => <Demo initial={longText} label="Text" />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Full screen' }))
+    const page = await within(document.body).findByTestId('writing-page')
+    expect(page.scrollHeight).toBeLessThanOrEqual(page.clientHeight)
+  },
 }

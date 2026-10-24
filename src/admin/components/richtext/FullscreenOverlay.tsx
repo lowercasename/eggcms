@@ -41,8 +41,8 @@ export default function FullscreenOverlay({ title, subtitle, icon, toolbar, onDo
         </Button>
       </div>
       {toolbar}
-      <div className="flex-1 overflow-auto flex justify-center px-6 py-10">
-        <div className="w-full max-w-[760px] min-h-[60vh] bg-panel border border-line-strong rounded-panel px-12 py-11 animate-card-in origin-top">
+      <div className="flex-1 overflow-auto flex justify-center items-start px-6 py-10">
+        <div data-testid="writing-page" className="w-full max-w-[760px] min-h-[60vh] bg-panel border border-line-strong rounded-panel px-12 py-11 animate-card-in origin-top">
           {children}
         </div>
       </div>
