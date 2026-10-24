@@ -2,6 +2,9 @@
 import Link from "@tiptap/extension-link";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 
+/** An absolute http(s) or protocol-relative URL: somewhere else on the web. */
+const leavesSite = (href: unknown) => typeof href === "string" && /^(https?:)?\/\//i.test(href.trim());
+
 /**
  * Extended Link extension that supports internal content references.
  *
@@ -9,8 +12,9 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
  * For internal links: stores contentRef as "schema:id" format
  *
  * HTML output:
- * - External: <a href="https://example.com">text</a>
+ * - External: <a href="https://example.com" target="_blank" rel="noopener noreferrer nofollow">text</a>
  * - Internal: <a href="#" data-content-ref="posts:abc123">text</a>
+ * - A path, anchor or email address: <a href="/articles/x">text</a>
  */
 export const LinkWithRef = Link.extend({
   // Ensure links don't open on click by default
@@ -33,21 +37,14 @@ export const LinkWithRef = Link.extend({
     };
   },
 
-  // Override renderHTML to handle internal links properly
+  // Only a link that leaves the site opens in a new tab. A page on this site
+  // (by path or picked from the CMS), an anchor or an email address is a
+  // plain link, even if it was saved with a target before.
   renderHTML({ HTMLAttributes }) {
-    // If it's an internal link, ensure href is set to #
-    if (HTMLAttributes.contentRef) {
-      return [
-        "a",
-        {
-          ...HTMLAttributes,
-          href: "#",
-          "data-content-ref": HTMLAttributes.contentRef,
-        },
-        0,
-      ];
+    if (HTMLAttributes["data-content-ref"] || !leavesSite(HTMLAttributes.href)) {
+      const { target: _target, rel: _rel, ...attributes } = HTMLAttributes;
+      return ["a", attributes, 0];
     }
-    // External link - render normally
     return ["a", HTMLAttributes, 0];
   },
 
