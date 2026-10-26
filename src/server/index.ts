@@ -10,6 +10,7 @@ import { createContentRoutes } from './routes/content'
 import { createSchemasRoute } from './routes/schemas'
 import { createMediaRoutes } from './routes/media'
 import { maxRequestBodyBytes } from './lib/mediaTypes'
+import { closeDatabase } from './db'
 
 // Refuse to start rather than sign sessions with a missing or weak secret.
 // (Throwing here exits Bun with the message; there is no fallback secret.)
@@ -72,6 +73,15 @@ if (fs.existsSync(adminPath)) {
 
 // Start initialization
 initialize().catch(console.error)
+
+// Docker stops the container with SIGTERM, and Ctrl-C sends SIGINT. Close the
+// database first, so that everything saved is in eggcms.db itself.
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(signal, () => {
+    closeDatabase()
+    process.exit(0)
+  })
+}
 
 // Export for Bun's native serve
 export default {
